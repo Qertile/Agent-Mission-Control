@@ -1,0 +1,6 @@
+{
+  "costCap5h": 36,
+  "costCapWeek": 203,
+  "weekResetWeekday": 4,
+  "weekResetHour": 21
+}

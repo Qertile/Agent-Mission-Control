@@ -1,0 +1,12 @@
+# Secrets and per-machine state - never commit these.
+Daily Summary/oauth-token.txt
+Daily Summary/daily-summary-settings.json
+Daily Summary/last-reviewed-report.txt
+Daily Summary/*.log
+Daily Summary/Reports/*
+!Daily Summary/Reports/.gitkeep
+Session HUD/week-usage.json
+Session HUD/week-usage.json.tmp
+Session HUD/*.log
+__pycache__/
+*.pyc
