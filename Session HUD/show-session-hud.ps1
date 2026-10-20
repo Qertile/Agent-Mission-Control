@@ -73,14 +73,22 @@ function Hide-ConsoleWindow {
     }
 }
 
-# Fixed display order and label, keyed on session id. List each tab from
-# Agents Launcher\Agents Launcher.bat here, top to bottom, with the name it
-# should show. The id never changes; the name the registry reports can drift
-# (a resumed tab may come back auto-named until --name pins it).
-# Sessions not listed are appended, newest first, under the registry name.
-$script:SessionOrder = @(
-    [PSCustomObject]@{ Id = '120965a5-73ab-4e30-b9ab-8a9ab0a64239'; Label = 'Main' }
-)
+# Display order and labels come from agents.json in the package folder - the
+# same list Agents Launcher opens its tabs from, so a tab is added, renamed or
+# moved in one place. Keyed on session id: the id never changes, while the name
+# the registry reports can drift (a resumed tab may come back auto-named).
+# Sessions not in the list are appended, newest first, under the registry name.
+# Read on every refresh, so edits show up without restarting the window.
+function Get-SessionOrder {
+    $file = Join-Path (Split-Path $PSScriptRoot -Parent) 'agents.json'
+    if (-not (Test-Path $file)) { return @() }
+    try {
+        return @((Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json).sessions |
+            ForEach-Object { [PSCustomObject]@{ Id = $_.id; Label = $_.name } })
+    } catch {
+        return @()
+    }
+}
 
 function Get-ActiveSessions {
     <#
@@ -131,12 +139,13 @@ function Get-ActiveSessions {
             UpdatedAt = $updated
         }
     }
+    $order = @(Get-SessionOrder)
     foreach ($s in $sessions) {
         $rank = 1000
-        for ($i = 0; $i -lt $script:SessionOrder.Count; $i++) {
-            if ($script:SessionOrder[$i].Id -eq $s.SessionId) {
+        for ($i = 0; $i -lt $order.Count; $i++) {
+            if ($order[$i].Id -eq $s.SessionId) {
                 $rank = $i
-                $s.Name = $script:SessionOrder[$i].Label
+                $s.Name = $order[$i].Label
                 break
             }
         }

@@ -46,7 +46,7 @@ Start-Process conhost.exe -ArgumentList 'powershell','-NoProfile','-ExecutionPol
 
 **為什麼一定要經過 `conhost.exe`**：Windows 11 的「預設終端機應用程式」若是 Windows Terminal， `Start-Process powershell` 配到的新主控台會由 WT 承載，畫面上會多一個標題叫 `powershell` 的空白終端機視窗。那個視窗屬於 `WindowsTerminal.exe`，`-WindowStyle Hidden` 跟腳本裡的 `Hide-ConsoleWindow` 都蓋不掉它。`conhost.exe` 會強制走舊版主控台，主控台留在本機行程裡並且是隱藏的，畫面上就只剩 HUD 本身。
 
-`Session HUD\show-session-hud.ps1`（Sessions Monitor，同樣是 PowerShell+WinForms 彈窗）走同一套，`Agents Launcher\Agents Launcher.bat` 裡也是用 `start "" conhost.exe powershell ...`。**一定要用這個版本**，不要為了除錯方便改用沒有 `-WindowStyle Hidden`（例如加 `-RedirectStandardError` 抓錯誤訊息）的版本來跳窗給使用者看。需要除錯時，先用無頭版本自己確認沒問題，再用上面這個正式版本跳給使用者看。
+`Session HUD\show-session-hud.ps1`（Sessions Monitor，同樣是 PowerShell+WinForms 彈窗）走同一套，`Agents Launcher\launch-agents.ps1` 裡也是透過 `conhost.exe` 啟動。**一定要用這個版本**，不要為了除錯方便改用沒有 `-WindowStyle Hidden`（例如加 `-RedirectStandardError` 抓錯誤訊息）的版本來跳窗給使用者看。需要除錯時，先用無頭版本自己確認沒問題，再用上面這個正式版本跳給使用者看。
 
 ## TaskDatabase.xlsx 同步
 

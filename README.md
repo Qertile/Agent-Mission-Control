@@ -23,18 +23,14 @@ Tools for running several Claude Code sessions side by side on Windows.
 
 1. Copy the `AI-Infra` folder into the folder your Claude sessions should work in.
    That parent folder becomes every tab's working directory.
-2. Set up your tabs. `Agents Launcher\Agents Launcher.bat` ships with one example
-   tab; the comments at its top explain how to add more. List the same session
-   ids, in the same order, in `$script:SessionOrder` near the top of
-   `Session HUD\show-session-hud.ps1`.
-3. Create the desktop shortcut:
-   ```
-   powershell -ExecutionPolicy Bypass -File "AI-Infra\Agents Launcher\create-shortcut.ps1"
-   ```
-4. Optional — the weekday 09:30 reminder popup:
-   ```
-   powershell -ExecutionPolicy Bypass -File "AI-Infra\Task Manager\setup-schedule.ps1"
-   ```
+2. List your tabs in `agents.json`: one entry per Claude Code session, with a name, a
+   fixed session id (make one with `powershell -c "[guid]::NewGuid()"`) and the number of
+   the Windows Terminal window it opens in. The launcher opens the tabs in this order,
+   and Agent Mission Control shows them in this order under these names.
+3. Double-click `install.bat`. It checks what the tools need (Windows Terminal,
+   Claude Code, Python 3, the ImportExcel module, the DejaVu Sans Mono font), puts the
+   **Agents Launcher** shortcut on the desktop, and asks which scheduled jobs to register.
+   Nothing is copied - the tools run from this folder. Run it again after moving the folder.
 
 ## Settings
 
@@ -101,17 +97,14 @@ when that file exists and contains the tag `#work`.
 
 1. 把 `AI-Infra` 資料夾複製到你希望 Claude session 工作的資料夾裡。
    它的上一層資料夾就是每個分頁的工作目錄。
-2. 設定分頁。`Agents Launcher\Agents Launcher.bat` 內附一個範例分頁，檔案開頭的註解
-   說明如何新增。再把相同的 session id 依相同順序，填入
-   `Session HUD\show-session-hud.ps1` 開頭附近的 `$script:SessionOrder`。
-3. 建立桌面捷徑：
-   ```
-   powershell -ExecutionPolicy Bypass -File "AI-Infra\Agents Launcher\create-shortcut.ps1"
-   ```
-4. 可選：平日 09:30 提醒彈窗：
-   ```
-   powershell -ExecutionPolicy Bypass -File "AI-Infra\Task Manager\setup-schedule.ps1"
-   ```
+2. 在 `agents.json` 列出你的分頁：每個 Claude Code session 一筆，包含名稱、固定的
+   session id（用 `powershell -c "[guid]::NewGuid()"` 產生），以及要開在第幾個
+   Windows Terminal 視窗。launcher 依這個順序開分頁，Agent Mission Control 也依這個
+   順序、用這些名稱顯示。
+3. 雙擊 `install.bat`。它會檢查工具需要的程式（Windows Terminal、Claude Code、
+   Python 3、ImportExcel 模組、DejaVu Sans Mono 字型），在桌面建立
+   **Agents Launcher** 捷徑，並詢問要註冊哪些排程。不會複製任何檔案，工具直接
+   從這個資料夾執行；資料夾搬家後再執行一次即可。
 
 ## 設定
 

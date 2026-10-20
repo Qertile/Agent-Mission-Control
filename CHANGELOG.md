@@ -2,6 +2,20 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-20 – single tab list and one-click setup
+
+### Added
+- **`agents.json`:** one list of Claude Code tabs (name, session id, terminal window).
+  Agents Launcher opens its tabs from it and Agent Mission Control takes its display
+  order and names from it, so a tab is added or renamed in one place.
+- **`install.bat`:** one-step setup. Checks Windows Terminal, Claude Code, Python 3, the
+  ImportExcel module and the DejaVu Sans Mono font; creates the desktop shortcut; asks
+  which scheduled jobs to register.
+
+### Changed
+- `Agents Launcher.bat` only calls the new `launch-agents.ps1`, which reads
+  `agents.json`. Agent Mission Control re-reads the list on every refresh.
+
 ## 2026-10-20
 
 ### Changed
