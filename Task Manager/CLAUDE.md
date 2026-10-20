@@ -2,7 +2,7 @@
 
 > 本檔指令中的路徑都是相對路徑，起點是 Claude session 的工作資料夾，也就是放 AI-Infra 的那一層。
 
-任務清單存放在 `Task Manager\tasks.md`，工作日 09:30 會有排程腳本（`Task Manager\show-hud.ps1`，由 `Task Manager\setup-schedule.ps1` 註冊為工作排程器任務 `TaskHUD-Weekday-0930`）跳出提醒。
+任務清單存放在 `Task Manager\tasks.md`，顯示在 Agent Mission Control（`Session HUD\show-session-hud.ps1`）的左側任務欄，它每 30 秒自動重讀 `tasks.md`。獨立的「Todo List」彈窗（`Task Manager\show-hud.ps1`）預設不使用，只有執行 `Task Manager\setup-schedule.ps1` 註冊排程後，才會在平日 09:30 跳出；`show-hud.ps1` 本身不要刪，Agent Mission Control 會載入它的解析與排序函式。
 
 ## 任務格式
 
@@ -19,7 +19,7 @@
 彈窗顯示順序是依優先度分數動態排序（分數越小越急），不是單純照檔案順序：
 - 分數公式跟 `TaskDatabase.xlsx` 的 P 欄公式概念一致：`(Due<今天?-1:1) × |Due-今天| × 狀態權重`，狀態權重 Checking=1、Ongoing=2、Pending（含還沒同步進 Excel 的任務）=3。
 - Due 沒填的話用 `added 日期 + 7 天`當計算用的預設到期日（跟 sync-sheet.ps1 對 Excel 的預設值邏輯一致，但不會回寫到 tasks.md）。
-- `tasks.md` 檔案本身的順序、`[due:...]`／`[priority:high]` 標記，只影響新增時插入的位置，不再直接決定彈窗顯示順序；彈窗只取排序後前5個未完成項目。
+- `tasks.md` 檔案本身的順序、`[due:...]`／`[priority:high]` 標記，只影響新增時插入的位置，不再直接決定彈窗顯示順序；Agent Mission Control 任務欄依排序顯示**全部**未完成項目，不限 5 項。
 
 彈窗與文字版清單都會附上該任務在 `TaskDatabase.xlsx` 裡的 Status（依任務標題比對），格式是標題後面加 `[Ongoing]`／`[Checking]`／`[Pending]` 等；如果這個任務還沒同步進 Excel（例如剛新增、還沒跑過 sync-sheet.ps1），就不顯示狀態標籤，不會硬填預設值。
 
@@ -36,7 +36,7 @@
 
 找不到明確對應的任務時，先跟使用者確認是哪一項，不要用猜的。
 
-每次新增/完成/刪除/修改/重新排序之後，都要實際跳出彈窗視窗（`Task Manager\show-hud.ps1`）讓使用者親眼確認，同時也要在聊天室文字列出目前前5項未完成任務（跟彈窗內容一致），兩者都要做，不是二選一。`show-hud.ps1` 每次直接執行時，會自動關閉上一個還開著的「今日待辦」舊視窗再開新的（比對視窗標題），不會讓視窗越開越多；這個行為內建在腳本裡，不需要額外下指令。跳窗必須用分離啟動，讓視窗獨立於工具的行程存在，不會被逾時機制關掉：
+每次新增/完成/刪除/修改/重新排序之後，在聊天室文字列出**全部**未完成任務（跟 Agent Mission Control 任務欄的內容一致）。**不要跳出獨立的 `show-hud.ps1` 彈窗**——任務只顯示在 Agent Mission Control 的任務欄，它會在 30 秒內自動更新。以下保留舊的跳窗說明，只在使用者明確要求開獨立彈窗時才用：`show-hud.ps1` 每次直接執行時，會自動關閉上一個還開著的「今日待辦」舊視窗再開新的（比對視窗標題），不會讓視窗越開越多；這個行為內建在腳本裡，不需要額外下指令。跳窗必須用分離啟動，讓視窗獨立於工具的行程存在，不會被逾時機制關掉：
 
 用 PowerShell 工具直接執行這行（不要再包一層 `powershell -Command "..."`，那層外殼本身會先彈出一個看得到的主控台視窗，使用者會看到多一個 PowerShell 視窗）：
 
@@ -50,7 +50,7 @@ Start-Process conhost.exe -ArgumentList 'powershell','-NoProfile','-ExecutionPol
 
 ## TaskDatabase.xlsx 同步
 
-`Task Manager\TaskDatabase.xlsx` 是完整任務資料庫（含已完成任務的歷史紀錄），跟 `tasks.md` 分工：HUD 彈窗只顯示前5項提醒，這份 Excel 給你搜尋/追蹤所有任務。
+`Task Manager\TaskDatabase.xlsx` 是完整任務資料庫（含已完成任務的歷史紀錄），跟 `tasks.md` 分工：Agent Mission Control 任務欄顯示全部未完成任務，這份 Excel 給你搜尋/追蹤所有任務。
 
 欄位：P（優先度公式）、Begin、Due（tasks.md 沒填 due 的話，Excel 這裡預設用 Begin + 7 天，不會回寫到 tasks.md）、Status（Pending/Ongoing/Checking/Finished，未完成任務預設 Pending，完成後強制改 Finished，其餘由使用者自己在 Excel 手動調整並會在同步時保留）、Items（任務標題）、Subitem（該任務的每一行縮排描述，一個描述一列；沒有描述就一列空白）、Result（該描述行後面若有 `→ 已回覆 (日期)：...` 或 `→ 結果 (日期)：...` 這種格式的行，會被抓進來當作這行的 Result，不會被當成新的 Subitem；如果這個任務本來就沒有子項目描述，直接在任務標題下加一行 `→ 結果：...`，會變成那唯一一列的 Result）。
 
@@ -60,7 +60,7 @@ P 欄公式（依到期日與狀態算優先度，數字越小越急；已完成
 ```
 （Excel 檔案內部實際存的是 `_xlfn.IFS(...)`，這是 Excel 對較新函數的內部命名規則，不是打錯字。）
 
-每次新增/完成/刪除/修改/重新排序 `tasks.md` 之後，除了跳彈窗，也要執行同步腳本更新這份 Excel：
+每次新增/完成/刪除/修改/重新排序 `tasks.md` 之後，都要執行同步腳本更新這份 Excel：
 
 ```
 powershell -ExecutionPolicy Bypass -File "AI-Infra\Task Manager\sync-sheet.ps1"

@@ -985,7 +985,7 @@ function Show-SessionHudForm {
     $taskBox.ForeColor = $titleColor
     $taskBox.Font = New-Object System.Drawing.Font($termFont, 12)
     $taskBox.DetectUrls = $false
-    $taskBox.ScrollBars = 'None'
+    $taskBox.ScrollBars = 'Vertical'   # appears only when the list is taller than the panel
     $taskBox.WordWrap = $true
     $taskBox.TabStop = $false
 
@@ -1025,7 +1025,8 @@ function Show-SessionHudForm {
             $taskBox.Text = "Task HUD script not found:`n$script:TaskHudScript"
             return
         }
-        $display = Get-HudDisplayTasks -Path $tasksPath -Count 5
+        # Every open task, in priority order - the user wants the whole list, not a top 5.
+        $display = Get-HudDisplayTasks -Path $tasksPath -Count ([int]::MaxValue)
         # Only redraw when something changed, so a selection survives refreshes.
         $sig = (@($display.Top | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.Text, $_.Due, $_.Status, ($_.Description -join '/') }) -join "`n") + "|$($display.Remaining)"
         if ($sig -eq $taskState.Signature) { return }
