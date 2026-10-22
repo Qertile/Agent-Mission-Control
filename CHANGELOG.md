@@ -2,6 +2,25 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-22 – Windows Snap, clean relaunch
+
+### Changed
+- **Agent Mission Control – window:** Windows Snap works now (drag to a screen edge,
+  Win+Arrow) while the borderless look stays. The form is a `SnapForm` subclass: the
+  sizable window styles are added after creation, the frame they imply is removed in
+  `WM_NCCALCSIZE` and never painted on (de)activation, corners are square and the DWM
+  border is off. Maximize fills the work area (the taskbar stays visible) and restore
+  keeps the size. The process is per-monitor DPI aware, so on a second monitor with a
+  different scale the window is drawn crisp instead of bitmap-stretched (which also
+  produced a stray frame).
+- **Agents Launcher:** a second click first closes what the previous click opened – the
+  agent tabs (found by their titles through UI Automation and closed with their own
+  close button, so other Windows Terminal windows are untouched) and the HUD – then
+  opens the new set. `-DryRun` lists what it would close.
+- **Task Manager rules (`Task Manager\CLAUDE.md`):** after a task is added, completed,
+  edited or reordered, the session edits `tasks.md`, runs `sync-sheet.ps1` and stops
+  there – no task list in chat; Agent Mission Control shows the tasks.
+
 ## 2026-10-20 – single tab list and one-click setup
 
 ### Added

@@ -243,6 +243,80 @@ function Show-SessionHudForm {
             public static extern bool ReleaseCapture();
             [System.Runtime.InteropServices.DllImport("user32.dll")]
             public static extern int SendMessage(System.IntPtr hWnd, int Msg, int wParam, int lParam);
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern bool SetProcessDpiAwarenessContext(System.IntPtr context);
+'@
+    }
+    # Per-monitor DPI aware (V2), before any window exists. Otherwise, on a monitor
+    # with a different scale, Windows bitmap-stretches the window and, seeing
+    # WS_THICKFRAME, reserves a frame it paints itself: a light band on the top
+    # and left, content clipped at the bottom and right.
+    [SessionHudNative.Win32]::SetProcessDpiAwarenessContext([System.IntPtr](-4)) | Out-Null
+    if (-not ([System.Management.Automation.PSTypeName]'SessionHudNative.SnapForm').Type) {
+        # Borderless form that Windows still treats as a normal sizable window, so
+        # Aero Snap works (drag to a screen edge, Win+Arrow). WS_THICKFRAME gives
+        # it that status; the frame Windows would then draw is taken away again in
+        # WM_NCCALCSIZE, and WM_GETMINMAXINFO keeps Maximized on the work area.
+        Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            using System.Windows.Forms;
+
+            namespace SessionHudNative {
+                public class SnapForm : Form {
+                    const int WS_THICKFRAME = 0x00040000, WS_MINIMIZEBOX = 0x00020000, WS_MAXIMIZEBOX = 0x00010000;
+                    const int SIZABLE = WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+                    const int WM_NCCALCSIZE = 0x0083, WM_NCPAINT = 0x0085, WM_NCACTIVATE = 0x0086;
+                    const int WM_GETMINMAXINFO = 0x0024, WM_STYLECHANGING = 0x007C;
+
+                    [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
+                    [StructLayout(LayoutKind.Sequential)] struct MINMAXINFO {
+                        public POINT ptReserved, ptMaxSize, ptMaxPosition, ptMinTrackSize, ptMaxTrackSize;
+                    }
+
+                    [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr h, int attr, ref int value, int size);
+                    [DllImport("user32.dll")] static extern int GetWindowLong(IntPtr h, int i);
+                    [DllImport("user32.dll")] static extern int SetWindowLong(IntPtr h, int i, int v);
+                    [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int w, int hh, uint f);
+
+                    protected override void OnHandleCreated(EventArgs e) {
+                        base.OnHandleCreated(e);
+                        // The sizable styles go on after creation, not through CreateParams:
+                        // WinForms sizes the window from CreateParams, and with a frame style
+                        // there it adds a frame the client never gets, so every restore from
+                        // Maximized grew the window by 14 px.
+                        SetWindowLong(Handle, -16, GetWindowLong(Handle, -16) | SIZABLE);
+                        SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0, 0x0027);   // FRAMECHANGED|NOMOVE|NOSIZE|NOZORDER
+                        // Windows 11 gives a framed window rounded corners and a 1-px border: off.
+                        int square = 1;                                     // DWMWCP_DONOTROUND
+                        DwmSetWindowAttribute(Handle, 33, ref square, 4);   // DWMWA_WINDOW_CORNER_PREFERENCE
+                        int none = unchecked((int)0xFFFFFFFE);              // DWMWA_COLOR_NONE
+                        DwmSetWindowAttribute(Handle, 34, ref none, 4);     // DWMWA_BORDER_COLOR
+                    }
+
+                    protected override void WndProc(ref Message m) {
+                        // WinForms rewrites the style from CreateParams on UpdateStyles: keep ours.
+                        if (m.Msg == WM_STYLECHANGING && (int)m.WParam.ToInt64() == -16) {
+                            Marshal.WriteInt32(m.LParam, 4, Marshal.ReadInt32(m.LParam, 4) | SIZABLE);
+                        }
+                        if (m.Msg == WM_NCCALCSIZE) { m.Result = IntPtr.Zero; return; }   // client area = whole window
+                        // DefWindowProc still paints the frame of a WS_THICKFRAME window on
+                        // (de)activation, straight over the client's outer 7 px: never let it.
+                        if (m.Msg == WM_NCPAINT) { m.Result = IntPtr.Zero; return; }
+                        if (m.Msg == WM_NCACTIVATE) { m.LParam = (IntPtr)(-1); }           // -1: no frame redraw
+                        base.WndProc(ref m);
+                        if (m.Msg == WM_GETMINMAXINFO) {
+                            Screen s = Screen.FromHandle(m.HWnd);
+                            MINMAXINFO mmi = (MINMAXINFO)Marshal.PtrToStructure(m.LParam, typeof(MINMAXINFO));
+                            mmi.ptMaxPosition.X = s.WorkingArea.Left - s.Bounds.Left;
+                            mmi.ptMaxPosition.Y = s.WorkingArea.Top - s.Bounds.Top;
+                            mmi.ptMaxSize.X = s.WorkingArea.Width;
+                            mmi.ptMaxSize.Y = s.WorkingArea.Height;
+                            Marshal.StructureToPtr(mmi, m.LParam, false);
+                        }
+                    }
+                }
+            }
 '@
     }
     $WM_NCLBUTTONDOWN = 0x00A1
@@ -263,7 +337,7 @@ function Show-SessionHudForm {
 
     $config = Get-HudConfig -ScriptDir $ScriptDir
 
-    $form = New-Object System.Windows.Forms.Form
+    $form = New-Object SessionHudNative.SnapForm
     $form.Text = 'Agent Mission Control'
     $form.ShowInTaskbar = $true
     $form.StartPosition = 'CenterScreen'
@@ -323,7 +397,7 @@ function Show-SessionHudForm {
     $minimizeButton.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(30, 45, 30)
     $minimizeButton.Add_Click({ $form.WindowState = [System.Windows.Forms.FormWindowState]::Minimized })
 
-    # Borderless, so Maximized covers the whole screen - that is the fullscreen.
+    # Maximized fills the work area (SnapForm keeps the taskbar visible) - that is the fullscreen.
     $fullButton = New-Object System.Windows.Forms.Button
     $fullButton.Text = '□'
     $fullButton.Dock = 'Right'
