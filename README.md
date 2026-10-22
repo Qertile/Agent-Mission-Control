@@ -35,8 +35,13 @@ Tools for running several Claude Code sessions side by side on Windows.
 ## Settings
 
 - `Session HUD\hud-config.json`:
-  - `costCap5h`: budget for one 5-hour block, in US dollars at API list price (left pie).
-  - `costCapWeek`: budget for one week, same unit (right pie).
+  - The two pies show the account's own 5-hour and weekly usage - the same percentages
+    as the Claude app and `/usage`, covering every machine on the login - read once a
+    minute from Anthropic's usage endpoint with the token Claude Code keeps in
+    `%USERPROFILE%\.claude\.credentials.json` (sent nowhere else, never displayed).
+  - `costCap5h`: fallback when that cannot be fetched - budget for one 5-hour block, in US
+    dollars at API list price, measured from this machine's transcripts (left pie).
+  - `costCapWeek`: fallback budget for one week, same unit (right pie).
   - `weekResetWeekday` / `weekResetHour`: when the weekly budget resets
     (weekday 0 = Monday ... 4 = Friday; hour 0-23).
   - `modelPrices` (optional): override or add list prices, USD per million tokens as
@@ -121,8 +126,13 @@ when that file exists and contains the tag `#work`.
 ## 設定
 
 - `Session HUD\hud-config.json`：
-  - `costCap5h`：每個 5 小時區段的額度，單位是以 API 牌價換算的美元（左邊的圓餅圖）。
-  - `costCapWeek`：每週的額度，單位相同（右邊的圓餅圖）。
+  - 兩個圓餅圖顯示的是帳號本身的 5 小時／每週用量——跟 Claude app 和 `/usage`
+    同一個百分比，涵蓋所有用這個帳號登入的機器——每分鐘用 Claude Code 存在
+    `%USERPROFILE%\.claude\.credentials.json` 的 token 向 Anthropic 的用量 endpoint
+    讀一次（token 不會送去別處、不會顯示）。
+  - `costCap5h`：抓不到時的備援——每個 5 小時區段的額度，單位是以 API 牌價換算的
+    美元，由本機的 transcript 估算（左邊的圓餅圖）。
+  - `costCapWeek`：每週的備援額度，單位相同（右邊的圓餅圖）。
   - `weekResetWeekday` / `weekResetHour`：每週額度重置的時間
     （weekday 0 = 星期一 … 4 = 星期五；hour 0–23）。
   - `modelPrices`（可選）：覆寫或新增模型牌價，單位為每百萬 token 美元，格式

@@ -2,6 +2,18 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-22 – account-wide usage
+
+### Changed
+- **Agent Mission Control – usage pies:** the 5H and WEEK pies now show the account's
+  own utilization from Anthropic's OAuth usage endpoint - the numbers the Claude app
+  and `/usage` show, covering every machine that shares the login - fetched once a
+  minute with the token Claude Code keeps in `.credentials.json`. The 5-hour reset time
+  comes from the account too. If the fetch fails the pies fall back to this machine's
+  spend against `costCap5h` / `costCapWeek`, and the status line says why.
+- **Usage panel:** smaller type (13 / 20 / 12 pt) and tighter rows, 166 → 140 px, so the
+  headline clears the pies and the session list gets the room.
+
 ## 2026-10-22 – edit tasks and talk to sessions from the window
 
 ### Added

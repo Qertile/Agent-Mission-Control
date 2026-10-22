@@ -83,6 +83,26 @@ function Set-TaskStatus {
     }
 }
 
+# --- account-wide usage --------------------------------------------------------
+# The percentages the Claude app and /usage show come from Anthropic's OAuth usage
+# endpoint and cover the whole account - every machine sharing the login - which
+# the local transcript scan cannot see. The HUD uses the access token Claude Code
+# keeps in .credentials.json; it is never shown and goes nowhere but that endpoint.
+function Get-AccountUsage {
+    $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
+    if (-not (Test-Path $credFile)) { throw 'no .credentials.json' }
+    $token = (Get-Content $credFile -Raw | ConvertFrom-Json).claudeAiOauth.accessToken
+    if (-not $token) { throw 'no OAuth token in .credentials.json' }
+    $headers = @{ Authorization = "Bearer $token"; 'anthropic-beta' = 'oauth-2025-04-20'; Accept = 'application/json' }
+    $r = Invoke-RestMethod -Uri 'https://api.anthropic.com/api/oauth/usage' -Headers $headers -TimeoutSec 10
+    return [PSCustomObject]@{
+        FiveHour      = [double]$r.five_hour.utilization
+        FiveHourReset = [datetime]::Parse($r.five_hour.resets_at)
+        Week          = [double]$r.seven_day.utilization
+        WeekReset     = [datetime]::Parse($r.seven_day.resets_at)
+    }
+}
+
 function Update-ActivitySamples {
     param([object[]]$Sessions)
 
@@ -520,19 +540,20 @@ function Show-SessionHudForm {
     $scanline.BackColor = $accentColor
 
     # --- usage panel -------------------------------------------------------
-    $usageState = [PSCustomObject]@{ Snapshot = $null; FetchedAt = $null; Failed = $false; Week = $null; WeekAt = $null }
+    $usageState = [PSCustomObject]@{ Snapshot = $null; FetchedAt = $null; Failed = $false; Week = $null; WeekAt = $null
+                                     Account = $null; AccountAt = $null; AccountError = $null }
 
     $usagePanel = New-Object System.Windows.Forms.Panel
     $usagePanel.Dock = 'Top'
     $hasCap = ($config -and $config.costCap5h -and [double]$config.costCap5h -gt 0)
     # The pie sits beside the text, so the cap does not add a row.
-    $usagePanel.Height = 166
+    $usagePanel.Height = 140
     $usagePanel.BackColor = $bgColor
 
-    # Overview type is deliberately 1.5x the grid type so the numbers read at a glance.
-    $usageFont      = New-Object System.Drawing.Font($termFont, 16)
-    $usageBigFont   = New-Object System.Drawing.Font($termFont, 22, [System.Drawing.FontStyle]::Bold)
-    $usageLabelFont = New-Object System.Drawing.Font($termFont, 13, [System.Drawing.FontStyle]::Bold)
+    # Overview type a step above the grid's 12: the headline must clear the pies.
+    $usageFont      = New-Object System.Drawing.Font($termFont, 13)
+    $usageBigFont   = New-Object System.Drawing.Font($termFont, 20, [System.Drawing.FontStyle]::Bold)
+    $usageLabelFont = New-Object System.Drawing.Font($termFont, 12, [System.Drawing.FontStyle]::Bold)
 
     $usagePanel.Add_Paint({
         param($sender, $e)
@@ -558,26 +579,40 @@ function Show-SessionHudForm {
             $winTotal = [double]$snap.block.total
             $g.DrawString((Format-TokenCount $winTotal), $usageBigFont, $brushValue, $valueX, $y)
             $headline = 'tokens · {0} req' -f $snap.block.requests
-            if ($snap.blockEnd) {
+            # Reset time from the account when it is known: the block the account is
+            # in is what counts, not the one this machine's transcripts suggest.
+            $acct = $usageState.Account
+            if ($acct) {
+                $left = Format-Remaining ([Math]::Max(0, [int]($acct.FiveHourReset - (Get-Date)).TotalSeconds))
+                $headline += ' · resets {0:HH:mm} · {1} left' -f $acct.FiveHourReset, $left
+            } elseif ($snap.blockEnd) {
                 $to = [datetime]::Parse($snap.blockEnd)
                 $left = Format-Remaining ([int]$snap.blockSecondsLeft)
                 $headline += ' · resets {0:HH:mm} · {1} left' -f $to, $left
             } else {
                 $headline += ' · no block running'
             }
-            $g.DrawString($headline, $usageFont, $brushLabel, ($x + 320), ($y + 8))
+            $g.DrawString($headline, $usageFont, $brushLabel, ($x + 300), ($y + 8))
 
-            $y += 44
-            if ($hasCap) {
-                # Share-of-cap pie, upper right. One value, so no legend: the
-                # percentage is printed under it and the colour only repeats the
-                # state it already says in words.
-                # Two pies side by side: 5-hour block, then week. Caption above,
-                # percentage below, both in text colour.
-                $pies = @(
-                    [PSCustomObject]@{ Caption = '5H';   Used = $(if ($null -ne $snap.blockCost) { [double]$snap.blockCost } else { $winTotal }); Cap = [double]$config.costCap5h }
-                    [PSCustomObject]@{ Caption = 'WEEK'; Used = $(if ($usageState.Week) { $(if ($null -ne $usageState.Week.cost) { [double]$usageState.Week.cost } else { [double]$usageState.Week.total }) } else { 0 }); Cap = [double]$config.costCapWeek }
-                )
+            $y += 38
+            if ($acct -or $hasCap) {
+                # Two pies side by side, upper right: 5-hour block, then week.
+                # Caption above, percentage below, both in text colour. The
+                # account's own percentages when they could be fetched; otherwise
+                # this machine's spend against the caps in hud-config.json.
+                $pies = if ($acct) {
+                    @(
+                        [PSCustomObject]@{ Caption = '5H';   Frac = $acct.FiveHour / 100 }
+                        [PSCustomObject]@{ Caption = 'WEEK'; Frac = $acct.Week / 100 }
+                    )
+                } else {
+                    $used5h = if ($null -ne $snap.blockCost) { [double]$snap.blockCost } else { $winTotal }
+                    $usedWk = if ($usageState.Week) { $(if ($null -ne $usageState.Week.cost) { [double]$usageState.Week.cost } else { [double]$usageState.Week.total }) } else { 0 }
+                    @(
+                        [PSCustomObject]@{ Caption = '5H';   Frac = $(if ([double]$config.costCap5h -gt 0) { $used5h / [double]$config.costCap5h } else { -1 }) }
+                        [PSCustomObject]@{ Caption = 'WEEK'; Frac = $(if ([double]$config.costCapWeek -gt 0) { $usedWk / [double]$config.costCapWeek } else { -1 }) }
+                    )
+                }
                 $pieD = 64
                 $pieGap = 34
                 $pieY = 30
@@ -585,8 +620,8 @@ function Show-SessionHudForm {
                 $oldMode = $g.SmoothingMode
                 for ($k = 0; $k -lt $pies.Count; $k++) {
                     $pie = $pies[$k]
-                    if (-not $pie.Cap -or $pie.Cap -le 0) { continue }
-                    $frac = [Math]::Min(1.0, $pie.Used / $pie.Cap)
+                    if ($pie.Frac -lt 0) { continue }
+                    $frac = [Math]::Min(1.0, [double]$pie.Frac)
                     $fillColor = if ($frac -ge 0.9) { [System.Drawing.Color]::FromArgb(255, 90, 90) }
                                  elseif ($frac -ge 0.7) { [System.Drawing.Color]::FromArgb(255, 196, 0) }
                                  else { $accentColor }
@@ -616,13 +651,13 @@ function Show-SessionHudForm {
                 (Format-TokenCount $snap.block.cacheCreate), (Format-TokenCount $snap.block.cacheRead)), `
                 $usageFont, $brushLabel, $x, $y)
 
-            $y += 38
+            $y += 30
             $g.DrawString('TODAY/WEEK', $usageLabelFont, $brushAccent, $x, $y)
             $weekTotal = if ($usageState.Week) { Format-TokenCount ([double]$usageState.Week.total) } else { '...' }
             $g.DrawString(('{0} tokens / {1} tokens' -f (Format-TokenCount ([double]$snap.today.total)), $weekTotal), `
-                $usageFont, $brushValue, $valueX, ($y - 4))
+                $usageFont, $brushValue, $valueX, ($y - 2))
 
-            $y += 34
+            $y += 28
             # Only the biggest few models fit on one line; the rest are counted.
             $models = @($snap.byModel.PSObject.Properties | Sort-Object -Property @{ Expression = { [double]$_.Value }; Descending = $true })
             $modelParts = @()
@@ -1089,7 +1124,10 @@ function Show-SessionHudForm {
         $count = $sessions.Count
         $stamp = Get-Date -Format 'HH:mm:ss'
         if ($usageState.FetchedAt) {
-            $noteLabel.Text = ('{0} active · sessions {1} · usage {2:HH:mm:ss}' -f $count, $stamp, $usageState.FetchedAt)
+            $acctNote = if ($usageState.Account) { ' · account {0:HH:mm:ss}' -f $usageState.AccountAt }
+                        elseif ($usageState.AccountError) { ' · account: ' + $usageState.AccountError }
+                        else { '' }
+            $noteLabel.Text = ('{0} active · sessions {1} · usage {2:HH:mm:ss}' -f $count, $stamp, $usageState.FetchedAt) + $acctNote
         } else {
             $noteLabel.Text = ('{0} active · sessions {1}' -f $count, $stamp)
         }
@@ -1106,6 +1144,13 @@ function Show-SessionHudForm {
                 try { $usageState.Week = Get-Content $weekFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
             }
             $usageState.WeekAt = Get-Date
+        }
+
+        # Account-wide limits once a minute; a failed fetch keeps the last reading.
+        if (-not $usageState.AccountAt -or ((Get-Date) - $usageState.AccountAt).TotalSeconds -ge 60) {
+            try { $usageState.Account = Get-AccountUsage; $usageState.AccountError = $null }
+            catch { $usageState.AccountError = $_.Exception.Message }
+            $usageState.AccountAt = Get-Date
         }
 
         $snap = Get-UsageSnapshot -ScriptDir $ScriptDir
