@@ -13,6 +13,76 @@ $script:TranscriptPaths  = @{}
 $script:TranscriptLast   = @{}
 $script:ActivityWindow   = 60
 
+# --- task edits made from the HUD ------------------------------------------
+# A task's due date lives in tasks.md ([due:...]) and its status in
+# TaskDatabase.xlsx (Status column, matched on Items = the task title): the same
+# places the Task HUD script reads them from. Finishing goes through tasks.md -
+# tick the task and let sync-sheet.ps1 set Finished - exactly as a chat edit does.
+function Get-TaskLineTitle {
+    param([string]$Body)
+    # Same stripping as Get-UncheckedTasks, so this matches the title the HUD shows.
+    return ($Body -replace '\(added:\S+\)', '' -replace '\[due:\S+\]', '' -replace '\[priority:\S+\]', '').Trim()
+}
+
+function Edit-TaskLine {
+    param([string]$Path, [string]$Title, [scriptblock]$Change)
+    $raw = [System.IO.File]::ReadAllText($Path)
+    $bom = ((Get-Content -Path $Path -Encoding Byte -TotalCount 3) -join ',') -eq '239,187,191'
+    $lines = [regex]::Split($raw, '(?<=\n)')
+    $found = $false
+    for ($i = 0; $i -lt $lines.Count -and -not $found; $i++) {
+        $body = $lines[$i] -replace '\r?\n$', ''
+        if ($body -match '^- \[ \] (.+)$' -and (Get-TaskLineTitle $matches[1]) -eq $Title) {
+            $lines[$i] = (& $Change $body) + $lines[$i].Substring($body.Length)
+            $found = $true
+        }
+    }
+    if (-not $found) { throw 'task not found in tasks.md' }
+    [System.IO.File]::WriteAllText($Path, ($lines -join ''), (New-Object System.Text.UTF8Encoding($bom)))
+}
+
+function Set-TaskDue {
+    param([string]$Path, [string]$Title, [string]$Due)
+    Edit-TaskLine -Path $Path -Title $Title -Change {
+        param($b)
+        if ($b -match '\[due:\S+\]') { $b -replace '\[due:\S+\]', "[due:$Due]" } else { "$b [due:$Due]" }
+    }.GetNewClosure()
+}
+
+function Set-TaskChecked {
+    param([string]$Path, [string]$Title)
+    Edit-TaskLine -Path $Path -Title $Title -Change { param($b) $b -replace '^- \[ \]', '- [x]' }
+}
+
+function Start-TaskSync {
+    param([string]$SyncScript, [switch]$Wait)
+    $p = Start-Process conhost.exe -ArgumentList 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$SyncScript`"" -PassThru
+    if ($Wait) { $p.WaitForExit() }
+}
+
+function Set-TaskStatus {
+    param([string]$XlsxPath, [string]$Title, [string]$Status, [string]$SyncScript)
+    Import-Module ImportExcel -ErrorAction Stop
+    $write = {
+        $pkg = Open-ExcelPackage -Path $XlsxPath
+        try {
+            $ws = $pkg.Workbook.Worksheets[1]
+            $cols = @{}
+            for ($c = 1; $c -le $ws.Dimension.End.Column; $c++) { $cols[[string]$ws.Cells[1, $c].Text] = $c }
+            $hits = 0
+            for ($r = 2; $r -le $ws.Dimension.End.Row; $r++) {
+                if ($ws.Cells[$r, $cols['Items']].Text -eq $Title) { $ws.Cells[$r, $cols['Status']].Value = $Status; $hits++ }
+            }
+            return $hits
+        } finally { Close-ExcelPackage $pkg }
+    }
+    if ((& $write) -eq 0) {
+        # A fresh task is not in the sheet until sync-sheet.ps1 has run: run it, then write.
+        Start-TaskSync -SyncScript $SyncScript -Wait
+        if ((& $write) -eq 0) { throw 'task not found in TaskDatabase.xlsx' }
+    }
+}
+
 function Update-ActivitySamples {
     param([object[]]$Sessions)
 
@@ -236,6 +306,7 @@ function Show-SessionHudForm {
 
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes   # to pick a Windows Terminal tab
 
     if (-not ([System.Management.Automation.PSTypeName]'SessionHudNative').Type) {
         Add-Type -Namespace SessionHudNative -Name Win32 -MemberDefinition @'
@@ -245,6 +316,26 @@ function Show-SessionHudForm {
             public static extern int SendMessage(System.IntPtr hWnd, int Msg, int wParam, int lParam);
             [System.Runtime.InteropServices.DllImport("user32.dll")]
             public static extern bool SetProcessDpiAwarenessContext(System.IntPtr context);
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern bool SetForegroundWindow(System.IntPtr hWnd);
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern System.IntPtr GetForegroundWindow();
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern bool IsIconic(System.IntPtr hWnd);
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern bool ShowWindow(System.IntPtr hWnd, int cmd);
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern void keybd_event(byte vk, byte scan, int flags, int extra);
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern uint SendInput(uint count, INPUT[] inputs, int size);
+            [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+            public struct KEYBDINPUT { public ushort wVk; public ushort wScan; public uint dwFlags; public uint time; public System.IntPtr dwExtraInfo; }
+            [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+            public struct INPUT { public uint type; public KEYBDINPUT ki; public long pad; }
+            public static INPUT Key(ushort vk, ushort scan, uint flags) {
+                INPUT i = new INPUT(); i.type = 1; i.ki.wVk = vk; i.ki.wScan = scan; i.ki.dwFlags = flags; return i;
+            }
+            public static int InputSize() { return System.Runtime.InteropServices.Marshal.SizeOf(typeof(INPUT)); }
 '@
     }
     # Per-monitor DPI aware (V2), before any window exists. Otherwise, on a monitor
@@ -341,8 +432,9 @@ function Show-SessionHudForm {
     $form.Text = 'Agent Mission Control'
     $form.ShowInTaskbar = $true
     $form.StartPosition = 'CenterScreen'
-    # 1099 for the sessions side plus the 362-px task column on the left.
-    $form.Size = New-Object System.Drawing.Size(1461, 695)
+    # 1099 for the sessions side plus the 362-px task column on the left; 783 high
+    # keeps the session list as tall as before the header and input rows came.
+    $form.Size = New-Object System.Drawing.Size(1461, 783)
     $form.FormBorderStyle = 'None'
     $form.MinimumSize = New-Object System.Drawing.Size(700, 400)
     $form.TopMost = $false
@@ -626,6 +718,19 @@ function Show-SessionHudForm {
                 $grid.CurrentCell = $grid.Rows[$e.RowIndex].Cells[$e.ColumnIndex]
             }
         }
+    })
+
+    # Double-click a session: the chat box at the bottom talks to it from then on.
+    # The row's Tag holds its paragraphs; the first one is the session name.
+    $grid.Add_CellDoubleClick({
+        param($sender, $e)
+        if ($e.RowIndex -lt 0) { return }
+        $name = $grid.Rows[$e.RowIndex].Tag[0].Text
+        if (-not $name) { return }
+        $sessionTarget.Name = $name
+        $sessionInput.Caption.Text = "to $name"
+        $sessionInput.Status.Text = ''
+        $sessionInput.Box.Focus()
     })
 
     $itemPadLeft = 6
@@ -1041,6 +1146,98 @@ function Show-SessionHudForm {
     $inner.Controls.Add($grid)
     $inner.Controls.Add($scrollBar)
     $inner.Controls.Add($noteLabel)
+    # --- typing into a Claude Code tab -------------------------------------------
+    # Claude Code's TUI only takes real keyboard input (console input written
+    # into its buffer never reaches it), so: bring the Windows Terminal window to
+    # the front, select the tab through UI Automation, send the text and Enter as
+    # keystrokes, then take the focus back. Returns $null, or what went wrong.
+    $sendToTab = {
+        param([string]$TabName, [string]$Text)
+        $A = [System.Windows.Automation.AutomationElement]
+        $tabCond = New-Object System.Windows.Automation.PropertyCondition($A::ControlTypeProperty, [System.Windows.Automation.ControlType]::TabItem)
+        $tab = $null; $win = $null; $hwnd = [IntPtr]::Zero
+        foreach ($wt in @(Get-Process WindowsTerminal -ErrorAction SilentlyContinue)) {
+            $winCond = New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $wt.Id)
+            foreach ($w in $A::RootElement.FindAll('Children', $winCond)) {
+                foreach ($t in $w.FindAll('Descendants', $tabCond)) {
+                    # Claude Code prefixes the title with a status glyph, e.g. "✳ KOYO".
+                    if (($t.Current.Name -replace '^\W+', '') -eq $TabName) { $tab = $t; $win = $w; $hwnd = [IntPtr]$w.Current.NativeWindowHandle }
+                }
+            }
+        }
+        if (-not $tab) { return "no '$TabName' tab open" }
+        if ([SessionHudNative.Win32]::IsIconic($hwnd)) { [SessionHudNative.Win32]::ShowWindow($hwnd, 9) | Out-Null }
+        [SessionHudNative.Win32]::SetForegroundWindow($hwnd) | Out-Null
+        $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Start-Sleep -Milliseconds 300
+        # Selecting a tab that is already selected moves no focus, so focus the
+        # terminal pane itself: the text element named after the bare tab title.
+        $paneCond = New-Object System.Windows.Automation.PropertyCondition($A::IsTextPatternAvailableProperty, $true)
+        $pane = $win.FindAll('Descendants', $paneCond) | Where-Object { $_.Current.Name -eq $TabName } | Select-Object -First 1
+        if ($pane) { $pane.SetFocus(); Start-Sleep -Milliseconds 200 }
+        if ([SessionHudNative.Win32]::GetForegroundWindow() -ne $hwnd) { return 'could not focus the terminal' }
+        $keys = New-Object System.Collections.Generic.List[SessionHudNative.Win32+INPUT]
+        foreach ($c in $Text.ToCharArray()) {
+            $keys.Add([SessionHudNative.Win32]::Key(0, [int]$c, 0x0004))   # KEYEVENTF_UNICODE
+            $keys.Add([SessionHudNative.Win32]::Key(0, [int]$c, 0x0006))   # ... | KEYEVENTF_KEYUP
+        }
+        [SessionHudNative.Win32]::SendInput($keys.Count, $keys.ToArray(), [SessionHudNative.Win32]::InputSize()) | Out-Null
+        Start-Sleep -Milliseconds 300
+        # Enter on its own, with its hardware scan code (0x1C): without the scan
+        # code the terminal takes it as a newline inside the prompt, not a submit.
+        $enter = @([SessionHudNative.Win32]::Key(13, 0x1C, 0), [SessionHudNative.Win32]::Key(13, 0x1C, 2))
+        [SessionHudNative.Win32]::SendInput(2, $enter, [SessionHudNative.Win32]::InputSize()) | Out-Null
+        Start-Sleep -Milliseconds 250
+        # A fake Alt tap lifts the foreground lock so the HUD can take focus back.
+        [SessionHudNative.Win32]::keybd_event(0x12, 0, 0, 0); [SessionHudNative.Win32]::keybd_event(0x12, 0, 2, 0)
+        $form.Activate()
+        return $null
+    }
+
+    # Input block at the bottom of a column: a caption line (caption left, result
+    # right) over a full-width one-line box. The caller wires Enter to $sendToTab.
+    $newInputRow = {
+        param([string]$Caption)
+        $row = New-Object System.Windows.Forms.Panel
+        $row.Dock = 'Bottom'
+        $row.Height = 58
+        $row.BackColor = $barColor
+        $row.Padding = New-Object System.Windows.Forms.Padding(8, 4, 8, 6)
+        $head = New-Object System.Windows.Forms.Panel
+        $head.Dock = 'Top'
+        $head.Height = 20
+        $head.BackColor = $barColor
+        $cap = New-Object System.Windows.Forms.Label
+        $cap.Text = $Caption
+        $cap.AutoSize = $true
+        $cap.Dock = 'Left'
+        $cap.ForeColor = $accentColor
+        $cap.BackColor = $barColor
+        $cap.Font = New-Object System.Drawing.Font($termFont, 9, [System.Drawing.FontStyle]::Bold)
+        $cap.TextAlign = 'MiddleLeft'
+        $status = New-Object System.Windows.Forms.Label
+        $status.Dock = 'Fill'
+        $status.ForeColor = $noteColor
+        $status.BackColor = $barColor
+        $status.Font = New-Object System.Drawing.Font($termFont, 9, [System.Drawing.FontStyle]::Italic)
+        $status.TextAlign = 'MiddleRight'
+        $head.Controls.Add($status)
+        $head.Controls.Add($cap)
+        $box = New-Object System.Windows.Forms.TextBox
+        $box.Dock = 'Fill'
+        $box.BorderStyle = 'FixedSingle'
+        $box.BackColor = $bgColor
+        $box.ForeColor = $titleColor
+        $box.Font = New-Object System.Drawing.Font($termFont, 12)
+        $row.Controls.Add($box)
+        $row.Controls.Add($head)
+        return [PSCustomObject]@{ Row = $row; Box = $box; Status = $status; Caption = $cap }
+    }
+
+    $taskDir    = Join-Path (Split-Path $ScriptDir -Parent) 'Task Manager'
+    $xlsxPath   = Join-Path $taskDir 'TaskDatabase.xlsx'
+    $syncScript = Join-Path $taskDir 'sync-sheet.ps1'
+
     # --- task column (left) ------------------------------------------------
     # Each task is a vertical block - title, sub-items, then ">> due  status" -
     # instead of the popup's three columns, which do not fit a narrow column.
@@ -1087,8 +1284,24 @@ function Show-SessionHudForm {
     $taskNote.TextAlign = 'MiddleLeft'
     $taskNote.Padding = New-Object System.Windows.Forms.Padding(10, 0, 0, 0)
 
+    # Enter here types the line into the Task Reminder tab.
+    $taskInput = & $newInputRow 'to Task Reminder'
+    $taskInput.Box.Add_KeyDown({
+        param($sender, $e)
+        if ($e.KeyCode -ne [System.Windows.Forms.Keys]::Enter) { return }
+        $e.SuppressKeyPress = $true
+        $text = $sender.Text.Trim()
+        if (-not $text) { return }
+        $taskInput.Status.Text = 'sending...'; $taskInput.Status.Refresh()
+        $err = & $sendToTab 'Task Reminder' $text
+        if ($err) { $taskInput.Status.Text = $err } else { $sender.Clear(); $taskInput.Status.Text = 'sent ' + (Get-Date -Format 'HH:mm:ss') }
+    })
+
+    # Docking resolves from the last-added control: header on top, the input
+    # row at the very bottom, the note above it, the list fills the rest.
     $taskPanel.Controls.Add($taskBoxPad)
     $taskPanel.Controls.Add($taskNote)
+    $taskPanel.Controls.Add($taskInput.Row)
     $taskPanel.Controls.Add($taskHeader)
 
     $taskDivider = New-Object System.Windows.Forms.Panel
@@ -1102,6 +1315,7 @@ function Show-SessionHudForm {
     $taskTitleFont = New-Object System.Drawing.Font($termFont, 12)
     $taskBodyFont = New-Object System.Drawing.Font($termFont, 12)
     $taskStatusFont = New-Object System.Drawing.Font($termFont, 12, [System.Drawing.FontStyle]::Bold)
+    $taskHits = New-Object System.Collections.Generic.List[object]   # clickable due / status spans
 
     $refreshTasks = {
         if (-not (Get-Command Get-HudDisplayTasks -ErrorAction SilentlyContinue)) {
@@ -1125,6 +1339,7 @@ function Show-SessionHudForm {
         }
 
         $taskBox.Clear()
+        $taskHits.Clear()
         if ($display.Top.Count -eq 0) {
             & $addRun 'No open tasks' $noteColor $taskBodyFont
         } else {
@@ -1143,11 +1358,21 @@ function Show-SessionHudForm {
                     & $addRun '▸ ' $descColor $taskBodyFont
                     & $addRun $desc $descColor $taskBodyFont
                 }
+                # Due and status are clickable: their spans are remembered for the click handler.
                 $due = if ($task.Due) { $task.Due } else { 'no due' }
-                & $addRun ("`n>> " + ('{0,-12}' -f $due)) $noteColor $taskBodyFont
+                & $addRun "`n>> " $noteColor $taskBodyFont
+                $start = $taskBox.TextLength
+                & $addRun ('{0,-12}' -f $due) $noteColor $taskBodyFont
+                $taskHits.Add([PSCustomObject]@{ Start = $start; Length = $due.Length; Kind = 'due'; Task = $task })
+                $start = $taskBox.TextLength
                 if ($task.Status) {
                     & $addRun $task.Status (Get-HudStatusColor -Status $task.Status) $taskStatusFont
+                    $statusLen = $task.Status.Length
+                } else {
+                    & $addRun '-' $noteColor $taskStatusFont   # not in TaskDatabase.xlsx yet
+                    $statusLen = 1
                 }
+                $taskHits.Add([PSCustomObject]@{ Start = $start; Length = $statusLen; Kind = 'status'; Task = $task })
             }
         }
         $taskBox.SelectionStart = 0
@@ -1158,12 +1383,120 @@ function Show-SessionHudForm {
     $taskTimer.Interval = 30000
     $taskTimer.Add_Tick($refreshTasks)
 
+    # Click on a due date: a small calendar; pick a day and tasks.md is updated and
+    # synced. Click on a status: Pending / Ongoing / Checking / Finished.
+    # The calendar sits in its own borderless window sized to the calendar: inside
+    # a ToolStripDropDown the host resizes it and clicks land on the wrong day.
+    $dueCalendar = New-Object System.Windows.Forms.MonthCalendar
+    $dueCalendar.MaxSelectionCount = 1
+    $dueCalendar.Location = New-Object System.Drawing.Point(0, 0)
+    $duePopup = New-Object System.Windows.Forms.Form
+    $duePopup.FormBorderStyle = 'None'
+    $duePopup.ShowInTaskbar = $false
+    $duePopup.StartPosition = 'Manual'
+    $duePopup.TopMost = $true
+    $duePopup.Controls.Add($dueCalendar)
+    $duePopup.Add_Shown({ $duePopup.ClientSize = $dueCalendar.Size })
+    $duePopup.Add_Deactivate({ $duePopup.Hide() })   # click anywhere else: gone
+    $editTarget = [PSCustomObject]@{ Task = $null }
+    $dueCalendar.Add_DateSelected({
+        param($sender, $e)
+        $duePopup.Hide()
+        $task = $editTarget.Task
+        if (-not $task) { return }
+        $due = $e.Start.ToString('yyyy-MM-dd')
+        try {
+            Set-TaskDue -Path $tasksPath -Title $task.Text -Due $due
+            Start-TaskSync -SyncScript $syncScript
+            $taskNote.Text = "due set to $due"
+        } catch { $taskNote.Text = "due not saved: $($_.Exception.Message)" }
+        & $refreshTasks
+    })
+
+    $statusMenu = New-Object System.Windows.Forms.ContextMenuStrip
+    foreach ($name in 'Pending', 'Ongoing', 'Checking', 'Finished') {
+        $statusMenu.Items.Add($name).Add_Click({
+            param($sender, $e)
+            $task = $editTarget.Task
+            $status = $sender.Text
+            if (-not $task) { return }
+            try {
+                if ($status -eq 'Finished') {
+                    # Ticked in tasks.md: gone from the list at once, Finished in the sheet after sync.
+                    Set-TaskChecked -Path $tasksPath -Title $task.Text
+                    Start-TaskSync -SyncScript $syncScript
+                } else {
+                    Set-TaskStatus -XlsxPath $xlsxPath -Title $task.Text -Status $status -SyncScript $syncScript
+                }
+                $taskNote.Text = "status set to $status"
+            } catch { $taskNote.Text = "status not saved: $($_.Exception.Message)" }
+            & $refreshTasks
+        })
+    }
+
+    $taskBox.Add_MouseClick({
+        param($sender, $e)
+        # A drag leaves a selection: that is copying, not a click on a field.
+        if ($e.Button -ne [System.Windows.Forms.MouseButtons]::Left -or $taskBox.SelectionLength -gt 0) { return }
+        $idx = $taskBox.GetCharIndexFromPosition($e.Location)
+        $hit = $taskHits | Where-Object { $idx -ge $_.Start -and $idx -lt ($_.Start + $_.Length) } | Select-Object -First 1
+        if (-not $hit) { return }
+        # GetCharIndexFromPosition snaps to the nearest character, so a click in the
+        # blank below or beside the text still lands on one: the click has to be on
+        # the span's own glyphs (DejaVu Sans Mono is about 0.6 em wide).
+        $first = $taskBox.GetPositionFromCharIndex($hit.Start)
+        $last  = $taskBox.GetPositionFromCharIndex($hit.Start + $hit.Length - 1)
+        $lineH = $taskBodyFont.Height
+        if ($e.Y -lt $first.Y -or $e.Y -gt $first.Y + $lineH -or $e.X -lt $first.X -or $e.X -gt $last.X + [int]($lineH * 0.6)) { return }
+        $editTarget.Task = $hit.Task
+        $at = $taskBox.PointToScreen($e.Location)
+        if ($hit.Kind -eq 'due') {
+            $d = [datetime]::MinValue
+            $dueCalendar.SetDate($(if ($hit.Task.Due -and [datetime]::TryParseExact($hit.Task.Due, 'yyyy-MM-dd', $null, [System.Globalization.DateTimeStyles]::None, [ref]$d)) { $d } else { (Get-Date).Date }))
+            $duePopup.Location = $at
+            $duePopup.Show()
+            $duePopup.ClientSize = $dueCalendar.Size
+            $duePopup.Activate()
+        } else {
+            $statusMenu.Show($at)
+        }
+    })
+
     # --- sessions column (right) ----------------------------------------------
     $sessionsPanel = New-Object System.Windows.Forms.Panel
     $sessionsPanel.Dock = 'Fill'
     $sessionsPanel.BackColor = $bgColor
+
+    # Same header as the task column.
+    $sessionHeader = New-Object System.Windows.Forms.Label
+    $sessionHeader.Text = 'Session Monitor'
+    $sessionHeader.Dock = 'Top'
+    $sessionHeader.Height = 30
+    $sessionHeader.BackColor = $barColor
+    $sessionHeader.ForeColor = $accentColor
+    $sessionHeader.Font = New-Object System.Drawing.Font($termFont, 12, [System.Drawing.FontStyle]::Bold)
+    $sessionHeader.TextAlign = 'MiddleLeft'
+    $sessionHeader.Padding = New-Object System.Windows.Forms.Padding(8, 0, 0, 0)
+
+    # Enter here types the line into the chosen session's tab: Sessions Manager
+    # until a session in the list is double-clicked.
+    $sessionTarget = [PSCustomObject]@{ Name = 'Sessions Manager' }
+    $sessionInput = & $newInputRow 'to Sessions Manager'
+    $sessionInput.Box.Add_KeyDown({
+        param($sender, $e)
+        if ($e.KeyCode -ne [System.Windows.Forms.Keys]::Enter) { return }
+        $e.SuppressKeyPress = $true
+        $text = $sender.Text.Trim()
+        if (-not $text) { return }
+        $sessionInput.Status.Text = 'sending...'; $sessionInput.Status.Refresh()
+        $err = & $sendToTab $sessionTarget.Name $text
+        if ($err) { $sessionInput.Status.Text = $err } else { $sender.Clear(); $sessionInput.Status.Text = 'sent ' + (Get-Date -Format 'HH:mm:ss') }
+    })
+
     $sessionsPanel.Controls.Add($inner)
     $sessionsPanel.Controls.Add($usagePanel)
+    $sessionsPanel.Controls.Add($sessionInput.Row)
+    $sessionsPanel.Controls.Add($sessionHeader)
 
     # Docking resolves from the last-added control: title bar and scanline span
     # the full width, then the task column takes the left, the rest is sessions.

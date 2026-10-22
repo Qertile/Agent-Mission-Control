@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-22 – edit tasks and talk to sessions from the window
+
+### Added
+- **Agent Mission Control – task panel:** the due date is clickable (a small calendar;
+  the day is written to `tasks.md` and synced) and so is the status (Pending / Ongoing /
+  Checking / Finished written to `TaskDatabase.xlsx`; Finished ticks the task off and
+  removes it from the list at once). A chat box under the list types what you enter into
+  the `Task Reminder` tab.
+- **Agent Mission Control – sessions:** a `Session Monitor` header, and a chat box under
+  the list that types into the `Sessions Manager` tab, or into whichever session you
+  double-click. Lines reach a tab as real keystrokes (the only input Claude Code's TUI
+  takes): the terminal is brought to the front, the tab's pane focused through UI
+  Automation, the text typed, then Enter with its scan code; focus returns to the window.
+- Default window height 695 → 783 to make room for the header and the two boxes.
+
+### Fixed
+- Clicking blank space in the task panel no longer opens the calendar or status menu.
+- The calendar lives in its own window: inside a `ToolStripDropDown` clicks landed on the
+  wrong day.
+
 ## 2026-10-22 – Windows Snap, clean relaunch
 
 ### Changed

@@ -51,6 +51,18 @@ the `tasks.md` format, how tasks are ranked, and when to sync the Excel file.
 Talk to any session started in the working folder ("add a task: …", "… is done")
 and it edits `tasks.md`; the Agent Mission Control picks the change up within 30 seconds.
 
+## Working in the window
+
+- **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
+  written to `tasks.md` and synced to the Excel file.
+- **Status:** click a task's status (or `-`) for Pending / Ongoing / Checking / Finished.
+  Finished ticks the task off and it leaves the list at once.
+- **Chat boxes:** the box under the task list types what you enter into the tab named
+  `Task Reminder`; the box under the sessions into the tab named `Sessions Manager`, or
+  into any session you double-click in the list. The line is typed into that Windows
+  Terminal tab as keystrokes - the terminal comes to the front for a moment, the reply
+  appears there - so those names must exist in `agents.json` for the boxes to work.
+
 ## Daily Summary
 
 | Job | When | What it does |
@@ -123,6 +135,17 @@ when that file exists and contains the tag `#work`.
 任務如何排序，以及何時同步 Excel。在工作資料夾裡開的任何 session 直接說
 （「加個任務：…」、「…做完了」），它就會編輯 `tasks.md`；Agent Mission Control
 會在 30 秒內反映變更。
+
+## 在視窗裡操作
+
+- **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
+  並同步到 Excel。
+- **狀態**：點任務的狀態（或 `-`）選 Pending／Ongoing／Checking／Finished。
+  選 Finished 會把任務打勾，立刻從清單消失。
+- **聊天框**：任務清單下方的輸入框會把你打的那行送進名為 `Task Reminder` 的分頁；
+  session 清單下方的則送進 `Sessions Manager`，或你在清單裡雙擊的任何一個 session。
+  那行字是以鍵盤輸入的方式打進該 Windows Terminal 分頁——終端機會短暫跳到前景，
+  回覆也在那邊看——所以 `agents.json` 裡要有這些名稱，輸入框才有作用。
 
 ## 每日總結
 
