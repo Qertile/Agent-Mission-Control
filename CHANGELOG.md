@@ -7,7 +7,8 @@ All notable changes to this project are listed here, newest first.
 ### Changed
 - **One branch:** the Windows and Linux files live side by side on `master`; the
   separate `linux` branch is merged in and no longer used.
-- **README:** says so, in English and 繁體中文.
+- **README:** says so, in English and 繁體中文; the opening line names Windows and Linux,
+  and the Agents Launcher row names GNOME Terminal with tmux for Linux.
 - **Your own files out of git:** `agents.json`, `Session HUD/hud-config.json`,
   `Task Manager/tasks.md` and `Task Manager/TaskDatabase.xlsx` are no longer tracked
   (`.gitignore`), so a pull never overwrites them. The repo keeps `*.template.*` copies;

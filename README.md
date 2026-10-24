@@ -1,12 +1,12 @@
 # AI-Infra
 
-Tools for running several Claude Code sessions side by side on Windows.
+Tools for running several Claude Code sessions side by side on Windows and Linux.
 
 [繁體中文說明在下方](#ai-infra繁體中文)
 
 | Folder | What it does |
 |---|---|
-| `Agents Launcher` | Opens your Claude Code tabs in Windows Terminal, each resuming a fixed session, then starts the Agent Mission Control. |
+| `Agents Launcher` | Opens your Claude Code tabs in Windows Terminal (Linux: GNOME Terminal with tmux), each resuming a fixed session, then starts the Agent Mission Control. |
 | `Session HUD` | The Agent Mission Control window: task list, live sessions with 60-second activity, and 5-hour / weekly token usage. |
 | `Task Manager` | Task list (`tasks.md`) and task history (`TaskDatabase.xlsx`), plus an optional weekday 09:30 reminder popup. |
 
@@ -132,11 +132,11 @@ when that file exists and contains the tag `#work`.
 
 # AI-Infra（繁體中文）
 
-在 Windows 上同時執行多個 Claude Code session 的工具組。
+在 Windows 和 Linux 上同時執行多個 Claude Code session 的工具組。
 
 | 資料夾 | 功能 |
 |---|---|
-| `Agents Launcher` | 在 Windows Terminal 開出所有 Claude Code 分頁，每個分頁各自接回固定的 session，接著啟動 Agent Mission Control。 |
+| `Agents Launcher` | 在 Windows Terminal（Linux 上是 GNOME Terminal 加 tmux）開出所有 Claude Code 分頁，每個分頁各自接回固定的 session，接著啟動 Agent Mission Control。 |
 | `Session HUD` | Agent Mission Control 視窗：任務清單、各 session 的即時狀態與 60 秒活動圖，以及 5 小時／每週的 token 用量。 |
 | `Task Manager` | 任務清單（`tasks.md`）與任務歷史（`TaskDatabase.xlsx`），另有可選的平日 09:30 提醒彈窗。 |
 
