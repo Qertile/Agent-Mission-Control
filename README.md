@@ -37,7 +37,7 @@ and never overwrites it, so a `git pull` leaves your copies alone.
    templates if they are missing, puts the **Agents Launcher** shortcut on the desktop,
    and asks which scheduled jobs to register. Nothing is copied elsewhere - the tools run
    from this folder. Run it again after moving the folder.
-3. List your tabs in `agents.json` (it starts with one, `Sessions Manager`): one entry per
+3. List your tabs in `agents.json` (it starts with one, `Session Manager`): one entry per
    Claude Code session, with a name, a fixed session id (make one with
    `powershell -c "[guid]::NewGuid()"`) and the number of the Windows Terminal window it
    opens in. The launcher opens the tabs in this order, and Agent Mission Control shows
@@ -102,7 +102,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 - **Status:** click a task's status (or `-`) for Pending / Ongoing / Checking / Finished.
   Finished ticks the task off and it leaves the list at once.
 - **Chat boxes:** the box under the task list types what you enter into the tab named
-  `Task Reminder`; the box under the sessions into the tab named `Sessions Manager`, or
+  `Task Reminder`; the box under the sessions into the tab named `Session Manager`, or
   into any session you double-click in the list. The line is typed into that Windows
   Terminal tab as keystrokes - the terminal comes to the front for a moment, the reply
   appears there - so those names must exist in `agents.json` for the boxes to work.
@@ -166,7 +166,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
    `hud-config.json`、`tasks.md`、`TaskDatabase.xlsx`，就從範本建立，接著在桌面建立
    **Agents Launcher** 捷徑，並詢問要註冊哪些排程。不會把檔案複製到別處，工具直接
    從這個資料夾執行；資料夾搬家後再執行一次即可。
-3. 在 `agents.json` 列出你的分頁（一開始已有一筆 `Sessions Manager`）：每個
+3. 在 `agents.json` 列出你的分頁（一開始已有一筆 `Session Manager`）：每個
    Claude Code session 一筆，包含名稱、固定的 session id（用
    `powershell -c "[guid]::NewGuid()"` 產生），以及要開在第幾個 Windows Terminal
    視窗。launcher 依這個順序開分頁，Agent Mission Control 也依這個順序、用這些名稱顯示。
@@ -201,7 +201,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **狀態**：點任務的狀態（或 `-`）選 Pending／Ongoing／Checking／Finished。
   選 Finished 會把任務打勾，立刻從清單消失。
 - **聊天框**：任務清單下方的輸入框會把你打的那行送進名為 `Task Reminder` 的分頁；
-  session 清單下方的則送進 `Sessions Manager`，或你在清單裡雙擊的任何一個 session。
+  session 清單下方的則送進 `Session Manager`，或你在清單裡雙擊的任何一個 session。
   那行字是以鍵盤輸入的方式打進該 Windows Terminal 分頁——終端機會短暫跳到前景，
   回覆也在那邊看——所以 `agents.json` 裡要有這些名稱，輸入框才有作用。
 

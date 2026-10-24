@@ -5,6 +5,12 @@ All notable changes to this project are listed here, newest first.
 ## 2026-10-24 – Linux version
 
 ### Changed
+- **Sessions Manager → Session Manager:** the session is renamed everywhere: the
+  session chat box's caption and default target (both HUDs), the session Agent Mission
+  Control opens on first send, `Agents Launcher/prompts/Session Manager.md` (file and
+  text), `agents.template.json` and the README. Entries below keep the old name. An
+  existing `agents.json` entry (and on Linux its tmux session) is renamed by hand;
+  otherwise the chat box opens a new `Session Manager`.
 - **One branch:** the Windows and Linux files live side by side on `master`; the
   separate `linux` branch is merged in and no longer used.
 - **README:** says so, in English and 繁體中文; the opening line names Windows and Linux,
@@ -34,6 +40,10 @@ All notable changes to this project are listed here, newest first.
   `"autoOpen"` in `agents.json` (ticked when missing). The Agents Launcher opens only
   ticked sessions; Agent Mission Control started on its own opens the ticked ones that
   are not running yet. Sessions not listed in `agents.json` have it greyed out.
+- **Closing Agent Mission Control closes the agents (Linux):** closing its window ends
+  every agent tab too (the whole `tmux -L amc` server); the conversations are kept, so
+  the Agents Launcher resumes them. A new Agent Mission Control replacing a running one
+  leaves the tabs open, and Claude sessions not started in tmux are not touched.
 - **Terminate (Linux):** a session list right-click item that ends the session: its
   whole tmux session, which closes its tab, or just the Claude process when it is not
   in tmux. The conversation is kept, so the Agents Launcher can resume it later.

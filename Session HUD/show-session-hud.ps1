@@ -1554,10 +1554,10 @@ function Show-SessionHudForm {
     $sessionHeader.TextAlign = 'MiddleLeft'
     $sessionHeader.Padding = New-Object System.Windows.Forms.Padding(8, 0, 0, 0)
 
-    # Enter here types the line into the chosen session's tab: Sessions Manager
+    # Enter here types the line into the chosen session's tab: Session Manager
     # until a session in the list is double-clicked.
-    $sessionTarget = [PSCustomObject]@{ Name = 'Sessions Manager' }
-    $sessionInput = & $newInputRow 'to Sessions Manager'
+    $sessionTarget = [PSCustomObject]@{ Name = 'Session Manager' }
+    $sessionInput = & $newInputRow 'to Session Manager'
     $sessionInput.Box.Add_KeyDown({
         param($sender, $e)
         if ($e.KeyCode -ne [System.Windows.Forms.Keys]::Enter -or $e.Shift) { return }   # Shift+Enter: newline

@@ -37,7 +37,7 @@ CLAUDE_DIR = os.path.expanduser('~/.claude')
 TMUX = ['tmux', '-L', 'amc']
 LAUNCHER_DIR = os.path.join(ROOT, 'Agents Launcher')
 WORK_DIR = os.path.dirname(ROOT)                   # every agent tab starts here
-CREATE_ON_SEND = {'Sessions Manager', 'Task Reminder'}  # opened (and added to agents.json) on first send
+CREATE_ON_SEND = {'Session Manager', 'Task Reminder'}  # opened (and added to agents.json) on first send
 
 sys.path.insert(0, TASK_DIR)
 import tasks  # noqa: E402
@@ -304,6 +304,11 @@ def terminate_session(pid):
             pass
 
 
+def close_all_sessions():
+    """Ends every agent tab: the whole "amc" tmux server, so each claude ends and its tab closes."""
+    subprocess.run(TMUX + ['kill-server'], stderr=subprocess.DEVNULL)
+
+
 def set_auto_open(sid, on):
     """Marks the agents.json session `sid` to open, or not, when Agent Mission Control starts."""
     sessions = (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []
@@ -438,7 +443,7 @@ class MissionControl:
         self.usage = {'snap': None, 'fetched': None, 'failed': False, 'week': None, 'week_at': None,
                       'account': None, 'account_at': None, 'account_error': None}
         self.rows, self.layout, self.selected = [], [], None
-        self.session_target = 'Sessions Manager'
+        self.session_target = 'Session Manager'
         self.task_sig = None
 
         self.f_grid = font(12)
@@ -581,7 +586,7 @@ class MissionControl:
         panel.pack(side='left', fill='both', expand=True)
         self.header(panel, 'Session Monitor')
         self.session_caption, self.session_status, self.session_box = \
-            self.input_row(panel, 'to Sessions Manager', lambda: self.session_target)
+            self.input_row(panel, 'to Session Manager', lambda: self.session_target)
         self.usage_canvas = tk.Canvas(panel, bg=BG, height=px(140), highlightthickness=0)
         self.usage_canvas.pack(side='top', fill='x')
         self.usage_canvas.bind('<Configure>', lambda e: self.draw_usage())
@@ -1016,6 +1021,9 @@ def main():
     S = display_scale()
     root = tk.Tk(className='AgentMissionControl')
     MissionControl(root)
+    # Closing the window ends the agents too. A newer start replacing this one stops it
+    # with SIGTERM instead, which leaves the tabs alone.
+    root.protocol('WM_DELETE_WINDOW', lambda: (close_all_sessions(), root.destroy()))
     # The Agents Launcher has just opened the tabs itself and says so with --no-auto-open.
     if '--no-auto-open' not in sys.argv:
         threading.Thread(target=open_auto_sessions, daemon=True).start()
