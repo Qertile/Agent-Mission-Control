@@ -300,10 +300,8 @@ function Format-Remaining {
 function Format-Uptime {
     param([Nullable[datetime]]$Started)
     if (-not $Started) { return '' }
-    $span = (Get-Date) - $Started
-    if ($span.TotalDays -ge 1) { return ('{0}d{1}h' -f [int][Math]::Floor($span.TotalDays), $span.Hours) }
-    if ($span.TotalHours -ge 1) { return ('{0}h{1:00}m' -f [int][Math]::Floor($span.TotalHours), $span.Minutes) }
-    return ('{0}m' -f [int][Math]::Floor($span.TotalMinutes))
+    # Hours only, one decimal, no other unit: "25.1 hrs".
+    return ('{0:0.0} hrs' -f ((Get-Date) - $Started).TotalHours)
 }
 
 function Get-SessionStatusColor {
@@ -452,9 +450,9 @@ function Show-SessionHudForm {
     $form.Text = 'Agent Mission Control'
     $form.ShowInTaskbar = $true
     $form.StartPosition = 'CenterScreen'
-    # 1099 for the sessions side plus the 362-px task column on the left; 783 high
+    # 1099 for the sessions side plus the 362-px task column on the left; 805 high
     # keeps the session list as tall as before the header and input rows came.
-    $form.Size = New-Object System.Drawing.Size(1461, 783)
+    $form.Size = New-Object System.Drawing.Size(1461, 805)
     $form.FormBorderStyle = 'None'
     $form.MinimumSize = New-Object System.Drawing.Size(700, 400)
     $form.TopMost = $false
@@ -1216,23 +1214,32 @@ function Show-SessionHudForm {
         $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 300
         # Selecting a tab that is already selected moves no focus, so focus the
-        # terminal pane itself: the text element named after the bare tab title.
-        $paneCond = New-Object System.Windows.Automation.PropertyCondition($A::IsTextPatternAvailableProperty, $true)
-        $pane = $win.FindAll('Descendants', $paneCond) | Where-Object { $_.Current.Name -eq $TabName } | Select-Object -First 1
-        if ($pane) { $pane.SetFocus(); Start-Sleep -Milliseconds 200 }
+        # terminal pane itself. Only the selected tab's pane is on screen; its
+        # name is whatever title the shell last set, so it cannot be matched.
+        $paneCond = New-Object System.Windows.Automation.PropertyCondition($A::ClassNameProperty, 'TermControl')
+        $pane = $win.FindAll('Descendants', $paneCond) | Where-Object { -not $_.Current.IsOffscreen } | Select-Object -First 1
+        if (-not $pane) { return 'terminal pane not found' }
+        $pane.SetFocus(); Start-Sleep -Milliseconds 200
         if ([SessionHudNative.Win32]::GetForegroundWindow() -ne $hwnd) { return 'could not focus the terminal' }
-        $keys = New-Object System.Collections.Generic.List[SessionHudNative.Win32+INPUT]
-        foreach ($c in $Text.ToCharArray()) {
-            $keys.Add([SessionHudNative.Win32]::Key(0, [int]$c, 0x0004))   # KEYEVENTF_UNICODE
-            $keys.Add([SessionHudNative.Win32]::Key(0, [int]$c, 0x0006))   # ... | KEYEVENTF_KEYUP
-        }
-        [SessionHudNative.Win32]::SendInput($keys.Count, $keys.ToArray(), [SessionHudNative.Win32]::InputSize()) | Out-Null
-        Start-Sleep -Milliseconds 300
-        # Enter on its own, with its hardware scan code (0x1C): without the scan
-        # code the terminal takes it as a newline inside the prompt, not a submit.
+        # Enter goes on its own, with its hardware scan code (0x1C): without the
+        # scan code the terminal takes it as a newline inside the prompt, not a
+        # submit. A newline inside the text is typed the way Claude Code documents
+        # it for any terminal: a backslash, then Enter.
         $enter = @([SessionHudNative.Win32]::Key(13, 0x1C, 0), [SessionHudNative.Win32]::Key(13, 0x1C, 2))
-        [SessionHudNative.Win32]::SendInput(2, $enter, [SessionHudNative.Win32]::InputSize()) | Out-Null
-        Start-Sleep -Milliseconds 250
+        $lines = $Text -split "`r?`n"
+        for ($n = 0; $n -lt $lines.Count; $n++) {
+            $chunk = if ($n -lt $lines.Count - 1) { $lines[$n] + '\' } else { $lines[$n] }
+            $keys = New-Object System.Collections.Generic.List[SessionHudNative.Win32+INPUT]
+            foreach ($c in $chunk.ToCharArray()) {
+                $keys.Add([SessionHudNative.Win32]::Key(0, [int]$c, 0x0004))   # KEYEVENTF_UNICODE
+                $keys.Add([SessionHudNative.Win32]::Key(0, [int]$c, 0x0006))   # ... | KEYEVENTF_KEYUP
+            }
+            if ($keys.Count) { [SessionHudNative.Win32]::SendInput($keys.Count, $keys.ToArray(), [SessionHudNative.Win32]::InputSize()) | Out-Null }
+            Start-Sleep -Milliseconds 300
+            [SessionHudNative.Win32]::SendInput(2, $enter, [SessionHudNative.Win32]::InputSize()) | Out-Null
+            Start-Sleep -Milliseconds 150
+        }
+        Start-Sleep -Milliseconds 100
         # A fake Alt tap lifts the foreground lock so the HUD can take focus back.
         [SessionHudNative.Win32]::keybd_event(0x12, 0, 0, 0); [SessionHudNative.Win32]::keybd_event(0x12, 0, 2, 0)
         $form.Activate()
@@ -1240,12 +1247,13 @@ function Show-SessionHudForm {
     }
 
     # Input block at the bottom of a column: a caption line (caption left, result
-    # right) over a full-width one-line box. The caller wires Enter to $sendToTab.
+    # right) over a full-width two-line box. Enter sends, Shift+Enter is a newline;
+    # the caller wires Enter to $sendToTab.
     $newInputRow = {
         param([string]$Caption)
         $row = New-Object System.Windows.Forms.Panel
         $row.Dock = 'Bottom'
-        $row.Height = 58
+        $row.Height = 80
         $row.BackColor = $barColor
         $row.Padding = New-Object System.Windows.Forms.Padding(8, 4, 8, 6)
         $head = New-Object System.Windows.Forms.Panel
@@ -1270,13 +1278,33 @@ function Show-SessionHudForm {
         $head.Controls.Add($cap)
         $box = New-Object System.Windows.Forms.TextBox
         $box.Dock = 'Fill'
+        $box.Multiline = $true   # no scrollbar: the box follows the caret as you type
         $box.BorderStyle = 'FixedSingle'
         $box.BackColor = $bgColor
         $box.ForeColor = $titleColor
         $box.Font = New-Object System.Drawing.Font($termFont, 12)
         $row.Controls.Add($box)
         $row.Controls.Add($head)
-        return [PSCustomObject]@{ Row = $row; Box = $box; Status = $status; Caption = $cap }
+        # Up on the first line / Down on the last line walk the lines sent from
+        # this box, like a shell history; the caller appends to History on send.
+        $hist = New-Object System.Collections.Generic.List[string]
+        $state = [PSCustomObject]@{ Index = 0 }   # Index = History.Count means "a new line"
+        $box.Add_KeyDown({
+            param($sender, $e)
+            $line = $sender.GetLineFromCharIndex($sender.SelectionStart)
+            if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Up -and $line -eq 0) {
+                if ($state.Index -gt 0) { $state.Index--; $sender.Text = $hist[$state.Index]; $sender.SelectionStart = $sender.TextLength }
+                $e.SuppressKeyPress = $true
+            } elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::Down -and $line -ge $sender.GetLineFromCharIndex($sender.TextLength)) {
+                if ($state.Index -lt $hist.Count) {
+                    $state.Index++
+                    $sender.Text = if ($state.Index -lt $hist.Count) { $hist[$state.Index] } else { '' }
+                    $sender.SelectionStart = $sender.TextLength
+                }
+                $e.SuppressKeyPress = $true
+            }
+        }.GetNewClosure())
+        return [PSCustomObject]@{ Row = $row; Box = $box; Status = $status; Caption = $cap; History = $hist; State = $state }
     }
 
     $taskDir    = Join-Path (Split-Path $ScriptDir -Parent) 'Task Manager'
@@ -1333,13 +1361,16 @@ function Show-SessionHudForm {
     $taskInput = & $newInputRow 'to Task Reminder'
     $taskInput.Box.Add_KeyDown({
         param($sender, $e)
-        if ($e.KeyCode -ne [System.Windows.Forms.Keys]::Enter) { return }
+        if ($e.KeyCode -ne [System.Windows.Forms.Keys]::Enter -or $e.Shift) { return }   # Shift+Enter: newline
         $e.SuppressKeyPress = $true
         $text = $sender.Text.Trim()
         if (-not $text) { return }
         $taskInput.Status.Text = 'sending...'; $taskInput.Status.Refresh()
         $err = & $sendToTab 'Task Reminder' $text
-        if ($err) { $taskInput.Status.Text = $err } else { $sender.Clear(); $taskInput.Status.Text = 'sent ' + (Get-Date -Format 'HH:mm:ss') }
+        if ($err) { $taskInput.Status.Text = $err } else {
+            $taskInput.History.Add($text); $taskInput.State.Index = $taskInput.History.Count
+            $sender.Clear(); $taskInput.Status.Text = 'sent ' + (Get-Date -Format 'HH:mm:ss')
+        }
     })
 
     # Docking resolves from the last-added control: header on top, the input
@@ -1529,13 +1560,16 @@ function Show-SessionHudForm {
     $sessionInput = & $newInputRow 'to Sessions Manager'
     $sessionInput.Box.Add_KeyDown({
         param($sender, $e)
-        if ($e.KeyCode -ne [System.Windows.Forms.Keys]::Enter) { return }
+        if ($e.KeyCode -ne [System.Windows.Forms.Keys]::Enter -or $e.Shift) { return }   # Shift+Enter: newline
         $e.SuppressKeyPress = $true
         $text = $sender.Text.Trim()
         if (-not $text) { return }
         $sessionInput.Status.Text = 'sending...'; $sessionInput.Status.Refresh()
         $err = & $sendToTab $sessionTarget.Name $text
-        if ($err) { $sessionInput.Status.Text = $err } else { $sender.Clear(); $sessionInput.Status.Text = 'sent ' + (Get-Date -Format 'HH:mm:ss') }
+        if ($err) { $sessionInput.Status.Text = $err } else {
+            $sessionInput.History.Add($text); $sessionInput.State.Index = $sessionInput.History.Count
+            $sender.Clear(); $sessionInput.Status.Text = 'sent ' + (Get-Date -Format 'HH:mm:ss')
+        }
     })
 
     $sessionsPanel.Controls.Add($inner)
