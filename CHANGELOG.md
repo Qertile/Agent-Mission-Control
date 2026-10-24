@@ -40,6 +40,12 @@ All notable changes to this project are listed here, newest first.
   `"autoOpen"` in `agents.json` (ticked when missing). The Agents Launcher opens only
   ticked sessions; Agent Mission Control started on its own opens the ticked ones that
   are not running yet. Sessions not listed in `agents.json` have it greyed out.
+- **Web version, stage 1 prototype (`Session HUD/amc_web.py`):** one window
+  (pywebview) with terminal tabs drawn by xterm.js 5.5.0 (kept in `Session HUD/web/vendor`)
+  and a two-line chat box that types into the active tab. Each tab is a pseudo-terminal
+  the window owns - ptyprocess on Linux, ConPTY (pywinpty) on Windows - so closing the
+  window ends them. `--shell` runs shells instead of `claude`. Separate from the current
+  HUD and tabs; it does not read `agents.json` yet.
 - **Closing Agent Mission Control closes the agents (Linux):** closing its window ends
   every agent tab too (the whole `tmux -L amc` server); the conversations are kept, so
   the Agents Launcher resumes them. A new Agent Mission Control replacing a running one

@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Agent Mission Control</title>
+<link rel="stylesheet" href="vendor/xterm.css">
+<style>
+  :root { --bg: #060a06; --bar: #0a100a; --accent: #33ff66; --title: #8cff8c; --desc: #46a05a; --note: #5a9664; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--title);
+               font-family: 'DejaVu Sans Mono', Consolas, monospace; font-size: 13px; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  #tabs { display: flex; background: var(--bar); border-bottom: 1px solid var(--desc); }
+  .tab { padding: 6px 14px; cursor: pointer; color: var(--desc); border-right: 1px solid var(--bar); }
+  .tab.active { color: var(--accent); background: var(--bg); }
+  #terms { flex: 1; position: relative; min-height: 0; }
+  .term { position: absolute; inset: 4px 4px 4px 8px; visibility: hidden; }
+  .term.active { visibility: visible; }
+  #chat { background: var(--bar); padding: 5px 8px 6px; }
+  #chat-head { display: flex; justify-content: space-between; font-size: 11px; }
+  #caption { color: var(--accent); font-weight: bold; }
+  #status { color: var(--note); font-style: italic; }
+  #box { width: 100%; box-sizing: border-box; margin-top: 3px; resize: none; background: var(--bg);
+         color: var(--title); caret-color: var(--accent); border: 1px solid var(--desc); outline: none;
+         font: inherit; font-size: 15px; padding: 2px 4px; overflow: hidden; }
+  #box:focus { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="tabs"></div>
+<div id="terms"></div>
+<div id="chat">
+  <div id="chat-head"><span id="caption"></span><span id="status"></span></div>
+  <textarea id="box" rows="2"></textarea>
+</div>
+<script src="vendor/xterm.js"></script>
+<script src="vendor/addon-fit.js"></script>
+<script>
+const amc = {
+  tabs: {},            // id -> {title, term, fit, el, tabEl}
+  active: null,
+
+  output(id, data) { const t = amc.tabs[id]; if (t) t.term.write(data); },
+
+  async init() {
+    const list = await pywebview.api.start();
+    for (const {id, title} of list) amc.addTab(id, title);
+    amc.select(list[0].id);
+    new ResizeObserver(() => amc.fitActive()).observe(document.getElementById('terms'));
+  },
+
+  addTab(id, title) {
+    const tabEl = document.createElement('div');
+    tabEl.className = 'tab'; tabEl.textContent = title;
+    tabEl.onclick = () => amc.select(id);
+    document.getElementById('tabs').appendChild(tabEl);
+    const el = document.createElement('div');
+    el.className = 'term';
+    document.getElementById('terms').appendChild(el);
+    const term = new Terminal({
+      fontFamily: "'DejaVu Sans Mono', Consolas, monospace", fontSize: 14, cursorBlink: true,
+      scrollback: 5000, allowProposedApi: true,
+      theme: { background: '#060a06', foreground: '#c8e6c8', cursor: '#33ff66', selectionBackground: '#2a5a34' },
+    });
+    const fit = new FitAddon.FitAddon();
+    term.loadAddon(fit);
+    term.open(el);
+    term.onData(data => pywebview.api.write(id, data));
+    term.onResize(({cols, rows}) => pywebview.api.resize(id, cols, rows));
+    // Ctrl+Shift+C copies the selection; Ctrl+Shift+V is left to the browser's paste,
+    // which xterm.js turns into input. Plain Ctrl+C / Ctrl+V still go to the program.
+    term.attachCustomKeyEventHandler(e => {
+      if (e.type !== 'keydown' || !e.ctrlKey || !e.shiftKey) return true;
+      if (e.code === 'KeyC') { amc.copy(term.getSelection()); return false; }
+      if (e.code === 'KeyV') return false;
+      return true;
+    });
+    amc.tabs[id] = {title, term, fit, el, tabEl};
+  },
+
+  select(id) {
+    for (const [k, t] of Object.entries(amc.tabs)) {
+      t.el.classList.toggle('active', k === id);
+      t.tabEl.classList.toggle('active', k === id);
+    }
+    amc.active = id;
+    document.getElementById('caption').textContent = 'to ' + amc.tabs[id].title;
+    amc.fitActive();
+    amc.tabs[id].term.focus();
+  },
+
+  fitActive() {
+    const t = amc.tabs[amc.active];
+    if (t) t.fit.fit();
+  },
+
+  copy(text) {
+    if (!text) return;
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+    amc.tabs[amc.active].term.focus();
+  },
+};
+
+// Chat box: Enter sends to the active tab, Shift+Enter is a newline;
+// Up on the first line / Down on the last line walk what was sent from it.
+const box = document.getElementById('box'), statusEl = document.getElementById('status');
+const sent = []; let histIndex = 0;
+box.addEventListener('keydown', async e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const text = box.value.trim();
+    if (!text) return;
+    statusEl.textContent = 'sending...';
+    const err = await pywebview.api.send(amc.active, text);
+    if (err) { statusEl.textContent = err; return; }
+    sent.push(text); histIndex = sent.length;
+    box.value = '';
+    statusEl.textContent = 'sent ' + new Date().toTimeString().slice(0, 8);
+  } else if (e.key === 'ArrowUp' && !box.value.slice(0, box.selectionStart).includes('\n')) {
+    e.preventDefault();
+    if (histIndex > 0) box.value = sent[--histIndex];
+  } else if (e.key === 'ArrowDown' && !box.value.slice(box.selectionEnd).includes('\n')) {
+    e.preventDefault();
+    if (histIndex < sent.length) { histIndex++; box.value = sent[histIndex] ?? ''; }
+  }
+});
+
+if (window.pywebview && pywebview.api && pywebview.api.start) amc.init();
+else window.addEventListener('pywebviewready', () => amc.init());
+</script>
+</body>
+</html>
