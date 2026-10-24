@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Agent Mission Control, web version (stage 2): one window for everything.
+"""Agent Mission Control, web version: one window for everything. The Agents Launcher
+starts it; it replaces show-session-hud.ps1 / mission_control.py and their terminal tabs.
 
 Left, the task list; middle, account usage and the live Claude Code sessions with
 a 60-second activity sparkline each; right, a terminal tab per agents.json session,
@@ -142,7 +143,7 @@ class Api:
         threading.Thread(target=self._activity_loop, daemon=True).start()
         running = {s['sid'] for s in active_sessions()}
         for e in core.agents():
-            # A session already running elsewhere (an old tmux tab) is left there.
+            # A session already running elsewhere (another terminal) is left there.
             if e.get('autoOpen', True) and e['id'] not in running:
                 self._start(e)
         return self.tabs()

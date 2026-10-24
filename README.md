@@ -6,8 +6,8 @@ Tools for running several Claude Code sessions side by side on Windows and Linux
 
 | Folder | What it does |
 |---|---|
-| `Agents Launcher` | Opens your Claude Code tabs in Windows Terminal (Linux: GNOME Terminal with tmux), each resuming a fixed session, then starts the Agent Mission Control. |
-| `Session HUD` | The Agent Mission Control window: task list, live sessions with 60-second activity, and 5-hour / weekly token usage. |
+| `Agents Launcher` | Starts the Agent Mission Control window, which opens your Claude Code sessions as tabs inside it, each resuming a fixed session. |
+| `Session HUD` | The Agent Mission Control window (`amc_web.py`): task list, live sessions with 60-second activity, 5-hour / weekly token usage, and a terminal tab per session. |
 | `Task Manager` | Task list (`tasks.md`) and task history (`TaskDatabase.xlsx`), plus an optional weekday 09:30 reminder popup. |
 
 Windows and Linux are kept on one branch, `master`: each platform's files sit side by
@@ -20,9 +20,12 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 
 ## Requirements
 
-- Windows 10 or 11 with Windows Terminal (`wt`)
+- Windows 10 or 11
 - Claude Code CLI, with `claude` on PATH
-- Python 3 on PATH (the Agent Mission Control reads token usage with `scan-usage.py`)
+- Python 3 on PATH, with the modules `pywebview`, `pywinpty` and `openpyxl`:
+  `python -m pip install -U pywebview pywinpty openpyxl typing_extensions`
+  (Python 3.7 needs the newer `typing_extensions`, or pywebview fails with
+  `cannot import name 'Unpack'`)
 - PowerShell module ImportExcel, for task status and the Excel sync:
   `Install-Module ImportExcel -Scope CurrentUser`
 - Font DejaVu Sans Mono (the HUD's typeface)
@@ -31,17 +34,17 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 
 1. Copy the `AI-Infra` folder into the folder your Claude sessions should work in.
    That parent folder becomes every tab's working directory.
-2. Double-click `install.bat`. It checks what the tools need (Windows Terminal,
-   Claude Code, Python 3, the ImportExcel module, the DejaVu Sans Mono font), makes your
+2. Double-click `install.bat`. It checks what the tools need (Claude Code, Python 3
+   and its modules, the ImportExcel module, the DejaVu Sans Mono font), makes your
    own `agents.json`, `hud-config.json`, `tasks.md` and `TaskDatabase.xlsx` from their
    templates if they are missing, puts the **Agents Launcher** shortcut on the desktop,
    and asks which scheduled jobs to register. Nothing is copied elsewhere - the tools run
    from this folder. Run it again after moving the folder.
 3. List your tabs in `agents.json` (it starts with one, `Session Manager`): one entry per
-   Claude Code session, with a name, a fixed session id (make one with
-   `powershell -c "[guid]::NewGuid()"`) and the number of the Windows Terminal window it
-   opens in. The launcher opens the tabs in this order, and Agent Mission Control shows
-   them in this order under these names.
+   Claude Code session, with a name and a fixed session id (make one with
+   `powershell -c "[guid]::NewGuid()"`). Agent Mission Control shows them in this order
+   under these names. (`"window"` was the Windows Terminal window of the old launcher
+   and is no longer used.)
 
 ## Linux
 
@@ -53,20 +56,14 @@ reports are shared.
 |---|---|
 | `install.bat` / `install.ps1` | `./install.sh` (`--check-only` to only check) |
 | `Agents Launcher\Agents Launcher.bat` | `Agents Launcher/launch-agents.py` (desktop shortcut `Agents Launcher.desktop`) |
-| `Session HUD\show-session-hud.ps1` | `Session HUD/mission_control.py` |
+| `Session HUD\amc_web.py` | the same file |
 | `Task Manager\sync-sheet.ps1`, `show-hud.ps1` | `Task Manager/tasks.py sync`, `tasks.py popup` |
 | `Daily Summary\run-*.ps1` + Task Scheduler | `Daily Summary/jobs.py review / daily / weekly` + systemd user timers |
 
-Needs: `sudo apt install gnome-terminal tmux python3-tk python3-openpyxl fonts-dejavu-core`
+Needs: `sudo apt install python3-webview python3-ptyprocess python3-openpyxl python3-tk fonts-dejavu-core`
 and Claude Code.
 
 Differences from Windows:
-- Each tab runs its agent inside tmux (`tmux -L amc`, settings in `Agents Launcher/tmux.conf`).
-  That is how the chat boxes type into a tab, without bringing the terminal to the front.
-  Only sessions started by the Agents Launcher can be typed into. In a tab, the mouse
-  wheel scrolls back; hold Shift to select text.
-- Agent Mission Control uses the normal window frame of the desktop, so snapping,
-  maximizing and closing work as for any other window.
 - Scheduled jobs are systemd user timers (`systemctl --user list-timers 'amc-*'`). A job
   missed while the computer was off runs at the next login.
 - The OAuth token for the jobs is read from `Daily Summary/oauth-token.txt` only.
@@ -97,15 +94,26 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 
 ## Working in the window
 
+- **Tabs:** the right column has a tab per running `agents.json` session. The ones ticked
+  *Open on start* (the session list's right-click menu) start with the window; `+` starts
+  any other listed one, `×` ends one. Type into a tab as into any terminal. Closing the
+  window ends every tab; the conversations are kept and resume next time. A session
+  already running in another terminal is left there and gets no tab.
+- **Session list:** double-click a session to show its tab. Right-click for Copy,
+  Copy all rows, Open on start and Terminate.
+- **Columns:** drag the bars between the three columns to resize them; the widths are kept.
+
 - **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
   written to `tasks.md` and synced to the Excel file.
 - **Status:** click a task's status (or `-`) for Pending / Ongoing / Checking / Finished.
   Finished ticks the task off and it leaves the list at once.
-- **Chat boxes:** the box under the task list types what you enter into the tab named
-  `Task Reminder`; the box under the sessions into the tab named `Session Manager`, or
-  into any session you double-click in the list. The line is typed into that Windows
-  Terminal tab as keystrokes - the terminal comes to the front for a moment, the reply
-  appears there - so those names must exist in `agents.json` for the boxes to work.
+- **Chat box:** the box under the task list types what you enter into the `Task Reminder`
+  tab and submits it (Shift+Enter for a new line). With no `Task Reminder` yet, the first
+  send adds one to `agents.json` and opens its tab.
+
+The old windows (`Session HUD\show-session-hud.ps1`, `Session HUD/mission_control.py`) and
+the terminal tabs they worked with (`agent.bat`, `agent.sh`, `tmux.conf`) are still in the
+folder but no longer started.
 
 ## Daily Summary
 
@@ -136,8 +144,8 @@ when that file exists and contains the tag `#work`.
 
 | 資料夾 | 功能 |
 |---|---|
-| `Agents Launcher` | 在 Windows Terminal（Linux 上是 GNOME Terminal 加 tmux）開出所有 Claude Code 分頁，每個分頁各自接回固定的 session，接著啟動 Agent Mission Control。 |
-| `Session HUD` | Agent Mission Control 視窗：任務清單、各 session 的即時狀態與 60 秒活動圖，以及 5 小時／每週的 token 用量。 |
+| `Agents Launcher` | 啟動 Agent Mission Control 視窗，由它在視窗內把 Claude Code session 開成分頁，每個分頁各自接回固定的 session。 |
+| `Session HUD` | Agent Mission Control 視窗（`amc_web.py`）：任務清單、各 session 的即時狀態與 60 秒活動圖、5 小時／每週的 token 用量，以及每個 session 一個終端機分頁。 |
 | `Task Manager` | 任務清單（`tasks.md`）與任務歷史（`TaskDatabase.xlsx`），另有可選的平日 09:30 提醒彈窗。 |
 
 Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並排放在同樣的資料夾裡
@@ -150,9 +158,12 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 ## 需求
 
-- Windows 10 或 11，並安裝 Windows Terminal（`wt`）
+- Windows 10 或 11
 - Claude Code CLI，且 `claude` 在 PATH 中
-- Python 3 在 PATH 中（Agent Mission Control 用 `scan-usage.py` 讀取 token 用量）
+- Python 3 在 PATH 中，並裝好 `pywebview`、`pywinpty`、`openpyxl` 模組：
+  `python -m pip install -U pywebview pywinpty openpyxl typing_extensions`
+  （Python 3.7 要裝新版 `typing_extensions`，否則 pywebview 會出現
+  `cannot import name 'Unpack'`）
 - PowerShell 模組 ImportExcel，用於任務狀態與 Excel 同步：
   `Install-Module ImportExcel -Scope CurrentUser`
 - 字型 DejaVu Sans Mono（HUD 使用的字型）
@@ -161,15 +172,15 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 1. 把 `AI-Infra` 資料夾複製到你希望 Claude session 工作的資料夾裡。
    它的上一層資料夾就是每個分頁的工作目錄。
-2. 雙擊 `install.bat`。它會檢查工具需要的程式（Windows Terminal、Claude Code、
-   Python 3、ImportExcel 模組、DejaVu Sans Mono 字型），若還沒有 `agents.json`、
+2. 雙擊 `install.bat`。它會檢查工具需要的程式（Claude Code、Python 3 與它的模組、
+   ImportExcel 模組、DejaVu Sans Mono 字型），若還沒有 `agents.json`、
    `hud-config.json`、`tasks.md`、`TaskDatabase.xlsx`，就從範本建立，接著在桌面建立
    **Agents Launcher** 捷徑，並詢問要註冊哪些排程。不會把檔案複製到別處，工具直接
    從這個資料夾執行；資料夾搬家後再執行一次即可。
 3. 在 `agents.json` 列出你的分頁（一開始已有一筆 `Session Manager`）：每個
-   Claude Code session 一筆，包含名稱、固定的 session id（用
-   `powershell -c "[guid]::NewGuid()"` 產生），以及要開在第幾個 Windows Terminal
-   視窗。launcher 依這個順序開分頁，Agent Mission Control 也依這個順序、用這些名稱顯示。
+   Claude Code session 一筆，包含名稱和固定的 session id（用
+   `powershell -c "[guid]::NewGuid()"` 產生）。Agent Mission Control 依這個順序、用這些
+   名稱顯示。（`"window"` 是舊 launcher 的 Windows Terminal 視窗編號，已不再使用。）
 
 ## 設定
 
@@ -196,14 +207,24 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 ## 在視窗裡操作
 
+- **分頁**：右欄每個執行中的 `agents.json` session 一個分頁。勾了 *Open on start*
+  （session 清單的右鍵選單）的會隨視窗啟動；`+` 可啟動清單裡其他的 session，`×` 結束
+  一個。在分頁裡打字就跟一般終端機一樣。關掉視窗會結束所有分頁；對話會保留，下次接著
+  繼續。已經在別的終端機執行的 session 會留在原處，不會有分頁。
+- **Session 清單**：雙擊 session 會切到它的分頁。右鍵有 Copy、Copy all rows、
+  Open on start、Terminate。
+- **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
+
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
   並同步到 Excel。
 - **狀態**：點任務的狀態（或 `-`）選 Pending／Ongoing／Checking／Finished。
   選 Finished 會把任務打勾，立刻從清單消失。
-- **聊天框**：任務清單下方的輸入框會把你打的那行送進名為 `Task Reminder` 的分頁；
-  session 清單下方的則送進 `Session Manager`，或你在清單裡雙擊的任何一個 session。
-  那行字是以鍵盤輸入的方式打進該 Windows Terminal 分頁——終端機會短暫跳到前景，
-  回覆也在那邊看——所以 `agents.json` 裡要有這些名稱，輸入框才有作用。
+- **聊天框**：任務清單下方的輸入框會把你打的內容送進 `Task Reminder` 分頁並送出
+  （Shift+Enter 換行）。還沒有 `Task Reminder` 時，第一次送出會把它加進 `agents.json`
+  並開出分頁。
+
+舊視窗（`Session HUD\show-session-hud.ps1`、`Session HUD/mission_control.py`）和它們
+搭配的終端機分頁（`agent.bat`、`agent.sh`、`tmux.conf`）還留在資料夾裡，但不會再啟動。
 
 ## 每日總結
 

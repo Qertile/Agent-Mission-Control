@@ -8,6 +8,6 @@ $lnk = $sh.CreateShortcut($lnkPath)
 $lnk.TargetPath       = $target
 $lnk.WorkingDirectory = $PSScriptRoot
 $lnk.IconLocation     = '%SystemRoot%\System32\imageres.dll,144'
-$lnk.Description      = 'Open all active Claude Code agent tabs'
+$lnk.Description      = 'Open Agent Mission Control and its agent tabs'
 $lnk.Save()
 Write-Host "Shortcut created: $lnkPath"

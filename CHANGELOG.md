@@ -2,6 +2,27 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-24 – one window (web version, stage 3)
+
+### Changed
+- **Agents Launcher starts the web version:** `launch-agents.py` (Linux) and
+  `launch-agents.ps1` (Windows) now only start `Session HUD/amc_web.py`, which opens the
+  sessions ticked *Open on start* as tabs inside its window. No GNOME Terminal / tmux or
+  Windows Terminal tabs are opened. A second click replaces the running window: on Linux
+  the new window waits until the old one and its tabs have ended (up to 5 s), on Windows
+  the launcher closes it as its close button does and waits up to 10 s; the conversations
+  resume in the new window. Windows starts it with `pythonw` (no console); errors go
+  to `Session HUD/amc-web.log`, as on Linux.
+- **Old windows kept, not started:** `show-session-hud.ps1`, `mission_control.py` and the
+  tab scripts `agent.bat`, `agent.sh`, `tmux.conf` stay in the folder as a fallback.
+  `agents.json`'s `"window"` is no longer used.
+- **Install:** `install.sh` checks pywebview, ptyprocess, openpyxl and Tk (for the task
+  popup) instead of GNOME Terminal and tmux. `install.ps1` no longer checks Windows
+  Terminal; it checks the Python modules pywebview, pywinpty and openpyxl and offers to
+  install them with pip, together with a newer `typing_extensions` (Python 3.7).
+- **README** and `Task Manager/CLAUDE.md` describe the web window: tabs, `+` / `×`,
+  double-click, resizable columns, the one `Task Reminder` chat box.
+
 ## 2026-10-24 – Linux version
 
 ### Changed

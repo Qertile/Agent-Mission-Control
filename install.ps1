@@ -1,8 +1,9 @@
 <#
     One-step setup for AI-Infra on this PC. Nothing is copied anywhere - the tools
     run from this folder. Setting up means four things:
-      1. checking the programs the tools call (Windows Terminal, Claude Code,
-         Python 3, the ImportExcel PowerShell module, the DejaVu Sans Mono font);
+      1. checking the programs the tools call (Claude Code, Python 3 with
+         pywebview, pywinpty and openpyxl, the ImportExcel PowerShell module, the
+         DejaVu Sans Mono font);
       2. making your own agents.json, hud-config.json, tasks.md and TaskDatabase.xlsx
          from their templates, if they are not there yet;
       3. putting the "Agents Launcher" shortcut on the desktop;
@@ -29,8 +30,6 @@ function Report([string]$Name, [bool]$Ok, [string]$Fix) {
     else { Write-Host "  MISSING  $Name - $Fix" -ForegroundColor Yellow; $script:missing++ }
 }
 
-Report 'Windows Terminal (wt)' ([bool](Get-Command wt -ErrorAction SilentlyContinue)) `
-    'install "Windows Terminal" from the Microsoft Store.'
 Report 'Claude Code (claude)' ([bool](Get-Command claude -ErrorAction SilentlyContinue)) `
     'install Claude Code and check that "claude" runs in a new terminal.'
 # A missing Python still leaves a Microsoft Store stub named python on PATH, so
@@ -38,6 +37,22 @@ Report 'Claude Code (claude)' ([bool](Get-Command claude -ErrorAction SilentlyCo
 $pythonOk = $false
 try { $pythonOk = ((& python --version 2>&1) -join ' ') -match '^Python 3' } catch {}
 Report 'Python 3 (python)' $pythonOk 'install Python 3 from python.org and tick "Add python.exe to PATH".'
+
+# Agent Mission Control's window (pywebview), its terminal tabs (pywinpty) and the
+# task statuses (openpyxl). Python 3.7 also needs a newer typing_extensions than it
+# ships with, or pywebview fails with "cannot import name 'Unpack'".
+$pipCmd = 'python -m pip install -U pywebview pywinpty openpyxl typing_extensions'
+function PyModulesOk { try { & python -c 'import webview, winpty, openpyxl' 2>$null; return $LASTEXITCODE -eq 0 } catch { return $false } }
+if (-not $pythonOk) {
+    Report 'Python modules pywebview, pywinpty, openpyxl' $false 'install Python 3 first.'
+} elseif (PyModulesOk) {
+    Report 'Python modules pywebview, pywinpty, openpyxl' $true ''
+} elseif (-not $CheckOnly -and (Ask '  Python modules for Agent Mission Control are missing. Install them now with pip?' $true)) {
+    Invoke-Expression $pipCmd
+    Report 'Python modules pywebview, pywinpty, openpyxl' (PyModulesOk) "run: $pipCmd"
+} else {
+    Report 'Python modules pywebview, pywinpty, openpyxl' $false "run: $pipCmd"
+}
 
 if (Get-Module -ListAvailable ImportExcel) {
     Report 'PowerShell module ImportExcel' $true ''

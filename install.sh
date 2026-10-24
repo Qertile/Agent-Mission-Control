@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # One-step setup on Linux (the counterpart of install.ps1). Nothing is copied
 # anywhere - the tools run from this folder. Setting up means four things:
-#   1. checking the programs the tools call (GNOME Terminal, tmux, Claude Code,
-#      Python 3 with Tk and openpyxl, the DejaVu Sans Mono font);
+#   1. checking the programs the tools call (Claude Code, Python 3 with pywebview,
+#      ptyprocess, openpyxl and Tk, the DejaVu Sans Mono font);
 #   2. making your own agents.json, hud-config.json, tasks.md and TaskDatabase.xlsx
 #      from their templates, if they are not there yet;
 #   3. putting the "Agents Launcher" shortcut on the desktop;
@@ -30,11 +30,11 @@ has() { command -v "$1" >/dev/null 2>&1 && echo 1 || echo 0; }
 py() { python3 -c "$1" >/dev/null 2>&1 && echo 1 || echo 0; }
 
 echo -e "\n\e[36m== 1. Checking what the tools need ==\e[0m"
-report 'GNOME Terminal (gnome-terminal)' "$(has gnome-terminal)" 'sudo apt install gnome-terminal'
-report 'tmux' "$(has tmux)" 'sudo apt install tmux'
 report 'Claude Code (claude)' "$(has claude)" 'install Claude Code and check that "claude" runs in a new terminal.'
 report 'Python 3 (python3)' "$(has python3)" 'sudo apt install python3'
-report 'Python Tk (tkinter)' "$(py 'import tkinter')" 'sudo apt install python3-tk'
+report 'Python pywebview' "$(py 'import webview')" 'sudo apt install python3-webview'
+report 'Python ptyprocess' "$(py 'import ptyprocess')" 'sudo apt install python3-ptyprocess'
+report 'Python Tk (tkinter, for the task popup)' "$(py 'import tkinter')" 'sudo apt install python3-tk'
 report 'Python openpyxl' "$(py 'import openpyxl')" 'sudo apt install python3-openpyxl'
 font=0; fc-list | grep -q 'DejaVu Sans Mono' && font=1
 report 'Font DejaVu Sans Mono' "$font" 'sudo apt install fonts-dejavu-core'
@@ -64,7 +64,7 @@ cat > "$shortcut" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Agents Launcher
-Comment=Open all active Claude Code agent tabs
+Comment=Open Agent Mission Control and its agent tabs
 Exec=python3 "$root/Agents Launcher/launch-agents.py"
 Path=$root/Agents Launcher
 Icon=utilities-terminal
