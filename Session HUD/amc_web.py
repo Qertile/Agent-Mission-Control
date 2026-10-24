@@ -436,7 +436,10 @@ def main():
         from single_instance import replace_previous
         replace_previous('mission-control-web')
     api = Api()
-    window = webview.create_window('Agent Mission Control', os.path.join(HERE, 'web', 'index.html'),
+    # The browser cache outlives the window (private_mode=False), so the page's
+    # modified time in its URL makes an edited page load fresh.
+    page = os.path.join(HERE, 'web', 'index.html')
+    window = webview.create_window('Agent Mission Control', f'{page}?v={int(os.path.getmtime(page))}',
                                    js_api=api, width=1880, height=1000, min_size=(1100, 600),
                                    maximized=True, background_color='#060a06')
     api._window = window

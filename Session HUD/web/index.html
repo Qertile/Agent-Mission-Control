@@ -16,6 +16,7 @@
   .split:hover, body.dragging .split { background: var(--desc); }
   .head { background: var(--bar); color: var(--accent); font-weight: bold; padding: 5px 8px; }
   .note { color: var(--note); font-style: italic; font-size: 11px; padding: 3px 10px; min-height: 14px; }
+  #grid-msg:empty { display: none; }
   .click { cursor: pointer; }
   .click:hover { color: var(--accent); }
 
@@ -113,6 +114,7 @@
   <div id="usage"></div>
   <div id="grid-head"><div>Session</div><div>Status</div><div>5h Tok</div><div>Up</div><div>Updated</div></div>
   <div id="grid"></div>
+  <div class="note" id="grid-msg"></div>   <!-- kept until the next click; grid-note is redrawn every second -->
   <div class="note" id="grid-note"></div>
 </div>
 <div class="split" data-col="2"></div>
@@ -342,13 +344,14 @@ $('grid').addEventListener('click', e => {
   const r = rowAt(e);
   selected = r ? r.sid : null;
   drawGrid();
+  $('grid-msg').textContent = '';
   if (!r) return;
   const double = r.sid === lastClick.sid && e.timeStamp - lastClick.at < 400;
   lastClick = double ? {sid: null, at: 0} : {sid: r.sid, at: e.timeStamp};
   // Double-click a session: its tab, ready to type into.
   if (double) {
     if (r.tab) amc.select(r.sid);
-    else $('grid-note').textContent = `${r.name} runs outside this window`;
+    else $('grid-msg').textContent = `${r.name} runs outside this window`;
   }
 });
 
