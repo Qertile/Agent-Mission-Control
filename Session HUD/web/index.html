@@ -78,9 +78,23 @@
   #add-tab { padding: 6px 12px; cursor: pointer; color: var(--desc); font-weight: bold; }
   #add-tab:hover { color: var(--accent); }
   .tab.active { color: var(--accent); background: var(--bg); }
+  .tab.shown { color: var(--title); background: var(--bg); }        /* in the other side-by-side pane */
+  .tab .dot { margin-right: 6px; color: #8c96a0; }
+  .tab.attn { animation: attn 1s ease-in-out infinite alternate; }  /* finished or waiting, not on screen */
+  @keyframes attn { from { background: var(--bar); } to { background: #4a3d00; } }
+  #wide-btn { margin-left: auto; padding: 6px 12px; cursor: pointer; color: var(--desc); }
+  #wide-btn:hover, body.wide #wide-btn { color: var(--accent); }
   #terms { flex: 1; position: relative; min-height: 0; }
   .term { position: absolute; inset: 4px 4px 4px 8px; visibility: hidden; }
   .term.active { visibility: visible; }
+  /* Wide: the task and session columns are hidden and two tabs sit side by side. */
+  body.wide { grid-template-columns: 1fr; }
+  body.wide > .col:not(#term-col), body.wide > .split { display: none; }
+  body.wide .term.p0:not(.solo) { right: calc(50% + 4px); }
+  body.wide .term.p1 { left: calc(50% + 8px); }
+  body.wide.two #terms::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+                                background: var(--line); }
+  body.wide .term.focus { outline: 1px solid var(--line); outline-offset: 2px; }
   #no-tabs { color: var(--note); padding: 14px; }
 
   /* menus and the calendar */
@@ -121,8 +135,9 @@
   <div class="note" id="grid-note"></div>
 </div>
 <div class="split" data-col="2"></div>
-<div class="col">
-  <div id="tabs"><div id="add-tab" title="start a session, or a new one">+</div></div>
+<div class="col" id="term-col">
+  <div id="tabs"><div id="add-tab" title="start a session, or a new one">+</div>
+    <div id="wide-btn" title="hide the task and session columns and show two tabs side by side">⇔ side by side</div></div>
   <div id="terms"><div id="no-tabs">No session running: start one with +.</div></div>
 </div>
 
@@ -151,7 +166,11 @@ const TASK_STATUS_COLORS = {Ongoing: '#00dcff', Checking: '#ffc400'};
 const amc = {
   tabs: {},            // id -> {name, term, fit, el, tabEl, running}
   pending: {},         // output for a tab the page has not drawn yet
-  active: null,
+  active: null,        // the tab typed into
+  wide: false,         // side by side: panes[0] left, panes[1] right, panes[focus] is active
+  panes: [null, null],
+  focus: 0,
+  status: {},          // id -> last session status, to spot busy -> idle
 
   output(id, data) {
     const t = amc.tabs[id];
@@ -172,16 +191,24 @@ const amc = {
     }
     const live = list.filter(t => t.running);
     $('no-tabs').style.display = live.length ? 'none' : '';
-    if (!live.some(t => t.id === amc.active)) {
+    const isLive = id => live.some(t => t.id === id);
+    amc.panes = amc.panes.map(id => isLive(id) ? id : null);
+    if (!amc.panes[0]) amc.panes = [amc.panes[1], null];
+    if (!amc.panes[amc.focus]) amc.focus = 0;
+    if (!isLive(amc.active)) {
       amc.active = null;
-      if (live.length) amc.select(live[0].id);
+      if (amc.wide && amc.panes[0]) amc.select(amc.panes[amc.focus]);
+      else if (live.length) amc.select(live[0].id);
+      else amc.render();
+    } else {
+      amc.render();
     }
   },
 
   addTab(id, name) {
     const tabEl = document.createElement('div');
     tabEl.className = 'tab';
-    tabEl.innerHTML = `${esc(name)}<span class="x" title="end this session">×</span>`;
+    tabEl.innerHTML = `<span class="dot">●</span>${esc(name)}<span class="x" title="end this session">×</span>`;
     tabEl.onclick = e => {
       if (e.target.classList.contains('x')) api().terminate(id, 0);    // its tab goes when it ends
       else amc.select(id);
@@ -198,6 +225,7 @@ const amc = {
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
     term.open(el);
+    el.addEventListener('mousedown', () => { if (amc.tabs[id] && id !== amc.active) amc.select(id); }, true);
     term.onData(data => api().write(id, data));
     term.onResize(({cols, rows}) => api().resize(id, cols, rows));
     // Ctrl+Shift+C copies the selection; Ctrl+Shift+V is left to the browser's paste,
@@ -212,17 +240,74 @@ const amc = {
     if (amc.pending[id]) { term.write(amc.pending[id]); delete amc.pending[id]; }
   },
 
+  // Side by side, a tab already in a pane gets the focus there; any other replaces
+  // the tab in the focused pane.
   select(id) {
     const t = amc.tabs[id];
     if (!t || !t.running) return;
-    for (const [k, x] of Object.entries(amc.tabs)) {
-      x.el.classList.toggle('active', k === id);
-      x.tabEl.classList.toggle('active', k === id);
+    if (amc.wide) {
+      const at = amc.panes.indexOf(id);
+      if (at >= 0) amc.focus = at;
+      else if (!amc.panes[0]) { amc.panes[0] = id; amc.focus = 0; }
+      else if (!amc.panes[1]) { amc.panes[1] = id; amc.focus = 1; }
+      else amc.panes[amc.focus] = id;
     }
     amc.active = id;
-    t.fit.fit();
-    api().resize(id, t.term.cols, t.term.rows);
+    amc.render();
     t.term.focus();
+  },
+
+  // Which tabs are on screen and where; fits each to its pane.
+  render() {
+    const shown = amc.wide ? amc.panes.filter(Boolean) : [amc.active].filter(Boolean);
+    document.body.classList.toggle('wide', amc.wide);
+    document.body.classList.toggle('two', amc.wide && shown.length === 2);
+    for (const [k, x] of Object.entries(amc.tabs)) {
+      const pane = amc.wide ? amc.panes.indexOf(k) : (k === amc.active ? 0 : -1);
+      x.el.classList.toggle('active', pane >= 0);
+      x.el.classList.toggle('p0', pane === 0);
+      x.el.classList.toggle('p1', pane === 1);
+      x.el.classList.toggle('solo', shown.length < 2);
+      x.el.classList.toggle('focus', k === amc.active && shown.length === 2);
+      x.tabEl.classList.toggle('active', k === amc.active);
+      x.tabEl.classList.toggle('shown', pane >= 0 && k !== amc.active);
+      if (pane >= 0) x.tabEl.classList.remove('attn');
+    }
+    for (const k of shown) {
+      const x = amc.tabs[k];
+      x.fit.fit();
+      api().resize(k, x.term.cols, x.term.rows);
+    }
+  },
+
+  toggleWide() {
+    amc.wide = !amc.wide;
+    if (amc.wide) {
+      const other = Object.keys(amc.tabs).find(k => k !== amc.active && amc.tabs[k].running) || null;
+      amc.panes = [amc.active, other];
+      amc.focus = 0;
+    } else {
+      amc.active = amc.panes[amc.focus] || amc.active;
+    }
+    amc.render();
+    const t = amc.tabs[amc.active];
+    if (t) t.term.focus();
+  },
+
+  // A dot in each tab shows its session's status. A tab not on screen whose session
+  // finished (busy -> anything else) or started waiting blinks until it is shown.
+  statuses(rows) {
+    for (const r of rows) {
+      const t = amc.tabs[r.sid];
+      if (!t) continue;
+      t.tabEl.querySelector('.dot').style.color = r.color;
+      t.tabEl.title = r.status;
+      const prev = amc.status[r.sid];
+      amc.status[r.sid] = r.status;
+      const onScreen = t.el.classList.contains('active');
+      const done = prev && prev !== r.status && (prev === 'busy' || r.status === 'waiting');
+      if (done && !onScreen) t.tabEl.classList.add('attn');
+    }
   },
 
   // + lists the agents.json sessions not running; picking one starts it (it resumes
@@ -265,9 +350,9 @@ $('add-menu').addEventListener('keydown', async e => {
   await amc.syncTabs();
   amc.select(res.id);
 });
+$('wide-btn').addEventListener('click', () => amc.toggleWide());
 new ResizeObserver(() => {
-  const t = amc.tabs[amc.active];
-  if (t) t.fit.fit();
+  for (const x of Object.values(amc.tabs)) if (x.el.classList.contains('active')) x.fit.fit();
 }).observe($('terms'));
 
 function copyText(text) {
@@ -520,6 +605,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus();
 async function refresh() {
   const s = await api().snapshot();
   rows = s.rows;
+  amc.statuses(rows);
   drawGrid();
   drawUsage(s.usage);
   $('grid-note').textContent = s.note;

@@ -9,6 +9,14 @@ All notable changes to this project are listed here, newest first.
   and press Enter, and a session with that name and a new id is added to `agents.json`
   and started in a tab (with `prompts/<name>.md` as its first message when that file
   exists). A name already in `agents.json` or an empty one is refused in the menu.
+- **Status on the tabs:** each tab starts with a dot in its session's status colour
+  (busy cyan, idle green, waiting yellow; the status is its tooltip). A tab not on screen
+  whose session finishes (busy -> idle) or starts waiting blinks until it is shown.
+- **Side by side (`⇔` at the right of the tab bar):** hides the task and session columns
+  and shows two tabs next to each other at full height (about 80 columns each on a
+  1440 px screen). Clicking a tab puts it in the focused pane, or focuses it when it is
+  already shown; clicking a pane focuses it. `⇔` again goes back to three columns with the
+  focused tab shown.
 
 ### Changed
 - **Agents Launcher starts the web version:** `launch-agents.py` (Linux) and

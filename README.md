@@ -102,6 +102,11 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 - **Session list:** double-click a session to show its tab. Right-click for Copy,
   Copy all rows, Open on start and Terminate.
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
+- **Tab status:** the dot in each tab is its session's status colour (busy cyan, idle
+  green). A tab not on screen blinks when its session finishes or waits for you.
+- **Side by side:** `⇔` at the right of the tab bar hides the task and session columns and
+  shows two tabs next to each other. A tab you click goes into the focused pane (click a
+  pane to focus it); `⇔` again goes back.
 
 - **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
   written to `tasks.md` and synced to the Excel file.
@@ -214,6 +219,10 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **Session 清單**：雙擊 session 會切到它的分頁。右鍵有 Copy、Copy all rows、
   Open on start、Terminate。
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
+- **分頁狀態**：每個分頁前的圓點是 session 狀態的顏色（busy 藍、idle 綠）。不在畫面上的
+  分頁，session 跑完或在等你時會閃爍。
+- **並排**：分頁列最右邊的 `⇔` 會收起任務欄和 Session Monitor，兩個分頁左右並排。點分頁
+  會放進目前選中的那格（點一下格子即可選中）；再按 `⇔` 回到三欄。
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
   並同步到 Excel。
