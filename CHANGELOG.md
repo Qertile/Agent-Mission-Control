@@ -43,6 +43,12 @@ All notable changes to this project are listed here, newest first.
   column in decimal hours (`25.1 hrs`). The window is 805 px high, as on Windows.
 
 ### Fixed
+- **Tabs opened by Agent Mission Control (Linux):** each session it opened (Open on
+  start, or a chat box creating `Sessions Manager` / `Task Reminder`) got its own
+  window, because `gnome-terminal --tab` run outside a terminal opens a new one. It now
+  joins the window already showing an agent, found through `GNOME_TERMINAL_SCREEN` in a
+  tmux client's environment; with none shown, the first tab opens a window and the rest
+  join it.
 - **Open on start (Linux):** a ticked session still alive in tmux with no terminal
   attached (e.g. after every terminal window closed) got no tab when Agent Mission
   Control started, because it counted as running. It is now opened in a tab that

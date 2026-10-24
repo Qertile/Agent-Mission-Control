@@ -224,6 +224,38 @@ def tmux_name(name):
     return name.replace('.', '_').replace(':', '_')
 
 
+def terminal_env():
+    """The environment for a gnome-terminal call that adds its tab to the window already
+    showing an agent, or None when none is shown. gnome-terminal --tab opens a new window
+    unless GNOME_TERMINAL_SCREEN names a terminal to open beside; a tmux client of the
+    "amc" server runs in such a terminal and still has it in its environment."""
+    try:
+        out = subprocess.run(TMUX + ['list-clients', '-F', '#{client_pid}'],
+                             capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    for pid in out.split():
+        try:
+            with open(f'/proc/{pid}/environ', 'rb') as f:
+                pairs = [v.decode(errors='replace').split('=', 1) for v in f.read().split(b'\0') if b'=' in v]
+        except OSError:
+            continue
+        found = {k: v for k, v in pairs if k in ('GNOME_TERMINAL_SCREEN', 'GNOME_TERMINAL_SERVICE')}
+        if len(found) == 2:
+            return {**os.environ, **found}
+    return None
+
+
+def wait_for_client(name, timeout=5):
+    """Waits until a terminal is attached to the tmux session `name`."""
+    end = time.time() + timeout
+    while time.time() < end:
+        out = subprocess.run(TMUX + ['list-clients', '-F', '#{session_name}'], capture_output=True, text=True).stdout
+        if tmux_name(name) in out.splitlines():
+            return
+        time.sleep(0.2)
+
+
 def open_session(name):
     """Opens `name` in a terminal tab the way the Agents Launcher does, adding it to
     agents.json with a new session id first if it is not listed there yet."""
@@ -235,7 +267,7 @@ def open_session(name):
     inner = TMUX + ['-f', os.path.join(LAUNCHER_DIR, 'tmux.conf'), 'new-session', '-A', '-s', tmux_name(name),
                     '-c', WORK_DIR, os.path.join(LAUNCHER_DIR, 'agent.sh'), entry['id'], name]
     subprocess.Popen(['gnome-terminal', '--tab', f'--title={name}', f'--working-directory={WORK_DIR}', '--', *inner],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=terminal_env())
 
 
 def open_auto_sessions():
@@ -255,7 +287,8 @@ def open_auto_sessions():
         elif s.get('id') in running:
             continue          # running outside tmux, nothing to attach to
         open_session(s['name'])
-        time.sleep(0.5)       # keep the tabs in agents.json order
+        # The next tab joins this one's window, and keeps agents.json order.
+        wait_for_client(s['name'])
 
 
 def terminate_session(pid):
