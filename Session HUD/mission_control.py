@@ -37,7 +37,7 @@ CLAUDE_DIR = os.path.expanduser('~/.claude')
 TMUX = ['tmux', '-L', 'amc']
 LAUNCHER_DIR = os.path.join(ROOT, 'Agents Launcher')
 WORK_DIR = os.path.dirname(ROOT)                   # every agent tab starts here
-CREATE_ON_SEND = {'Sessions Manager'}              # opened (and added to agents.json) on first send
+CREATE_ON_SEND = {'Sessions Manager', 'Task Reminder'}  # opened (and added to agents.json) on first send
 
 sys.path.insert(0, TASK_DIR)
 import tasks  # noqa: E402

@@ -24,6 +24,11 @@ All notable changes to this project are listed here, newest first.
 - **Sessions Manager default prompt:** on a session's first run, `agent.sh` sends
   `Agents Launcher/prompts/<name>.md` as its first message, so a new `Sessions Manager`
   starts knowing its job; resumed sessions are not sent it again.
+- **Task Reminder session (Linux):** the first message sent from the task chat box
+  opens a `Task Reminder` tab when there is none and adds it to `agents.json`, as the
+  session chat box does for `Sessions Manager`. Its first run gets
+  `Agents Launcher/prompts/Task Reminder.md`: read `Task Manager/CLAUDE.md` and keep the
+  task list from then on.
 - **Open on start (Linux):** a tick in the session list's right-click menu, kept as
   `"autoOpen"` in `agents.json` (ticked when missing). The Agents Launcher opens only
   ticked sessions; Agent Mission Control started on its own opens the ticked ones that
