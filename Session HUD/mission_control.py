@@ -243,14 +243,21 @@ def open_session(name):
 
 
 def open_auto_sessions():
-    """Opens every agents.json session marked "autoOpen" (the default) that is not running yet."""
+    """Opens every agents.json session marked "autoOpen" (the default) that has no tab: not
+    running yet, or still alive in tmux with no terminal attached (re-attached, not restarted)."""
     running = {s['sid'] for s in active_sessions()}
+    out = subprocess.run(TMUX + ['list-sessions', '-F', '#{session_attached} #{session_name}'],
+                         capture_output=True, text=True).stdout       # empty when no tmux server
+    attached = {line.split(' ', 1)[1]: line.split(' ', 1)[0] != '0' for line in out.splitlines()}
     for s in (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []:
-        if not s.get('autoOpen', True) or s.get('id') in running:
+        if not s.get('autoOpen', True):
             continue
-        if subprocess.run(TMUX + ['has-session', '-t', '=' + tmux_name(s['name'])],
-                          stderr=subprocess.DEVNULL).returncode == 0:
-            continue
+        name = tmux_name(s['name'])
+        if name in attached:
+            if attached[name]:
+                continue      # already shown in a tab
+        elif s.get('id') in running:
+            continue          # running outside tmux, nothing to attach to
         open_session(s['name'])
         time.sleep(0.5)       # keep the tabs in agents.json order
 

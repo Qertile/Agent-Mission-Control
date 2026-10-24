@@ -18,6 +18,13 @@ All notable changes to this project are listed here, newest first.
   ticked sessions; Agent Mission Control started on its own opens the ticked ones that
   are not running yet. Sessions not listed in `agents.json` have it greyed out.
 
+### Fixed
+- **Open on start (Linux):** a ticked session still alive in tmux with no terminal
+  attached (e.g. after every terminal window closed) got no tab when Agent Mission
+  Control started, because it counted as running. It is now opened in a tab that
+  re-attaches to the tmux session, so Claude is not restarted. Sessions already shown in
+  a tab, or running outside tmux, are still skipped.
+
 ## 2026-10-22 – account-wide usage
 
 ### Changed
