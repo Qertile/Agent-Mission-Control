@@ -166,6 +166,22 @@ class Api:
             return str(e)
         return None
 
+    def new_session(self, name):
+        """Adds a session named `name` with a new id to agents.json and starts its tab.
+        Returns {'id': ...} or {'error': ...}."""
+        name = ' '.join(str(name).split())
+        if not name:
+            return {'error': 'type a name'}
+        if any(e['name'] == name for e in core.agents()):
+            return {'error': f"'{name}' is already in agents.json"}
+        entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1}
+        core.save_agents(core.agents() + [entry])
+        try:
+            self._start(entry)
+        except Exception as e:
+            return {'error': str(e)}
+        return {'id': entry['id']}
+
     def write(self, tid, data):
         term = self._terms.get(tid)
         if term:

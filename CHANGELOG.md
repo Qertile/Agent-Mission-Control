@@ -4,6 +4,12 @@ All notable changes to this project are listed here, newest first.
 
 ## 2026-10-24 – one window (web version, stage 3)
 
+### Added
+- **New session from `+`:** the tab bar's `+` menu ends with *New session…*: type a name
+  and press Enter, and a session with that name and a new id is added to `agents.json`
+  and started in a tab (with `prompts/<name>.md` as its first message when that file
+  exists). A name already in `agents.json` or an empty one is refused in the menu.
+
 ### Changed
 - **Agents Launcher starts the web version:** `launch-agents.py` (Linux) and
   `launch-agents.ps1` (Windows) now only start `Session HUD/amc_web.py`, which opens the
@@ -20,8 +26,10 @@ All notable changes to this project are listed here, newest first.
   popup) instead of GNOME Terminal and tmux. `install.ps1` no longer checks Windows
   Terminal; it checks the Python modules pywebview, pywinpty and openpyxl and offers to
   install them with pip, together with a newer `typing_extensions` (Python 3.7).
-- **Linux desktop shortcut:** `install.sh` names it `Agent Mission Control` (with the
-  window's own icon) instead of `Agents Launcher`; it still runs `launch-agents.py`.
+- **Desktop shortcut:** named `Agent Mission Control` instead of `Agents Launcher`; it
+  still runs the Agents Launcher. On Linux (`install.sh`) it has the window's own icon; on
+  Windows (`create-shortcut.ps1`) the old `Agents Launcher.lnk` is removed when it points
+  at this folder's launcher.
 - **README** and `Task Manager/CLAUDE.md` describe the web window: tabs, `+` / `×`,
   double-click, resizable columns, the one `Task Reminder` chat box.
 

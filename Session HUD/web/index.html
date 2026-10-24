@@ -90,6 +90,9 @@
   .menu div:hover { background: var(--bg); color: var(--accent); }
   .menu div.disabled { color: #3a5a40; pointer-events: none; }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
+  .menu input { margin: 3px 8px; width: 180px; background: var(--bg); color: var(--title);
+                border: 1px solid var(--desc); font: inherit; padding: 2px 4px; outline: none; }
+  .menu .err { color: #ff6b6b; cursor: default; padding: 0 10px 3px; font-size: 11px; }
   #cal { position: fixed; z-index: 10; background: var(--bar); border: 1px solid var(--desc); padding: 6px;
          display: none; font-size: 12px; }
   #cal .nav { display: flex; justify-content: space-between; color: var(--accent); margin-bottom: 4px; }
@@ -119,7 +122,7 @@
 </div>
 <div class="split" data-col="2"></div>
 <div class="col">
-  <div id="tabs"><div id="add-tab" title="start a session from agents.json">+</div></div>
+  <div id="tabs"><div id="add-tab" title="start a session, or a new one">+</div></div>
   <div id="terms"><div id="no-tabs">No session running: start one with +.</div></div>
 </div>
 
@@ -234,15 +237,33 @@ const amc = {
 $('add-tab').addEventListener('click', e => {
   e.stopPropagation();
   const m = $('add-menu');
-  m.innerHTML = (amc.stopped || []).length
+  m.innerHTML = ((amc.stopped || []).length
     ? amc.stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)}</div>`).join('')
-    : '<div class="disabled">every session is running</div>';
+    : '<div class="disabled">every session is running</div>') +
+    '<hr><div data-new="1">New session…</div>';
   const r = $('add-tab').getBoundingClientRect();
   showAt(m, r.left, r.bottom);
 });
 $('add-menu').addEventListener('click', e => {
+  // New session: the menu turns into a name box; Enter adds it to agents.json and starts it.
+  if (e.target.dataset.new) {
+    e.stopPropagation();
+    $('add-menu').innerHTML = '<input id="new-name" placeholder="name, then Enter" spellcheck="false">' +
+                              '<div class="err" id="new-err"></div>';
+    $('new-name').focus();
+    return;
+  }
+  if (e.target.closest('input, .err')) { e.stopPropagation(); return; }
   hideMenus();
   if (e.target.dataset.id) amc.start(e.target.dataset.id);
+});
+$('add-menu').addEventListener('keydown', async e => {
+  if (e.target.id !== 'new-name' || e.key !== 'Enter') return;
+  const res = await api().new_session(e.target.value);
+  if (res.error) { $('new-err').textContent = res.error; return; }
+  hideMenus();
+  await amc.syncTabs();
+  amc.select(res.id);
 });
 new ResizeObserver(() => {
   const t = amc.tabs[amc.active];

@@ -37,7 +37,7 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 2. Double-click `install.bat`. It checks what the tools need (Claude Code, Python 3
    and its modules, the ImportExcel module, the DejaVu Sans Mono font), makes your
    own `agents.json`, `hud-config.json`, `tasks.md` and `TaskDatabase.xlsx` from their
-   templates if they are missing, puts the **Agents Launcher** shortcut on the desktop,
+   templates if they are missing, puts the **Agent Mission Control** shortcut on the desktop,
    and asks which scheduled jobs to register. Nothing is copied elsewhere - the tools run
    from this folder. Run it again after moving the folder.
 3. List your tabs in `agents.json` (it starts with one, `Session Manager`): one entry per
@@ -175,7 +175,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 2. 雙擊 `install.bat`。它會檢查工具需要的程式（Claude Code、Python 3 與它的模組、
    ImportExcel 模組、DejaVu Sans Mono 字型），若還沒有 `agents.json`、
    `hud-config.json`、`tasks.md`、`TaskDatabase.xlsx`，就從範本建立，接著在桌面建立
-   **Agents Launcher** 捷徑，並詢問要註冊哪些排程。不會把檔案複製到別處，工具直接
+   **Agent Mission Control** 捷徑，並詢問要註冊哪些排程。不會把檔案複製到別處，工具直接
    從這個資料夾執行；資料夾搬家後再執行一次即可。
 3. 在 `agents.json` 列出你的分頁（一開始已有一筆 `Session Manager`）：每個
    Claude Code session 一筆，包含名稱和固定的 session id（用

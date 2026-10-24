@@ -1,7 +1,8 @@
-﻿# Puts an "Agents Launcher" shortcut on the desktop that points at the
+﻿# Puts an "Agent Mission Control" shortcut on the desktop that points at the
 # launcher in this folder, wherever AI-Infra was copied to.
 $target  = Join-Path $PSScriptRoot 'Agents Launcher.bat'
-$lnkPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Agents Launcher.lnk'
+$desktop = [Environment]::GetFolderPath('Desktop')
+$lnkPath = Join-Path $desktop 'Agent Mission Control.lnk'
 
 $sh  = New-Object -ComObject WScript.Shell
 $lnk = $sh.CreateShortcut($lnkPath)
@@ -10,4 +11,11 @@ $lnk.WorkingDirectory = $PSScriptRoot
 $lnk.IconLocation     = '%SystemRoot%\System32\imageres.dll,144'
 $lnk.Description      = 'Open Agent Mission Control and its agent tabs'
 $lnk.Save()
+
+# The shortcut used to be called "Agents Launcher"; remove that one when it points here.
+$oldPath = Join-Path $desktop 'Agents Launcher.lnk'
+if ((Test-Path $oldPath) -and $sh.CreateShortcut($oldPath).TargetPath -eq $target) {
+    Remove-Item $oldPath
+    Write-Host "Old shortcut removed: $oldPath"
+}
 Write-Host "Shortcut created: $lnkPath"

@@ -6,7 +6,7 @@
          DejaVu Sans Mono font);
       2. making your own agents.json, hud-config.json, tasks.md and TaskDatabase.xlsx
          from their templates, if they are not there yet;
-      3. putting the "Agents Launcher" shortcut on the desktop;
+      3. putting the "Agent Mission Control" shortcut on the desktop;
       4. registering the scheduled jobs you choose with Windows Task Scheduler.
     Run it again after moving the folder: the shortcut and jobs are re-pointed.
 
@@ -103,4 +103,4 @@ if (Ask 'Also register the standalone task popup on weekdays at 09:30? (Tasks al
 
 Write-Host "`nDone." -ForegroundColor Green
 if ($missing -gt 0) { Write-Host "$missing item(s) above are still missing - fix them before using the tools." -ForegroundColor Yellow }
-Write-Host 'Next: list your tabs in agents.json, then double-click "Agents Launcher" on the desktop.'
+Write-Host 'Next: list your tabs in agents.json, then double-click "Agent Mission Control" on the desktop.'
