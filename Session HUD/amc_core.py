@@ -1,6 +1,6 @@
-"""What both Agent Mission Control windows share: paths, agents.json, the Claude Code
-session registry, account usage and number formats. No UI and no tmux here, and
-nothing Linux-only, so the web version runs it on Windows too."""
+"""Agent Mission Control's data side: paths, agents.json, the Claude Code session
+registry, account usage and number formats. No UI here, and nothing Linux-only, so it
+runs on Windows too."""
 
 import glob
 import json

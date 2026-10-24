@@ -27,9 +27,10 @@ All notable changes to this project are listed here, newest first.
   the launcher closes it as its close button does and waits up to 10 s; the conversations
   resume in the new window. Windows starts it with `pythonw` (no console); errors go
   to `Session HUD/amc-web.log`, as on Linux.
-- **Old windows kept, not started:** `show-session-hud.ps1`, `mission_control.py` and the
-  tab scripts `agent.bat`, `agent.sh`, `tmux.conf` stay in the folder as a fallback.
-  `agents.json`'s `"window"` is no longer used.
+- **Old windows removed:** `show-session-hud.ps1`, `mission_control.py` and the tab
+  scripts `agent.bat`, `agent.sh`, `tmux.conf` are deleted now that the web version runs
+  on both Windows and Linux (they are kept in the `v1.0` tag). `agents.json`'s `"window"`
+  is no longer used.
 - **Install:** `install.sh` checks pywebview, ptyprocess, openpyxl and Tk (for the task
   popup) instead of GNOME Terminal and tmux. `install.ps1` no longer checks Windows
   Terminal; it checks the Python modules pywebview, pywinpty and openpyxl and offers to

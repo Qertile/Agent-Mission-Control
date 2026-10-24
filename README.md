@@ -116,10 +116,6 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   tab and submits it (Shift+Enter for a new line). With no `Task Reminder` yet, the first
   send adds one to `agents.json` and opens its tab.
 
-The old windows (`Session HUD\show-session-hud.ps1`, `Session HUD/mission_control.py`) and
-the terminal tabs they worked with (`agent.bat`, `agent.sh`, `tmux.conf`) are still in the
-folder but no longer started.
-
 ## Daily Summary
 
 | Job | When | What it does |
@@ -231,9 +227,6 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **聊天框**：任務清單下方的輸入框會把你打的內容送進 `Task Reminder` 分頁並送出
   （Shift+Enter 換行）。還沒有 `Task Reminder` 時，第一次送出會把它加進 `agents.json`
   並開出分頁。
-
-舊視窗（`Session HUD\show-session-hud.ps1`、`Session HUD/mission_control.py`）和它們
-搭配的終端機分頁（`agent.bat`、`agent.sh`、`tmux.conf`）還留在資料夾裡，但不會再啟動。
 
 ## 每日總結
 

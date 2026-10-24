@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Agent Mission Control, web version: one window for everything. The Agents Launcher
-starts it; it replaces show-session-hud.ps1 / mission_control.py and their terminal tabs.
+"""Agent Mission Control: one window for everything. The Agents Launcher starts it.
 
 Left, the task list; middle, account usage and the live Claude Code sessions with
 a 60-second activity sparkline each; right, a terminal tab per agents.json session,
@@ -57,8 +56,8 @@ def arg_value(flag):
 
 
 def agent_argv(entry):
-    """The command a tab runs for the agents.json entry: the Agents Launcher's agent.sh /
-    agent.bat in Python. First run creates the session with its fixed id and, when
+    """The command a tab runs for the agents.json entry. First run creates the
+    session with its fixed id and, when
     Agents Launcher/prompts/<name>.md exists, sends that file as its first message;
     later runs resume the same conversation. --name pins the name in the registry."""
     if '--shell' in sys.argv:
@@ -399,7 +398,7 @@ class Api:
             time.sleep(15)
 
     def _usage_view(self):
-        """The usage panel as text and pie fractions, the way the Tk HUD draws it."""
+        """The usage panel as text and pie fractions."""
         u, snap = self._usage, self._usage['snap']
         if not snap:
             return {'message': 'USAGE  scanner unavailable (needs python3)' if u['failed'] else 'USAGE  scanning...'}

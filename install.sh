@@ -38,7 +38,7 @@ report 'Python Tk (tkinter, for the task popup)' "$(py 'import tkinter')" 'sudo 
 report 'Python openpyxl' "$(py 'import openpyxl')" 'sudo apt install python3-openpyxl'
 font=0; fc-list | grep -q 'DejaVu Sans Mono' && font=1
 report 'Font DejaVu Sans Mono' "$font" 'sudo apt install fonts-dejavu-core'
-chmod +x "$root/Agents Launcher/agent.sh" "$root/Agents Launcher/launch-agents.py" "$root/Daily Summary/jobs.py"
+chmod +x "$root/Agents Launcher/launch-agents.py" "$root/Daily Summary/jobs.py"
 
 if [ "$1" = --check-only ]; then
     echo -e "\n$missing item(s) missing. --check-only: nothing was changed."
