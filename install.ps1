@@ -1,10 +1,12 @@
 <#
     One-step setup for AI-Infra on this PC. Nothing is copied anywhere - the tools
-    run from this folder. Setting up means three things:
+    run from this folder. Setting up means four things:
       1. checking the programs the tools call (Windows Terminal, Claude Code,
          Python 3, the ImportExcel PowerShell module, the DejaVu Sans Mono font);
-      2. putting the "Agents Launcher" shortcut on the desktop;
-      3. registering the scheduled jobs you choose with Windows Task Scheduler.
+      2. making your own agents.json, hud-config.json, tasks.md and TaskDatabase.xlsx
+         from their templates, if they are not there yet;
+      3. putting the "Agents Launcher" shortcut on the desktop;
+      4. registering the scheduled jobs you choose with Windows Task Scheduler.
     Run it again after moving the folder: the shortcut and jobs are re-pointed.
 
     -CheckOnly stops after step 1 and changes nothing.
@@ -57,10 +59,26 @@ if ($CheckOnly) {
     return
 }
 
-Write-Host "`n== 2. Desktop shortcut ==" -ForegroundColor Cyan
+Write-Host "`n== 2. Your own files ==" -ForegroundColor Cyan
+# Kept out of git (.gitignore), so a pull never overwrites them; an existing one is left alone.
+function FromTemplate([string]$File, [string]$Template) {
+    if (Test-Path (Join-Path $root $File)) { Write-Host "  Kept     $File"; return $false }
+    Copy-Item (Join-Path $root $Template) (Join-Path $root $File)
+    Write-Host "  Created  $File"
+    return $true
+}
+if (FromTemplate 'agents.json' 'agents.template.json') {
+    $agents = Join-Path $root 'agents.json'
+    [IO.File]::WriteAllText($agents, ([IO.File]::ReadAllText($agents) -replace '__NEW_ID__', [guid]::NewGuid()))
+}
+FromTemplate 'Session HUD\hud-config.json' 'Session HUD\hud-config.template.json' | Out-Null
+FromTemplate 'Task Manager\tasks.md' 'Task Manager\tasks.template.md' | Out-Null
+FromTemplate 'Task Manager\TaskDatabase.xlsx' 'Task Manager\TaskDatabase.template.xlsx' | Out-Null
+
+Write-Host "`n== 3. Desktop shortcut ==" -ForegroundColor Cyan
 & (Join-Path $root 'Agents Launcher\create-shortcut.ps1')
 
-Write-Host "`n== 3. Scheduled jobs ==" -ForegroundColor Cyan
+Write-Host "`n== 4. Scheduled jobs ==" -ForegroundColor Cyan
 if (Ask 'Register the daily review (weekdays 09:30), daily summary (weekdays 19:00) and weekly summary (Fridays 19:30)?' $true) {
     & (Join-Path $root 'Daily Summary\setup-schedule.ps1')
 }

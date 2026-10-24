@@ -7,6 +7,13 @@ All notable changes to this project are listed here, newest first.
 ### Changed
 - **One branch:** the Windows and Linux files live side by side on `master`; the
   separate `linux` branch is merged in and no longer used.
+- **README:** says so, in English and 繁體中文.
+- **Your own files out of git:** `agents.json`, `Session HUD/hud-config.json`,
+  `Task Manager/tasks.md` and `Task Manager/TaskDatabase.xlsx` are no longer tracked
+  (`.gitignore`), so a pull never overwrites them. The repo keeps `*.template.*` copies;
+  `install.sh` / `install.ps1` make the real files from them when missing (a new session
+  id for `agents.json`) and leave existing ones alone. README setup steps: install
+  first, then list your tabs.
 
 ### Added
 - **Linux:** the same tools run on Linux (tested on Linux Mint 22 / Cinnamon, X11) from

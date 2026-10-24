@@ -10,6 +10,14 @@ Tools for running several Claude Code sessions side by side on Windows.
 | `Session HUD` | The Agent Mission Control window: task list, live sessions with 60-second activity, and 5-hour / weekly token usage. |
 | `Task Manager` | Task list (`tasks.md`) and task history (`TaskDatabase.xlsx`), plus an optional weekday 09:30 reminder popup. |
 
+Windows and Linux are kept on one branch, `master`: each platform's files sit side by
+side in the same folders (see [Linux](#linux)), so there is no separate Linux branch.
+
+Your own lists and settings - `agents.json`, `Session HUD/hud-config.json`,
+`Task Manager/tasks.md` and `Task Manager/TaskDatabase.xlsx` - are not in git
+(`.gitignore`). The installer makes each one from its `*.template.*` file the first time
+and never overwrites it, so a `git pull` leaves your copies alone.
+
 ## Requirements
 
 - Windows 10 or 11 with Windows Terminal (`wt`)
@@ -23,14 +31,17 @@ Tools for running several Claude Code sessions side by side on Windows.
 
 1. Copy the `AI-Infra` folder into the folder your Claude sessions should work in.
    That parent folder becomes every tab's working directory.
-2. List your tabs in `agents.json`: one entry per Claude Code session, with a name, a
-   fixed session id (make one with `powershell -c "[guid]::NewGuid()"`) and the number of
-   the Windows Terminal window it opens in. The launcher opens the tabs in this order,
-   and Agent Mission Control shows them in this order under these names.
-3. Double-click `install.bat`. It checks what the tools need (Windows Terminal,
-   Claude Code, Python 3, the ImportExcel module, the DejaVu Sans Mono font), puts the
-   **Agents Launcher** shortcut on the desktop, and asks which scheduled jobs to register.
-   Nothing is copied - the tools run from this folder. Run it again after moving the folder.
+2. Double-click `install.bat`. It checks what the tools need (Windows Terminal,
+   Claude Code, Python 3, the ImportExcel module, the DejaVu Sans Mono font), makes your
+   own `agents.json`, `hud-config.json`, `tasks.md` and `TaskDatabase.xlsx` from their
+   templates if they are missing, puts the **Agents Launcher** shortcut on the desktop,
+   and asks which scheduled jobs to register. Nothing is copied elsewhere - the tools run
+   from this folder. Run it again after moving the folder.
+3. List your tabs in `agents.json` (it starts with one, `Sessions Manager`): one entry per
+   Claude Code session, with a name, a fixed session id (make one with
+   `powershell -c "[guid]::NewGuid()"`) and the number of the Windows Terminal window it
+   opens in. The launcher opens the tabs in this order, and Agent Mission Control shows
+   them in this order under these names.
 
 ## Linux
 
@@ -129,6 +140,14 @@ when that file exists and contains the tag `#work`.
 | `Session HUD` | Agent Mission Control 視窗：任務清單、各 session 的即時狀態與 60 秒活動圖，以及 5 小時／每週的 token 用量。 |
 | `Task Manager` | 任務清單（`tasks.md`）與任務歷史（`TaskDatabase.xlsx`），另有可選的平日 09:30 提醒彈窗。 |
 
+Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並排放在同樣的資料夾裡
+（對照表見英文的 [Linux](#linux) 一節），沒有另外的 Linux 分支。
+
+你自己的清單和設定——`agents.json`、`Session HUD/hud-config.json`、
+`Task Manager/tasks.md`、`Task Manager/TaskDatabase.xlsx`——不放在 git 裡
+（`.gitignore`）。安裝程式第一次執行時，會從各自的 `*.template.*` 範本建立，之後
+不會再覆蓋，所以 `git pull` 不會動到你的檔案。
+
 ## 需求
 
 - Windows 10 或 11，並安裝 Windows Terminal（`wt`）
@@ -142,14 +161,15 @@ when that file exists and contains the tag `#work`.
 
 1. 把 `AI-Infra` 資料夾複製到你希望 Claude session 工作的資料夾裡。
    它的上一層資料夾就是每個分頁的工作目錄。
-2. 在 `agents.json` 列出你的分頁：每個 Claude Code session 一筆，包含名稱、固定的
-   session id（用 `powershell -c "[guid]::NewGuid()"` 產生），以及要開在第幾個
-   Windows Terminal 視窗。launcher 依這個順序開分頁，Agent Mission Control 也依這個
-   順序、用這些名稱顯示。
-3. 雙擊 `install.bat`。它會檢查工具需要的程式（Windows Terminal、Claude Code、
-   Python 3、ImportExcel 模組、DejaVu Sans Mono 字型），在桌面建立
-   **Agents Launcher** 捷徑，並詢問要註冊哪些排程。不會複製任何檔案，工具直接
+2. 雙擊 `install.bat`。它會檢查工具需要的程式（Windows Terminal、Claude Code、
+   Python 3、ImportExcel 模組、DejaVu Sans Mono 字型），若還沒有 `agents.json`、
+   `hud-config.json`、`tasks.md`、`TaskDatabase.xlsx`，就從範本建立，接著在桌面建立
+   **Agents Launcher** 捷徑，並詢問要註冊哪些排程。不會把檔案複製到別處，工具直接
    從這個資料夾執行；資料夾搬家後再執行一次即可。
+3. 在 `agents.json` 列出你的分頁（一開始已有一筆 `Sessions Manager`）：每個
+   Claude Code session 一筆，包含名稱、固定的 session id（用
+   `powershell -c "[guid]::NewGuid()"` 產生），以及要開在第幾個 Windows Terminal
+   視窗。launcher 依這個順序開分頁，Agent Mission Control 也依這個順序、用這些名稱顯示。
 
 ## 設定
 

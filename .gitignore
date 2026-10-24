@@ -10,3 +10,10 @@ Session HUD/week-usage.json.tmp
 Session HUD/*.log
 __pycache__/
 *.pyc
+
+# Your own lists and settings - made from the *.template.* files by install.sh /
+# install.ps1, so a pull never overwrites them.
+agents.json
+Session HUD/hud-config.json
+Task Manager/tasks.md
+Task Manager/TaskDatabase.xlsx

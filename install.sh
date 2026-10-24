@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # One-step setup on Linux (the counterpart of install.ps1). Nothing is copied
-# anywhere - the tools run from this folder. Setting up means three things:
+# anywhere - the tools run from this folder. Setting up means four things:
 #   1. checking the programs the tools call (GNOME Terminal, tmux, Claude Code,
 #      Python 3 with Tk and openpyxl, the DejaVu Sans Mono font);
-#   2. putting the "Agents Launcher" shortcut on the desktop;
-#   3. registering the scheduled jobs you choose as systemd user timers.
+#   2. making your own agents.json, hud-config.json, tasks.md and TaskDatabase.xlsx
+#      from their templates, if they are not there yet;
+#   3. putting the "Agents Launcher" shortcut on the desktop;
+#   4. registering the scheduled jobs you choose as systemd user timers.
 # Run it again after moving the folder: the shortcut and jobs are re-pointed.
 #
 #   ./install.sh --check-only    stops after step 1 and changes nothing.
@@ -43,7 +45,19 @@ if [ "$1" = --check-only ]; then
     exit 0
 fi
 
-echo -e "\n\e[36m== 2. Desktop shortcut ==\e[0m"
+echo -e "\n\e[36m== 2. Your own files ==\e[0m"
+# Kept out of git (.gitignore), so a pull never overwrites them; an existing one is left alone.
+from_template() {   # from_template file template
+    [ -e "$root/$1" ] && { echo "  Kept     $1"; return 1; }
+    cp "$root/$2" "$root/$1" && echo "  Created  $1"
+}
+from_template agents.json agents.template.json &&
+    sed -i "s/__NEW_ID__/$(cat /proc/sys/kernel/random/uuid)/" "$root/agents.json"
+from_template 'Session HUD/hud-config.json' 'Session HUD/hud-config.template.json'
+from_template 'Task Manager/tasks.md' 'Task Manager/tasks.template.md'
+from_template 'Task Manager/TaskDatabase.xlsx' 'Task Manager/TaskDatabase.template.xlsx'
+
+echo -e "\n\e[36m== 3. Desktop shortcut ==\e[0m"
 desktop="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
 shortcut="$desktop/Agents Launcher.desktop"
 cat > "$shortcut" <<EOF
@@ -60,7 +74,7 @@ chmod +x "$shortcut"
 gio set "$shortcut" metadata::trusted true 2>/dev/null
 echo "Shortcut created: $shortcut"
 
-echo -e "\n\e[36m== 3. Scheduled jobs ==\e[0m"
+echo -e "\n\e[36m== 4. Scheduled jobs ==\e[0m"
 units="$HOME/.config/systemd/user"
 mkdir -p "$units"
 # Persistent=true runs a job missed while logged out or asleep at the next chance,
