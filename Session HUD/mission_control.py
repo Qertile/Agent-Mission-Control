@@ -223,6 +223,11 @@ def save_agents(sessions):
     os.replace(path + '.tmp', path)
 
 
+def tmux_name(name):
+    # tmux reads "." and ":" in a target as window/pane separators.
+    return name.replace('.', '_').replace(':', '_')
+
+
 def open_session(name):
     """Opens `name` in a terminal tab the way the Agents Launcher does, adding it to
     agents.json with a new session id first if it is not listed there yet."""
@@ -231,11 +236,33 @@ def open_session(name):
     if not entry:
         entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1}
         save_agents(sessions + [entry])
-    tmux_name = name.replace('.', '_').replace(':', '_')
-    inner = TMUX + ['-f', os.path.join(LAUNCHER_DIR, 'tmux.conf'), 'new-session', '-A', '-s', tmux_name,
+    inner = TMUX + ['-f', os.path.join(LAUNCHER_DIR, 'tmux.conf'), 'new-session', '-A', '-s', tmux_name(name),
                     '-c', WORK_DIR, os.path.join(LAUNCHER_DIR, 'agent.sh'), entry['id'], name]
     subprocess.Popen(['gnome-terminal', '--tab', f'--title={name}', f'--working-directory={WORK_DIR}', '--', *inner],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def open_auto_sessions():
+    """Opens every agents.json session marked "autoOpen" (the default) that is not running yet."""
+    running = {s['sid'] for s in active_sessions()}
+    for s in (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []:
+        if not s.get('autoOpen', True) or s.get('id') in running:
+            continue
+        if subprocess.run(TMUX + ['has-session', '-t', '=' + tmux_name(s['name'])],
+                          stderr=subprocess.DEVNULL).returncode == 0:
+            continue
+        open_session(s['name'])
+        time.sleep(0.5)       # keep the tabs in agents.json order
+
+
+def set_auto_open(sid, on):
+    """Marks the agents.json session `sid` to open, or not, when Agent Mission Control starts."""
+    sessions = (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []
+    for s in sessions:
+        if s.get('id') == sid:
+            s['autoOpen'] = on
+            save_agents(sessions)
+            return
 
 
 def wait_for_session(name, timeout=90):
@@ -499,6 +526,11 @@ class MissionControl:
                                  activeforeground=ACCENT, font=self.f_grid, bd=0)
         self.copy_menu.add_command(label='Copy', command=lambda: self.copy_rows(all_rows=False))
         self.copy_menu.add_command(label='Copy all rows', command=lambda: self.copy_rows(all_rows=True))
+        self.copy_menu.add_separator()
+        self.auto_open = tk.BooleanVar(value=True)
+        self.copy_menu.add_checkbutton(label='Open on start', variable=self.auto_open, selectcolor=ACCENT,
+                                       command=lambda: set_auto_open(self.menu_sid, self.auto_open.get()))
+        self.menu_sid = None
 
     # --- timers ------------------------------------------------------------------
 
@@ -787,6 +819,13 @@ class MissionControl:
     def grid_menu(self, event):
         # Right-click selects the row under the cursor first, so Copy acts on it.
         self.grid_click(event)
+        # "Open on start" is kept in agents.json, so only sessions listed there have it.
+        row = self.row_at(event)
+        sessions = (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []
+        entry = next((s for s in sessions if row and s.get('id') == row['sid']), None)
+        self.menu_sid = entry and entry['id']
+        self.auto_open.set(bool(entry and entry.get('autoOpen', True)))
+        self.copy_menu.entryconfigure('Open on start', state='normal' if entry else 'disabled')
         self.copy_menu.tk_popup(event.x_root, event.y_root)
 
     def copy_rows(self, all_rows):
@@ -881,6 +920,9 @@ def main():
     S = display_scale()
     root = tk.Tk(className='AgentMissionControl')
     MissionControl(root)
+    # The Agents Launcher has just opened the tabs itself and says so with --no-auto-open.
+    if '--no-auto-open' not in sys.argv:
+        threading.Thread(target=open_auto_sessions, daemon=True).start()
     root.mainloop()
 
 

@@ -34,7 +34,9 @@ def tmux_name(name):
 def main():
     dry = '--dry-run' in sys.argv
     with open(os.path.join(ROOT, 'agents.json'), encoding='utf-8-sig') as f:
-        sessions = json.load(f)['sessions']
+        listed = json.load(f)['sessions']
+    # Sessions unticked "Open on start" (in Agent Mission Control's right-click menu) stay closed.
+    sessions = [s for s in listed if s.get('autoOpen', True)]
 
     # A second click must not stack a second set of tabs on the first one, so the
     # previous launch is closed first: ending an agent's tmux session ends its
@@ -65,7 +67,7 @@ def main():
             time.sleep(0.5)       # keep the windows in agents.json order
 
     # Agent Mission Control closes a window it finds still open from the last launch.
-    cmd = [sys.executable, HUD]
+    cmd = [sys.executable, HUD, '--no-auto-open']
     if dry:
         print(shlex.join(cmd))
     else:

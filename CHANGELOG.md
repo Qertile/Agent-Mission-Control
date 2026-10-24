@@ -13,6 +13,10 @@ All notable changes to this project are listed here, newest first.
 - **Sessions Manager default prompt:** on a session's first run, `agent.sh` sends
   `Agents Launcher/prompts/<name>.md` as its first message, so a new `Sessions Manager`
   starts knowing its job; resumed sessions are not sent it again.
+- **Open on start (Linux):** a tick in the session list's right-click menu, kept as
+  `"autoOpen"` in `agents.json` (ticked when missing). The Agents Launcher opens only
+  ticked sessions; Agent Mission Control started on its own opens the ticked ones that
+  are not running yet. Sessions not listed in `agents.json` have it greyed out.
 
 ## 2026-10-22 – account-wide usage
 
