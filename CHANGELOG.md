@@ -39,6 +39,7 @@ All notable changes to this project are listed here, newest first.
   still runs the Agents Launcher. On Linux (`install.sh`) it has the window's own icon; on
   Windows (`create-shortcut.ps1`) the old `Agents Launcher.lnk` is removed when it points
   at this folder's launcher.
+- **README:** a Versions section (both languages) says what `v2.0` and `v1.0` are.
 - **README** and `Task Manager/CLAUDE.md` describe the web window: tabs, `+` / `×`,
   double-click, resizable columns, the one `Task Reminder` chat box.
 

@@ -13,6 +13,13 @@ Tools for running several Claude Code sessions side by side on Windows and Linux
 Windows and Linux are kept on one branch, `master`: each platform's files sit side by
 side in the same folders (see [Linux](#linux)), so there is no separate Linux branch.
 
+## Versions
+
+| Tag | What it is |
+|---|---|
+| `v2.0` (current) | One Agent Mission Control window (`amc_web.py`, pywebview + xterm.js) with the task list, the session monitor and a terminal tab per session; the same code on Windows and Linux. The Agents Launcher only starts this window. |
+| `v1.0` | The earlier setup: each session in its own terminal tab (Windows Terminal; on Linux GNOME Terminal with tmux) next to a separate HUD window (`show-session-hud.ps1` / `mission_control.py`). Get it back with `git checkout v1.0`. |
+
 Your own lists and settings - `agents.json`, `Session HUD/hud-config.json`,
 `Task Manager/tasks.md` and `Task Manager/TaskDatabase.xlsx` - are not in git
 (`.gitignore`). The installer makes each one from its `*.template.*` file the first time
@@ -151,6 +158,13 @@ when that file exists and contains the tag `#work`.
 
 Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並排放在同樣的資料夾裡
 （對照表見英文的 [Linux](#linux) 一節），沒有另外的 Linux 分支。
+
+## 版本
+
+| Tag | 內容 |
+|---|---|
+| `v2.0`（目前） | 單一 Agent Mission Control 視窗（`amc_web.py`，pywebview 加 xterm.js），裡面有任務清單、Session Monitor，每個 session 一個終端機分頁；Windows 和 Linux 用同一份程式。Agents Launcher 只負責啟動這個視窗。 |
+| `v1.0` | 舊的做法：每個 session 開在各自的終端機分頁（Windows Terminal；Linux 上是 GNOME Terminal 加 tmux），旁邊另有一個 HUD 視窗（`show-session-hud.ps1`／`mission_control.py`）。用 `git checkout v1.0` 可以拿回來。 |
 
 你自己的清單和設定——`agents.json`、`Session HUD/hud-config.json`、
 `Task Manager/tasks.md`、`Task Manager/TaskDatabase.xlsx`——不放在 git 裡
