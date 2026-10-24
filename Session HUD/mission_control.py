@@ -181,13 +181,8 @@ def format_remaining(seconds):
 def format_uptime(started):
     if not started:
         return ''
-    span = datetime.now() - started
-    hours = span.total_seconds() / 3600
-    if span.days >= 1:
-        return f'{span.days}d{span.seconds // 3600}h'
-    if hours >= 1:
-        return f'{int(hours)}h{span.seconds % 3600 // 60:02d}m'
-    return f'{int(span.total_seconds() // 60)}m'
+    # Hours only, one decimal, no other unit: "25.1 hrs".
+    return f'{(datetime.now() - started).total_seconds() / 3600:.1f} hrs'
 
 
 # --- typing into a session ------------------------------------------------------
@@ -313,11 +308,17 @@ def send_to_session(name, text):
     if not pane:
         return f"'{name}' was not started by Agents Launcher"
     run = lambda *args: subprocess.run(TMUX + ['send-keys', '-t', pane, *args], timeout=5).returncode
-    if run('-l', '--', text) != 0:
-        return 'tmux send-keys failed'
-    # Enter on its own after a pause, so it lands as a submit, not as part of the typed text.
-    time.sleep(0.3)
-    run('Enter')
+    # A newline inside the text is typed the way Claude Code documents it for any
+    # terminal: a backslash, then Enter.
+    lines = text.splitlines()
+    for n, line in enumerate(lines):
+        chunk = line + '\\' if n < len(lines) - 1 else line
+        if chunk and run('-l', '--', chunk) != 0:
+            return 'tmux send-keys failed'
+        # Enter on its own after a pause, so it lands as a submit, not as part of the typed text.
+        time.sleep(0.3)
+        run('Enter')
+        time.sleep(0.15)
     return None
 
 
@@ -416,7 +417,7 @@ class MissionControl:
 
         root.title('Agent Mission Control')
         mx, my, mw, mh = primary_monitor(root)
-        w, h = min(px(1461), int(mw * 0.95)), min(px(783), int(mh * 0.9))
+        w, h = min(px(1461), int(mw * 0.95)), min(px(805), int(mh * 0.9))
         root.geometry(f'{w}x{h}+{mx + (mw - w) // 2}+{my + (mh - h) // 2}')
         root.minsize(px(700), px(400))
         root.configure(bg=BG)
@@ -449,14 +450,43 @@ class MissionControl:
         cap.pack(side='left')
         status = tk.Label(head, text='', bg=BAR, fg=NOTE, font=self.f_note)
         status.pack(side='right')
-        box = tk.Entry(row, bg=BG, fg=TITLE, insertbackground=ACCENT, font=self.f_grid, relief='flat',
-                       highlightthickness=1, highlightbackground=DESC, highlightcolor=ACCENT)
-        box.pack(side='top', fill='x', pady=(px(3), 0), ipady=px(2))
+        # Two lines, no scrollbar: the box follows the caret as you type.
+        box = tk.Text(row, bg=BG, fg=TITLE, insertbackground=ACCENT, font=self.f_grid, relief='flat',
+                      highlightthickness=1, highlightbackground=DESC, highlightcolor=ACCENT,
+                      height=2, wrap='word', padx=px(2), pady=px(2))
+        box.pack(side='top', fill='x', pady=(px(3), 0))
+        # Enter sends, Shift+Enter is a newline.
         box.bind('<Return>', lambda e: self.send(box, status, target()))
+        box.bind('<Shift-Return>', lambda e: self.newline(box))
+        # Up on the first line / Down on the last line walk the lines sent from this
+        # box, like a shell history; send() appends to it. Index == len(history): a new line.
+        box.history, box.hist_index = [], 0
+        box.bind('<Up>', lambda e: self.walk_history(box, -1))
+        box.bind('<Down>', lambda e: self.walk_history(box, 1))
         return cap, status, box
 
+    def newline(self, box):
+        box.insert('insert', '\n')
+        box.see('insert')
+        return 'break'
+
+    def walk_history(self, box, step):
+        # count() gives None for 0, else a 1-tuple.
+        above = (box.count('1.0', 'insert', 'displaylines') or (0,))[0]
+        below = (box.count('insert', 'end-1c', 'displaylines') or (0,))[0]
+        if (above if step < 0 else below):
+            return None               # not on the first / last line: move the caret as usual
+        i = box.hist_index + step
+        if 0 <= i <= len(box.history):
+            box.hist_index = i
+            box.delete('1.0', 'end')
+            box.insert('1.0', box.history[i] if i < len(box.history) else '')
+            box.mark_set('insert', 'end-1c')
+            box.see('insert')
+        return 'break'
+
     def send(self, box, status, name):
-        text = box.get().strip()
+        text = box.get('1.0', 'end-1c').strip()
         if not text:
             return 'break'
         status.configure(text='sending...')
@@ -471,7 +501,9 @@ class MissionControl:
                 if err:
                     status.configure(text=err)
                 else:
-                    box.delete(0, 'end')
+                    box.history.append(text)
+                    box.hist_index = len(box.history)
+                    box.delete('1.0', 'end')
                     status.configure(text='sent ' + datetime.now().strftime('%H:%M:%S'))
             self.ui.put(done)
         threading.Thread(target=work, daemon=True).start()

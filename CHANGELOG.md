@@ -24,6 +24,10 @@ All notable changes to this project are listed here, newest first.
 - **Terminate (Linux):** a session list right-click item that ends the session: its
   whole tmux session, which closes its tab, or just the Claude process when it is not
   in tmux. The conversation is kept, so the Agents Launcher can resume it later.
+- **Chat boxes and Up column (Linux):** the Windows changes below, ported to
+  `mission_control.py`: two-line boxes, Shift+Enter for a newline, Enter to send
+  (each line ends with a backslash, then Enter), Up/Down history per box, and the Up
+  column in decimal hours (`25.1 hrs`). The window is 805 px high, as on Windows.
 
 ### Fixed
 - **Open on start (Linux):** a ticked session still alive in tmux with no terminal
