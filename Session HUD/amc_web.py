@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Agent Mission Control: one window for everything. The Agents Launcher starts it.
 
-Left, the task list; middle, account usage and the live Claude Code sessions with
+Left, the task list; middle, Claude account usage and live Claude/Codex sessions with
 a 60-second activity sparkline each; right, a terminal tab per agents.json session,
 drawn by xterm.js. Each tab is a pseudo-terminal this process owns - ptyprocess on
-Linux, ConPTY (pywinpty) on Windows - running `claude` on the session's fixed id,
+POSIX, ConPTY (pywinpty) on Windows - running the selected agent CLI,
 so closing the window ends them; their conversations are kept and resume next time.
 
     python3 amc_web.py                    the agents.json tabs ticked "Open on start"
     python3 amc_web.py --agents FILE      another agents.json, e.g. for testing
-    python3 amc_web.py --shell            tabs run the login shell instead of claude
+    python3 amc_web.py --shell            tabs run the login shell instead of an agent CLI
 
 Needs: pywebview (Linux: sudo apt install python3-webview; Windows: pip install
 pywebview pywinpty), and openpyxl for the task statuses.
@@ -18,7 +18,6 @@ pywebview pywinpty), and openpyxl for the task statuses.
 import json
 import os
 import re
-import shutil
 import signal
 import subprocess
 import sys
@@ -31,6 +30,7 @@ from datetime import date, datetime
 import webview
 
 import amc_core as core
+from agent_runtime import agent_argv, codex_state
 from amc_core import (HERE, TASK_DIR, TASKS_PATH, XLSX_PATH, TASKS_SCRIPT, LAUNCHER_DIR, WORK_DIR,
                       CREATE_ON_SEND, load_json, active_sessions, transcript_path, account_usage,
                       format_tokens, format_remaining, format_uptime)
@@ -55,36 +55,25 @@ def arg_value(flag):
     return None
 
 
-def agent_argv(entry):
-    """The command a tab runs for the agents.json entry. First run creates the
-    session with its fixed id and, when
-    Agents Launcher/prompts/<name>.md exists, sends that file as its first message;
-    later runs resume the same conversation. --name pins the name in the registry."""
-    if '--shell' in sys.argv:
-        return [os.environ.get('COMSPEC', 'cmd.exe') if WINDOWS else os.environ.get('SHELL', '/bin/bash')]
-    sid, name = entry['id'], entry['name']
-    argv = [shutil.which('claude') or 'claude']
-    if transcript_path(sid):
-        return argv + ['--resume', sid, '--name', name]
-    argv += ['--session-id', sid, '--name', name]
-    try:
-        with open(os.path.join(LAUNCHER_DIR, 'prompts', f'{name}.md'), encoding='utf-8') as f:
-            argv.append(f.read())
-    except OSError:
-        pass
-    return argv
-
-
 class Term:
     """One pseudo-terminal and the thread reading it."""
 
-    def __init__(self, tid, argv, on_output, on_exit):
+    def __init__(self, tid, argv, on_output, on_exit, entry=None, run_id=None):
+        self.entry = entry or {}
+        self.run_id = run_id
+        self.started = datetime.now()
+        self.last_submit = time.time()
+        self.output_size = 0
+        self.updated = self.started
         env = dict(os.environ)
         if not WINDOWS:
             env.update(TERM='xterm-256color', COLORTERM='truecolor')
         self.proc = PtyProcess.spawn(argv, cwd=WORK_DIR, env=env, dimensions=(30, 100))
         self.lock = threading.Lock()
-        threading.Thread(target=self.pump, args=(tid, on_output, on_exit), daemon=True).start()
+        self._reader = threading.Thread(target=self.pump, args=(tid, on_output, on_exit), daemon=True)
+
+    def start(self):
+        self._reader.start()
 
     def pump(self, tid, on_output, on_exit):
         while True:
@@ -93,11 +82,15 @@ class Term:
             except (EOFError, OSError):
                 break
             if data:
+                self.output_size += len(data.encode('utf-8'))
+                self.updated = datetime.now()
                 on_output(tid, data)
         on_exit(tid, self)
 
     def write(self, data):
         with self.lock:
+            if '\r' in data:
+                self.last_submit = time.time()
             self.proc.write(data)
 
     def resize(self, cols, rows):
@@ -132,6 +125,7 @@ class Api:
                        'account': None, 'account_at': None, 'account_error': None}
         self._samples, self._transcripts, self._last_len = {}, {}, {}
         self._sessions = []
+        self._startup_errors = {}
 
     # --- page -> python: tabs and terminals
 
@@ -144,11 +138,17 @@ class Api:
         for e in core.agents():
             # A session already running elsewhere (another terminal) is left there.
             if e.get('autoOpen', True) and e['id'] not in running:
-                self._start(e)
+                try:
+                    self._start(e)
+                except Exception as exc:
+                    self._startup_errors[e['id']] = str(exc)
         return self.tabs()
 
     def tabs(self):
-        return [{'id': e['id'], 'name': e['name'], 'running': e['id'] in self._terms} for e in core.agents()]
+        return [{'id': e['id'], 'name': e['name'], 'provider': e.get('provider', 'claude'), 'running': e['id'] in self._terms} for e in core.agents()]
+
+    def preferences(self):
+        return {'defaultProvider': core.default_provider()}
 
     def open_tab(self, tid):
         """Starts the tab's process when it is not running. Returns None or what went wrong."""
@@ -165,7 +165,7 @@ class Api:
             return str(e)
         return None
 
-    def new_session(self, name):
+    def new_session(self, name, provider=None, codex_session_id=None):
         """Adds a session named `name` with a new id to agents.json and starts its tab.
         Returns {'id': ...} or {'error': ...}."""
         name = ' '.join(str(name).split())
@@ -173,7 +173,17 @@ class Api:
             return {'error': 'type a name'}
         if any(e['name'] == name for e in core.agents()):
             return {'error': f"'{name}' is already in agents.json"}
-        entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1}
+        entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1,
+                 'provider': provider or core.default_provider()}
+        try:
+            core.provider(entry)
+            if codex_session_id:
+                if core.provider(entry) != 'codex':
+                    return {'error': 'A Codex session ID requires the Codex provider'}
+                entry['codexSessionId'] = str(uuid.UUID(codex_session_id.strip()))
+            agent_argv(entry)  # Validate the CLI before adding a persistent entry.
+        except (ValueError, RuntimeError) as exc:
+            return {'error': str(exc)}
         core.save_agents(core.agents() + [entry])
         try:
             self._start(entry)
@@ -197,7 +207,8 @@ class Api:
         of CREATE_ON_SEND). Returns None or what went wrong."""
         entry = next((e for e in core.agents() if e['name'] == name), None)
         if not entry and name in CREATE_ON_SEND:
-            entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1}
+            entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1,
+                     'provider': core.default_provider()}
             core.save_agents(core.agents() + [entry])
         if not entry:
             return f"no '{name}' in agents.json"
@@ -209,6 +220,12 @@ class Api:
             if not self._wait_idle(entry['id']):
                 return f"opened '{name}' - answer its tab, then send again"
         term = self._terms[entry['id']]
+        if core.provider(entry) == 'codex':
+            # Paste keeps multiline input in one composer message; Enter submits.
+            term.write('\x1b[200~' + text.replace('\x1b', '') + '\x1b[201~')
+            time.sleep(0.15)
+            term.write('\r')
+            return None
         # A newline inside the text is typed the way Claude Code documents it for any
         # terminal: a backslash, then Enter. Enter goes on its own after a pause, so it
         # lands as a submit, not as part of the typed text.
@@ -230,7 +247,8 @@ class Api:
         listed = {e['id']: e for e in core.agents()}
         rows = []
         for s in self._sessions:
-            slot = (snap.get('bySession') or {}).get(s['sid'])
+            slot = ((snap.get('bySession') or {}).get(s['sid'])
+                    if s.get('provider', 'claude') == 'claude' else None)
             # Prefer real token activity when the scan saw any, otherwise the registry's updatedAt.
             updated = s['updated']
             if slot and slot.get('lastTs'):
@@ -239,6 +257,7 @@ class Api:
                     updated = scanned
             entry = listed.get(s['sid'])
             rows.append({'sid': s['sid'], 'pid': s['pid'], 'name': s['name'], 'short': s['sid'][:8],
+                         'provider': s.get('provider', 'claude'),
                          'status': s['status'], 'color': STATUS_COLORS.get(s['status'], GREY),
                          'tokens': format_tokens(slot['block']['total']) if slot else '-',
                          'up': format_uptime(s['started']),
@@ -247,6 +266,8 @@ class Api:
                          'tab': s['sid'] in self._terms,
                          'samples': list(self._samples.get(s['sid'], []))})
         note = f"{len(rows)} active · sessions {datetime.now():%H:%M:%S}"
+        if self._startup_errors:
+            note += ' · ' + '; '.join(self._startup_errors.values())
         if u['fetched']:
             note += f" · usage {u['fetched']:%H:%M:%S}"
             if u['account']:
@@ -303,7 +324,11 @@ class Api:
     def _start(self, entry):
         with self._start_lock:
             if entry['id'] not in self._terms:
-                self._terms[entry['id']] = Term(entry['id'], agent_argv(entry), self._output, self._exited)
+                run_id = str(uuid.uuid4())
+                self._terms[entry['id']] = Term(entry['id'], agent_argv(entry, run_id),
+                                                self._output, self._exited, entry, run_id)
+                self._terms[entry['id']].start()
+                self._startup_errors.pop(entry['id'], None)
 
     def _wait_idle(self, sid, timeout=90):
         """True once the session is registered and idle at its prompt."""
@@ -312,7 +337,8 @@ class Api:
             return True
         end = time.time() + timeout
         while time.time() < end:
-            if any(s['sid'] == sid and s['status'] == 'idle' for s in active_sessions()):
+            sessions = active_sessions() + self._codex_sessions()
+            if any(s['sid'] == sid and s['status'] == 'idle' for s in sessions):
                 time.sleep(1)       # let the prompt finish drawing before typing into it
                 return True
             time.sleep(1)
@@ -348,25 +374,45 @@ class Api:
             for tid, data in pending.items():
                 self._js(f'amc.output({json.dumps(tid)}, {json.dumps(data)})')
 
+    def _codex_sessions(self):
+        sessions = []
+        for sid, term in list(self._terms.items()):
+            if core.provider(term.entry) != 'codex' or not term.alive():
+                continue
+            state = codex_state(term.entry)
+            completed = state.get('completedAt', 0)
+            idle = (state.get('runId') == term.run_id and
+                    isinstance(completed, (float, int)) and completed >= term.last_submit)
+            sessions.append({'sid': sid, 'pid': term.proc.pid, 'name': term.entry['name'],
+                             'provider': 'codex', 'status': 'idle' if idle else 'running',
+                             'started': term.started, 'updated': term.updated})
+        return sessions
+
     def _activity_loop(self):
         """One sample a second: bytes each session appended to its transcript."""
         while True:
-            self._sessions = active_sessions()
+            self._sessions = active_sessions() + self._codex_sessions()
             for s in self._sessions:
                 sid = s['sid']
                 if not sid:
                     continue
-                if not self._transcripts.get(sid):
-                    self._transcripts[sid] = transcript_path(sid)
-                try:
-                    length = os.path.getsize(self._transcripts[sid]) if self._transcripts[sid] else 0
-                except OSError:
-                    length = 0
-                # First sighting has no previous length, so its delta is zero rather than the whole file.
+                if s.get('provider') == 'codex':
+                    term = self._terms.get(sid)
+                    length = term.output_size if term else self._last_len.get(sid, 0)
+                else:
+                    length = self._transcript_size(sid)
                 prev = self._last_len.get(sid, length)
                 self._last_len[sid] = length
                 self._samples.setdefault(sid, deque(maxlen=ACTIVITY_WINDOW)).append(max(0, length - prev))
             time.sleep(1)
+
+    def _transcript_size(self, sid):
+        if not self._transcripts.get(sid):
+            self._transcripts[sid] = transcript_path(sid)
+        try:
+            return os.path.getsize(self._transcripts[sid]) if self._transcripts[sid] else 0
+        except OSError:
+            return 0
 
     def _usage_loop(self):
         """The scans and the account fetch can take seconds, so they run here."""
@@ -401,9 +447,9 @@ class Api:
         """The usage panel as text and pie fractions."""
         u, snap = self._usage, self._usage['snap']
         if not snap:
-            return {'message': 'USAGE  scanner unavailable (needs python3)' if u['failed'] else 'USAGE  scanning...'}
+            return {'message': 'CLAUDE USAGE  scanner unavailable (needs python3)' if u['failed'] else 'CLAUDE USAGE  scanning...'}
         block, acct = snap['block'], u['account']
-        headline = f"tokens · {block['requests']} req"
+        headline = f"Claude · tokens · {block['requests']} req"
         # Reset time from the account when known: the block the account is in is what counts.
         if acct and acct['five_hour_reset']:
             left = format_remaining(max(0, (acct['five_hour_reset'] - datetime.now()).total_seconds()))

@@ -104,7 +104,7 @@
   .menu div:hover { background: var(--bg); color: var(--accent); }
   .menu div.disabled { color: #3a5a40; pointer-events: none; }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
-  .menu input { margin: 3px 8px; width: 180px; background: var(--bg); color: var(--title);
+  .menu input, .menu select { margin: 3px 8px; width: 220px; background: var(--bg); color: var(--title);
                 border: 1px solid var(--desc); font: inherit; padding: 2px 4px; outline: none; }
   .menu .err { color: #ff6b6b; cursor: default; padding: 0 10px 3px; font-size: 11px; }
   #cal { position: fixed; z-index: 10; background: var(--bar); border: 1px solid var(--desc); padding: 6px;
@@ -181,9 +181,9 @@ const amc = {
   async syncTabs() {
     const list = await api().tabs();
     amc.stopped = list.filter(t => !t.running);
-    for (const {id, name, running} of list) {
+    for (const {id, name, running, provider} of list) {
       if (!running && !amc.tabs[id]) continue;
-      if (!amc.tabs[id]) amc.addTab(id, name);
+      if (!amc.tabs[id]) amc.addTab(id, provider === 'codex' ? name + ' · Codex' : name);
       const t = amc.tabs[id];
       t.running = running;
       t.tabEl.classList.toggle('off', !running);
@@ -324,28 +324,36 @@ $('add-tab').addEventListener('click', e => {
   e.stopPropagation();
   const m = $('add-menu');
   m.innerHTML = ((amc.stopped || []).length
-    ? amc.stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)}</div>`).join('')
+    ? amc.stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)} · ${esc(t.provider)}</div>`).join('')
     : '<div class="disabled">every session is running</div>') +
     '<hr><div data-new="1">New session…</div>';
   const r = $('add-tab').getBoundingClientRect();
   showAt(m, r.left, r.bottom);
 });
-$('add-menu').addEventListener('click', e => {
+$('add-menu').addEventListener('click', async e => {
   // New session: the menu turns into a name box; Enter adds it to agents.json and starts it.
   if (e.target.dataset.new) {
     e.stopPropagation();
-    $('add-menu').innerHTML = '<input id="new-name" placeholder="name, then Enter" spellcheck="false">' +
+    $('add-menu').innerHTML = '<select id="new-provider" aria-label="Session provider"><option value="claude">Claude Code</option><option value="codex">Codex</option></select>' +
+                              '<input id="new-name" placeholder="name, then Enter" spellcheck="false">' +
+                              '<input id="new-codex-id" placeholder="existing Codex session UUID (optional)" aria-label="Existing Codex session UUID" hidden>' +
                               '<div class="err" id="new-err"></div>';
+    const preferences = await api().preferences();
+    if (!$('new-provider')) return;
+    $('new-provider').value = preferences.defaultProvider;
+    const updateProvider = () => { $('new-codex-id').hidden = $('new-provider').value !== 'codex'; };
+    $('new-provider').onchange = updateProvider;
+    updateProvider();
     $('new-name').focus();
     return;
   }
-  if (e.target.closest('input, .err')) { e.stopPropagation(); return; }
+  if (e.target.closest('input, select, .err')) { e.stopPropagation(); return; }
   hideMenus();
   if (e.target.dataset.id) amc.start(e.target.dataset.id);
 });
 $('add-menu').addEventListener('keydown', async e => {
-  if (e.target.id !== 'new-name' || e.key !== 'Enter') return;
-  const res = await api().new_session(e.target.value);
+  if (!['new-name', 'new-codex-id'].includes(e.target.id) || e.key !== 'Enter') return;
+  const res = await api().new_session($('new-name').value, $('new-provider').value, $('new-codex-id').value);
   if (res.error) { $('new-err').textContent = res.error; return; }
   hideMenus();
   await amc.syncTabs();
@@ -413,7 +421,7 @@ function drawUsage(u) {
   const pies = u.pies.map(p => `<div><div class="cap">${p.caption}</div>${pieSvg(p.frac)}` +
                                `<div class="pct">${Math.round(Math.min(1, p.frac) * 100)}%</div></div>`).join('');
   $('usage').innerHTML =
-    `<div class="row"><span class="k">5H BLOCK</span><span class="big">${esc(u.total)}</span></div>` +
+    `<div class="row"><span class="k">CLAUDE 5H</span><span class="big">${esc(u.total)}</span></div>` +
     `<div class="row d">${esc(u.headline)}</div>` +
     `<div class="row d">${esc(u.detail)}</div>` +
     `<div class="row"><span class="k">TODAY/WEEK</span><span class="v">${esc(u.week)}</span></div>` +
@@ -438,7 +446,7 @@ function drawGrid() {
   $('grid').innerHTML = rows.length ? rows.map((r, i) => `
     <div class="row-s${r.sid === selected ? ' sel' : ''}" data-i="${i}">
       <div class="who"><div class="txt">${r.tab ? '<span class="tabmark">▸</span>' : '▹'} ${esc(r.name)}
-        <div class="sub">· ${esc(r.short)}  (pid ${r.pid})</div></div>${spark(r.samples, scale)}</div>
+        <div class="sub">${esc(r.provider)} · ${esc(r.short)}  (pid ${r.pid})</div></div>${spark(r.samples, scale)}</div>
       <div class="stat" style="color:${r.color}">${esc(r.status)}</div>
       <div>${esc(r.tokens)}</div><div>${esc(r.up)}</div><div class="upd" title="${esc(r.updated)}">${esc(r.updated.slice(11))}</div>
     </div>`).join('') : '<div class="note" style="padding:8px">No active sessions</div>';

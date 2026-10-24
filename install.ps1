@@ -30,8 +30,9 @@ function Report([string]$Name, [bool]$Ok, [string]$Fix) {
     else { Write-Host "  MISSING  $Name - $Fix" -ForegroundColor Yellow; $script:missing++ }
 }
 
-Report 'Claude Code (claude)' ([bool](Get-Command claude -ErrorAction SilentlyContinue)) `
-    'install Claude Code and check that "claude" runs in a new terminal.'
+$agentCliOk = [bool](Get-Command claude -ErrorAction SilentlyContinue) -or [bool](Get-Command codex -ErrorAction SilentlyContinue)
+Report 'Agent CLI (Claude Code or Codex)' $agentCliOk `
+    'install claude or codex, log in, and select that provider in agents.json. Daily Summary still needs Claude.'
 # A missing Python still leaves a Microsoft Store stub named python on PATH, so
 # ask it for a version instead of only looking the command up.
 $pythonOk = $false

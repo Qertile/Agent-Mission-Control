@@ -1,6 +1,6 @@
 # AI-Infra
 
-Tools for running several Claude Code sessions side by side on Windows, Linux and macOS.
+Tools for running Claude Code and Codex sessions side by side on Windows, Linux and macOS.
 
 [繁體中文說明在下方](#ai-infra繁體中文)
 
@@ -121,6 +121,28 @@ the main app does not need Tk. Start it with:
 .venv/bin/python3 "Task Manager/tasks.py" popup
 ```
 
+### macOS startup troubleshooting
+
+When the project lives on Desktop, Finder-launched Python needs permission to
+read the Desktop folder. A Terminal launch and a Finder launch can have different
+macOS privacy permissions. If the app closes immediately, check
+`~/Library/Logs/Agent Mission Control/launcher.log`; GUI errors and startup times
+are recorded in `Session HUD/amc-web.log`.
+
+If the log shows `Operation not permitted` opening `.venv/pyvenv.cfg`, allow Desktop
+folder access for Python / Agent Mission Control in System Settings → Privacy &
+Security → Files & Folders, then reopen the app. Full Disk Access is not required.
+A terminal launch can also be used while resolving the Finder permission:
+
+```sh
+.venv/bin/python3 "Agents Launcher/launch-agents.py"
+```
+
+The macOS app starts the framework Python directly when available, retaining the
+project virtual environment. The launcher keeps the GUI in the same process so
+LaunchServices can track its lifetime. Re-run `./install.sh` after updating this
+launcher code to refresh an existing installed app.
+
 ## Compatibility checks
 
 ```sh
@@ -136,6 +158,73 @@ still require an interactive check on each target platform.
 On macOS, `.venv/bin/python3 tests/smoke_macos_gui.py` opens a temporary Cocoa
 window and shell tab, checks input/output and resizing, then closes and checks
 process cleanup. It does not start Claude or read account credentials.
+
+## Codex sessions
+
+Install the Codex CLI and run `codex login` once in your normal terminal. In
+Agent Mission Control, choose **+ → New session… → Codex**, enter a name and
+press Enter. Claude and Codex tabs can run in the same window on all three platforms.
+To attach an existing saved Codex chat, enter its UUID in the optional session field.
+
+You can also edit `agents.json` (use a new UUID for each AMC tab):
+
+```json
+{
+  "defaultProvider": "codex",
+  "sessions": [
+    {
+      "name": "Codex Work",
+      "id": "6711ad39-f054-48ed-bbbc-99402a49d24e",
+      "provider": "codex",
+      "autoOpen": true
+    }
+  ]
+}
+```
+
+`defaultProvider` selects the provider for newly created tabs and for the Task
+Reminder chat box when it first creates its session. An existing entry without a
+`provider` keeps using Claude for backward compatibility. Optional `codexSessionId`
+on a Codex entry attaches a saved Codex session UUID on first launch. The AMC tab
+UUID and Codex's conversation UUID are separate identities.
+
+Codex creates its own conversation ID. AMC records it after the **first completed
+response**, through the official `notify` / `agent-turn-complete` hook, then uses
+`codex resume <UUID>` on subsequent launches. Closing before the first response
+completes leaves no automatic mapping; add the saved session UUID manually if
+needed. `/new` in the Codex tab updates the mapping after the new chat completes
+its first response. An invalid/deleted saved chat shows the CLI's error; AMC does
+not silently replace it with another conversation.
+
+The mapping lives in `.amc-state/codex/`, outside Git, and contains only the thread
+ID, launch ID and completion timestamp. No messages or credentials are copied.
+For these tabs AMC overrides Codex's external `notify` command **for that launch**;
+an existing user-configured external notifier is not invoked. The user's config
+file and built-in TUI notifications are unchanged. Do not disable the AMC hook if
+you need automatic resume. Back up `.amc-state` alongside personal configuration
+when moving this installation, or supply `codexSessionId` after moving it.
+
+The monitor lists Codex tabs owned by this window. `running` means the process is
+open; `idle` means a response-complete notification arrived since the last Enter.
+Login/trust/approval prompts remain in the terminal; there is no inferred approval
+status. Codex activity graphs measure terminal output bytes and its token column
+shows `-`. The account usage panel remains **Claude-only**; use `/status` inside a
+Codex tab to inspect Codex usage. Existing daily review/summary/weekly jobs still
+require Claude and summarize Claude transcripts. They are not switched by
+`defaultProvider`.
+
+Prompt files may be overridden per provider under `Agents Launcher/prompts/codex/`.
+The Codex Session Manager prompt uses Codex's tools instead of Claude's ListAgents
+and SendMessage. The task list and Excel sync are shared by both providers.
+
+The optional live macOS test `.venv/bin/python3 tests/smoke_codex_gui.py` opens
+Codex in a temporary directory with a read-only sandbox and sends one short model
+request. It requires an already logged-in CLI with `--no-daemon` support and checks
+that a real notification records the thread ID and generates the matching resume
+command. Unlike the unit tests, it uses your Codex account quota.
+
+References: [official CLI resume](https://learn.chatgpt.com/docs/cli/reference)
+and [official notification hook](https://learn.chatgpt.com/docs/config-file/config-advanced#notifications).
 
 ## Settings
 
@@ -210,7 +299,7 @@ when that file exists and contains the tag `#work`.
 
 # AI-Infra（繁體中文）
 
-在 Windows、Linux 和 macOS 上同時執行多個 Claude Code session 的工具組。
+在 Windows、Linux 和 macOS 上同時執行 Claude Code 與 Codex session 的工具組。
 
 | 資料夾 | 功能 |
 |---|---|
@@ -336,3 +425,13 @@ powershell -ExecutionPolicy Bypass -File "AI-Infra\Daily Summary\setup-schedule.
 使用 Mac 本機時區，並需要使用者登入。`--remove-schedules` 可移除這三個排程。
 回顧使用 Terminal.app；用量支援從 macOS 鑰匙圈讀取 Claude 憑證；
 終端機支援 Command+C／Command+V。細節與測試指令見上方 macOS 一節。
+
+## Codex 支援
+
+安裝並登入 Codex CLI 後，在視窗按 **+ → New session…**，選 **Codex** 並輸入名稱即可。
+也可填入既有 Codex 對話的 UUID。`agents.json` 的 `defaultProvider` 設為 `codex`，
+可讓新增分頁及第一次建立的 Task Reminder 使用 Codex；既有分頁的 provider 不會自動改變。
+
+第一次回覆完成後，工具會記錄 Codex 的對話 ID，之後重新開啟分頁會自動恢復。
+用量圖與日報／週報目前仍限 Claude；Codex 的額度請在分頁輸入 `/status` 查看。
+其餘細節與通知 hook 的使用方式見上方 Codex sessions 一節。

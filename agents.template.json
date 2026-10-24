@@ -1,5 +1,6 @@
 {
+  "defaultProvider": "claude",
   "sessions": [
-    { "name": "Session Manager", "id": "__NEW_ID__", "window": 1 }
+    { "name": "Session Manager", "id": "__NEW_ID__", "window": 1, "provider": "claude" }
   ]
 }

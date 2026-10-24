@@ -36,11 +36,24 @@ def agents():
     return (load_json(AGENTS_PATH) or {}).get('sessions') or []
 
 
+def default_provider():
+    return (load_json(AGENTS_PATH) or {}).get('defaultProvider', 'claude')
+
+
+def provider(entry):
+    value = entry.get('provider', 'claude')
+    if value not in ('claude', 'codex'):
+        raise ValueError(f'Unsupported provider: {value}')
+    return value
+
+
 def save_agents(sessions):
-    """Writes agents.json in its one-session-per-line layout."""
-    lines = ',\n'.join('    { ' + json.dumps(s, ensure_ascii=False)[1:-1] + ' }' for s in sessions)
+    """Atomically replace sessions while preserving other personal settings."""
+    config = load_json(AGENTS_PATH) or {}
+    config['sessions'] = sessions
     with open(AGENTS_PATH + '.tmp', 'w', encoding='utf-8') as f:
-        f.write('{\n  "sessions": [\n' + lines + '\n  ]\n}\n')
+        json.dump(config, f, ensure_ascii=False, indent=2)
+        f.write('\n')
     os.replace(AGENTS_PATH + '.tmp', AGENTS_PATH)
 
 

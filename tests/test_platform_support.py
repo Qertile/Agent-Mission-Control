@@ -25,6 +25,7 @@ def load(name, path):
 
 
 installer = load('mac_installer', 'install-macos.py')
+launcher = load('agent_launcher', 'Agents Launcher/launch-agents.py')
 jobs = load('jobs', 'Daily Summary/jobs.py')
 tasks = load('tasks', 'Task Manager/tasks.py')
 
@@ -108,6 +109,39 @@ class CredentialsTests(unittest.TestCase):
 
 
 class InstallerTests(unittest.TestCase):
+    def test_macos_launcher_keeps_gui_in_launchservices_process(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'Session HUD').mkdir()
+            with patch.object(launcher, 'ROOT', temp), \
+                    patch.object(launcher.sys, 'platform', 'darwin'), \
+                    patch.object(launcher.sys, 'argv', ['launch-agents.py']), \
+                    patch.object(launcher.sys, 'path', list(sys.path)), \
+                    patch.object(launcher.os, 'dup2') as dup, \
+                    patch.object(launcher.runpy, 'run_path') as run, \
+                    patch.object(launcher.subprocess, 'Popen') as spawn:
+                launcher.main()
+                run.assert_called_once_with(launcher.WEB, run_name='__main__')
+                spawn.assert_not_called()
+                self.assertEqual(dup.call_count, 2)
+            self.assertIn('Starting Agent Mission Control', (root / 'Session HUD/amc-web.log').read_text())
+
+    def test_framework_python_skips_apple_shim_and_keeps_venv(self):
+        with tempfile.TemporaryDirectory(prefix='amc app ') as temp:
+            root = Path(temp)
+            python = root / 'venv/bin/python3'
+            python.parent.mkdir(parents=True)
+            python.touch()
+            framework = root / 'framework/Resources/Python.app/Contents/MacOS/Python'
+            framework.parent.mkdir(parents=True)
+            framework.touch()
+            with patch.object(installer.subprocess, 'check_output', return_value=str(root / 'framework')):
+                installer.create_app(root / 'Test.app', python=python, root=root)
+            script = (root / 'Test.app/Contents/MacOS/Agent Mission Control').read_text()
+            self.assertIn('__PYVENV_LAUNCHER__=', script)
+            self.assertIn(str(framework), script)
+            self.assertIn('launcher.log', script)
+
     def test_preserve_settings_and_generate_uuid(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

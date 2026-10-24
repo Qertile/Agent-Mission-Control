@@ -1,3 +1,21 @@
+## macOS Finder startup reliability
+
+- Keep the GUI in the launcher's process instead of detaching it from LaunchServices.
+- Invoke framework Python directly when available, preserving the virtual environment
+  and avoiding Apple's python3 shim failure during Finder startup.
+- Capture early startup errors in the user's Library/Logs folder and document
+  macOS Desktop privacy permissions for projects stored on Desktop.
+
+## Codex CLI support
+
+- Allow Claude and Codex terminal tabs in the same window, with a provider selector
+  and optional existing Codex conversation UUID when adding a session.
+- Record Codex's conversation ID through its notification hook and resume that
+  exact conversation on later starts; isolate mapping files from Git.
+- Add Codex process/completion monitoring, multiline paste, provider prompts, and
+  provider-aware installer checks. Preserve legacy Claude session behavior.
+- Label Claude account usage explicitly; existing report jobs remain Claude-based.
+
 ## macOS support
 
 - Add macOS setup with an isolated Python environment and a Finder-launchable app.

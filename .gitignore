@@ -11,6 +11,7 @@ Session HUD/*.log
 __pycache__/
 *.pyc
 .venv/
+.amc-state/
 
 # Your own lists and settings - made from the *.template.* files by install.sh /
 # install.ps1, so a pull never overwrites them.

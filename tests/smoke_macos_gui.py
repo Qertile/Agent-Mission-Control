@@ -54,6 +54,22 @@ def main():
             else:
                 raise AssertionError('PTY output did not reach xterm.js')
             api.resize(sid, 90, 24)
+            window.evaluate_js("document.getElementById('add-tab').click(); document.querySelector('[data-new]').click();")
+            while time.monotonic() < deadline:
+                ready = window.evaluate_js("Boolean(document.getElementById('new-provider')?.onchange)")
+                if ready:
+                    break
+                time.sleep(0.1)
+            else:
+                raise AssertionError('Provider selector did not become ready')
+            selectable = window.evaluate_js("""(() => {
+                const select = document.getElementById('new-provider');
+                select.value = 'codex'; select.dispatchEvent(new Event('change'));
+                return select.value === 'codex' && !document.getElementById('new-codex-id').hidden;
+            })()""")
+            if not selectable:
+                raise AssertionError('Codex provider selection failed')
+            results['codex_provider_selector'] = True
             results.update(cocoa_window=True, shell_input_output=True, terminal_resize=True)
         except Exception as exc:
             failures.append(str(exc))

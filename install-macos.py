@@ -2,6 +2,7 @@
 """macOS setup. Run through ./install.sh; scheduled jobs are opt-in."""
 
 import argparse
+import json
 import os
 from pathlib import Path
 import plistlib
@@ -52,11 +53,27 @@ def create_app(destination, python=PYTHON, root=ROOT):
             'CFBundleIdentifier': LABEL_PREFIX,
             'CFBundleExecutable': executable.name,
             'CFBundlePackageType': 'APPL', 'CFBundleVersion': '1',
+            'NSDesktopFolderUsageDescription': 'Agent Mission Control needs access to its project, Python environment and agent working folders on your Desktop.',
             'NSHighResolutionCapable': True}
     (contents / 'Info.plist').write_bytes(plistlib.dumps(info))
-    command = [str(python), str(root / 'Agents Launcher' / 'launch-agents.py')]
-    executable.write_text('#!/bin/sh\nexport PATH=' + shlex.quote(runtime_path()) +
-                          '\nexec ' + shlex.join(command) + '\n', encoding='utf-8')
+    interpreter = python
+    environment = ''
+    if python.exists():
+        prefix = subprocess.check_output([str(python), '-c', 'import sys; print(sys.base_prefix)'], text=True).strip()
+        framework = Path(prefix) / 'Resources/Python.app/Contents/MacOS/Python'
+        if framework.is_file():
+            # Apple's python3 shim can fail under LaunchServices before our code
+            # runs. Invoke the real framework binary, retaining venv discovery.
+            interpreter = framework
+            environment = 'export __PYVENV_LAUNCHER__=' + shlex.quote(str(python)) + '\n'
+    command = [str(interpreter), str(root / 'Agents Launcher' / 'launch-agents.py')]
+    executable.write_text('#!/bin/sh\n'
+                          'log_dir="$HOME/Library/Logs/Agent Mission Control"\n'
+                          'mkdir -p "$log_dir"\n'
+                          'exec >>"$log_dir/launcher.log" 2>&1\n'
+                          'echo "Starting Agent Mission Control: $(date)"\n'
+                          'export PYTHONUNBUFFERED=1\nexport PATH=' + shlex.quote(runtime_path()) +
+                          '\n' + environment + 'exec ' + shlex.join(command) + '\n', encoding='utf-8')
     executable.chmod(0o755)
 
 
@@ -96,8 +113,14 @@ def configure_schedules(remove=False):
 def check():
     python = str(PYTHON) if PYTHON.exists() else sys.executable
     failures = []
-    if not shutil.which('claude', path=runtime_path()):
-        failures.append('Claude Code: install the CLI and run claude to log in.')
+    config = ROOT / 'agents.json'
+    settings = json.loads(config.read_text()) if config.exists() else {}
+    required = {entry.get('provider', 'claude') for entry in settings.get('sessions', [])
+                if entry.get('autoOpen', True)}
+    required.add(settings.get('defaultProvider', 'claude'))
+    for provider in sorted(required):
+        if provider not in ('claude', 'codex') or not shutil.which(provider, path=runtime_path()):
+            failures.append(f'{provider}: install the configured CLI and log in.')
     for module in ('webview', 'ptyprocess', 'openpyxl', 'Cocoa', 'WebKit'):
         result = subprocess.run([python, '-c', f'import {module}'], capture_output=True)
         if result.returncode:
@@ -137,8 +160,8 @@ def main():
     app = Path.home() / 'Applications' / 'Agent Mission Control.app'
     create_app(app)
     print(f'Open {app} to start. Every session works in {ROOT.parent}.')
-    if not shutil.which('claude', path=runtime_path()):
-        print('Claude Code CLI was not found. Install it and run claude to log in before opening the app.')
+    if not any(shutil.which(cli, path=runtime_path()) for cli in ('claude', 'codex')):
+        print('No supported agent CLI found. Install Claude Code or Codex and log in before opening the app.')
     if args.schedule:
         configure_schedules()
     return 0

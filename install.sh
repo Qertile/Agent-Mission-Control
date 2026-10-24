@@ -34,7 +34,9 @@ has() { command -v "$1" >/dev/null 2>&1 && echo 1 || echo 0; }
 py() { python3 -c "$1" >/dev/null 2>&1 && echo 1 || echo 0; }
 
 echo -e "\n\e[36m== 1. Checking what the tools need ==\e[0m"
-report 'Claude Code (claude)' "$(has claude)" 'install Claude Code and check that "claude" runs in a new terminal.'
+agent_cli=0
+if command -v claude >/dev/null 2>&1 || command -v codex >/dev/null 2>&1; then agent_cli=1; fi
+report 'Agent CLI (Claude Code or Codex)' "$agent_cli" 'install claude or codex, log in, and select that provider in agents.json. Daily Summary still needs Claude.'
 report 'Python 3 (python3)' "$(has python3)" 'sudo apt install python3'
 report 'Python pywebview' "$(py 'import webview')" 'sudo apt install python3-webview'
 report 'Python ptyprocess' "$(py 'import ptyprocess')" 'sudo apt install python3-ptyprocess'

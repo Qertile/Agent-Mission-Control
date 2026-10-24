@@ -8,9 +8,11 @@ are no terminal windows to open here. A second click replaces the running window
 """
 
 import os
+import runpy
 import shlex
 import subprocess
 import sys
+from datetime import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)                  # the package folder
@@ -22,12 +24,22 @@ def main():
         os.environ['PATH'] = os.pathsep.join([
             os.path.expanduser('~/.local/bin'), '/opt/homebrew/bin', '/usr/local/bin',
             os.environ.get('PATH', '/usr/bin:/bin')])
-    cmd = [sys.executable, WEB]
+    cmd = [sys.executable, WEB] + [arg for arg in sys.argv[1:] if arg != '--dry-run']
     if '--dry-run' in sys.argv:
         print(shlex.join(cmd))
         return
-    log = open(os.path.join(ROOT, 'Session HUD', 'amc-web.log'), 'a')
-    subprocess.Popen(cmd, stdout=log, stderr=log, start_new_session=True)
+    with open(os.path.join(ROOT, 'Session HUD', 'amc-web.log'), 'a', buffering=1) as log:
+        log.write(f'[{datetime.now().isoformat(timespec="seconds")}] Starting Agent Mission Control (pid {os.getpid()})\n')
+        if sys.platform == 'darwin':
+            # Keep the LaunchServices PID alive for the lifetime of the GUI.
+            # Detaching a child here makes Finder think the app immediately quit.
+            os.dup2(log.fileno(), 1)
+            os.dup2(log.fileno(), 2)
+            sys.argv = cmd[1:]
+            sys.path.insert(0, os.path.dirname(WEB))
+            runpy.run_path(WEB, run_name='__main__')
+        else:
+            subprocess.Popen(cmd, stdout=log, stderr=log, start_new_session=True)
 
 
 if __name__ == '__main__':
