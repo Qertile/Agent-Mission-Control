@@ -14,6 +14,7 @@ import glob
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -260,6 +261,19 @@ def open_auto_sessions():
             continue          # running outside tmux, nothing to attach to
         open_session(s['name'])
         time.sleep(0.5)       # keep the tabs in agents.json order
+
+
+def terminate_session(pid):
+    """Ends the Claude session `pid`: its whole tmux session (closing the tab) when it runs
+    in one, otherwise just the process."""
+    pane = find_pane(pid)
+    if pane:
+        subprocess.run(TMUX + ['kill-session', '-t', pane], stderr=subprocess.DEVNULL)
+    else:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
 
 
 def set_auto_open(sid, on):
@@ -523,7 +537,8 @@ class MissionControl:
         self.grid.bind('<Configure>', lambda e: self.draw_grid())
         self.grid.bind('<Button-1>', self.grid_click)
         self.grid.bind('<Double-Button-1>', self.grid_double)
-        self.grid.bind('<Button-3>', self.grid_menu)
+        # On release: on X11 a menu posted on press takes the release as a pick and closes.
+        self.grid.bind('<ButtonRelease-3>', self.grid_menu)
         self.grid.bind('<Control-c>', lambda e: self.copy_rows(all_rows=False))
         for seq, step in (('<Button-4>', -1), ('<Button-5>', 1)):
             self.grid.bind(seq, lambda e, s=step: self.grid.yview_scroll(s, 'units'))
@@ -537,7 +552,9 @@ class MissionControl:
         self.auto_open = tk.BooleanVar(value=True)
         self.copy_menu.add_checkbutton(label='Open on start', variable=self.auto_open, selectcolor=ACCENT,
                                        command=lambda: set_auto_open(self.menu_sid, self.auto_open.get()))
+        self.copy_menu.add_command(label='Terminate', command=self.terminate_menu)
         self.menu_sid = None
+        self.menu_pid = None
 
     # --- timers ------------------------------------------------------------------
 
@@ -701,7 +718,7 @@ class MissionControl:
         rows = []
         if not sessions:
             rows.append({'paragraphs': [('  ', 'No active sessions', NOTE)],
-                         'cells': ['No active sessions', '', '', '', ''], 'color': NOTE, 'sid': None, 'name': None})
+                         'cells': ['No active sessions', '', '', '', ''], 'color': NOTE, 'sid': None, 'name': None, 'pid': None})
         for s in sessions:
             slot = (snap.get('bySession') or {}).get(s['sid'])
             tokens = format_tokens(slot['block']['total']) if slot else '-'
@@ -716,7 +733,7 @@ class MissionControl:
                 'paragraphs': [('▸ ', s['name'], TITLE), ('    · ', f"{short}  (pid {s['pid']})", DESC)],
                 'cells': [f"{s['name']}  {short}  pid {s['pid']}", s['status'], tokens,
                           format_uptime(s['started']), updated.strftime('%Y-%m-%d %H:%M:%S') if updated else ''],
-                'color': STATUS_COLORS.get(s['status'], GREY), 'sid': s['sid'], 'name': s['name']})
+                'color': STATUS_COLORS.get(s['status'], GREY), 'sid': s['sid'], 'name': s['name'], 'pid': s['pid']})
         self.rows = rows
         self.draw_grid()
 
@@ -833,7 +850,14 @@ class MissionControl:
         self.menu_sid = entry and entry['id']
         self.auto_open.set(bool(entry and entry.get('autoOpen', True)))
         self.copy_menu.entryconfigure('Open on start', state='normal' if entry else 'disabled')
+        self.menu_pid = row and row['pid']
+        self.copy_menu.entryconfigure('Terminate', state='normal' if self.menu_pid else 'disabled')
         self.copy_menu.tk_popup(event.x_root, event.y_root)
+
+    def terminate_menu(self):
+        if self.menu_pid:
+            terminate_session(self.menu_pid)
+            self.refresh_grid()
 
     def copy_rows(self, all_rows):
         rows = [r for r in self.rows if all_rows or r['cells'][0] == self.selected]

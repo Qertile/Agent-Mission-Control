@@ -17,6 +17,9 @@ All notable changes to this project are listed here, newest first.
   `"autoOpen"` in `agents.json` (ticked when missing). The Agents Launcher opens only
   ticked sessions; Agent Mission Control started on its own opens the ticked ones that
   are not running yet. Sessions not listed in `agents.json` have it greyed out.
+- **Terminate (Linux):** a session list right-click item that ends the session: its
+  whole tmux session, which closes its tab, or just the Claude process when it is not
+  in tmux. The conversation is kept, so the Agents Launcher can resume it later.
 
 ### Fixed
 - **Open on start (Linux):** a ticked session still alive in tmux with no terminal
@@ -24,6 +27,9 @@ All notable changes to this project are listed here, newest first.
   Control started, because it counted as running. It is now opened in a tab that
   re-attaches to the tmux session, so Claude is not restarted. Sessions already shown in
   a tab, or running outside tmux, are still skipped.
+- **Session list right-click menu (Linux):** it closed as soon as the right button was
+  released, so it had to be held down. It now opens on release and stays open until
+  an item is clicked or you click elsewhere.
 
 ## 2026-10-22 – account-wide usage
 
