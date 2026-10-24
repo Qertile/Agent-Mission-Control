@@ -66,4 +66,12 @@ P 欄公式（依到期日與狀態算優先度，數字越小越急；已完成
 powershell -ExecutionPolicy Bypass -File "AI-Infra\Task Manager\sync-sheet.ps1"
 ```
 
+**Linux** 上改跑這行（`<套件資料夾>` 是工作資料夾裡放這套工具的那一層，例如 `Agent-Mission-Control`）：
+
+```
+python3 "<套件資料夾>/Task Manager/tasks.py" sync
+```
+
+Linux 上沒有 `show-hud.ps1`：使用者明確要求開獨立彈窗時，改用 `setsid -f python3 "<套件資料夾>/Task Manager/tasks.py" popup`，上面 `conhost.exe` 那段只適用 Windows。
+
 如果同步失敗，最常見原因是使用者正在 Excel 裡開著這個檔案，請提醒使用者關閉檔案後再重試，不要自己嘗試其他繞過方式。

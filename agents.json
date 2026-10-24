@@ -1,5 +1,6 @@
 {
   "sessions": [
-    { "name": "Main", "id": "120965a5-73ab-4e30-b9ab-8a9ab0a64239", "window": 1 }
+    { "name": "Main", "id": "120965a5-73ab-4e30-b9ab-8a9ab0a64239", "window": 1 },
+    { "name": "Sessions Manager", "id": "0b127088-eb24-436b-acdc-a2ebbb28c3f1", "window": 1 }
   ]
 }

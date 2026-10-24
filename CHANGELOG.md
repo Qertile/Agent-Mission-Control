@@ -2,6 +2,18 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-24 – Linux version
+
+### Added
+- **Linux:** the same tools run on Linux (tested on Linux Mint 22 / Cinnamon, X11) from
+  Python files next to the Windows ones: `install.sh`, `Agents Launcher/launch-agents.py`
+  + `agent.sh`, `Session HUD/mission_control.py`, `Task Manager/tasks.py` and
+  `Daily Summary/jobs.py` (systemd user timers instead of Task Scheduler). Each tab runs
+  inside tmux (`tmux -L amc`), which is how the chat boxes type into it.
+- **Sessions Manager default prompt:** on a session's first run, `agent.sh` sends
+  `Agents Launcher/prompts/<name>.md` as its first message, so a new `Sessions Manager`
+  starts knowing its job; resumed sessions are not sent it again.
+
 ## 2026-10-22 – account-wide usage
 
 ### Changed

@@ -32,6 +32,34 @@ Tools for running several Claude Code sessions side by side on Windows.
    **Agents Launcher** shortcut on the desktop, and asks which scheduled jobs to register.
    Nothing is copied - the tools run from this folder. Run it again after moving the folder.
 
+## Linux
+
+The same tools run on Linux (tested on Linux Mint 22 / Cinnamon, X11) from Python
+files next to the Windows ones; `agents.json`, `hud-config.json`, `tasks.md` and the
+reports are shared.
+
+| Windows | Linux |
+|---|---|
+| `install.bat` / `install.ps1` | `./install.sh` (`--check-only` to only check) |
+| `Agents Launcher\Agents Launcher.bat` | `Agents Launcher/launch-agents.py` (desktop shortcut `Agents Launcher.desktop`) |
+| `Session HUD\show-session-hud.ps1` | `Session HUD/mission_control.py` |
+| `Task Manager\sync-sheet.ps1`, `show-hud.ps1` | `Task Manager/tasks.py sync`, `tasks.py popup` |
+| `Daily Summary\run-*.ps1` + Task Scheduler | `Daily Summary/jobs.py review / daily / weekly` + systemd user timers |
+
+Needs: `sudo apt install gnome-terminal tmux python3-tk python3-openpyxl fonts-dejavu-core`
+and Claude Code.
+
+Differences from Windows:
+- Each tab runs its agent inside tmux (`tmux -L amc`, settings in `Agents Launcher/tmux.conf`).
+  That is how the chat boxes type into a tab, without bringing the terminal to the front.
+  Only sessions started by the Agents Launcher can be typed into. In a tab, the mouse
+  wheel scrolls back; hold Shift to select text.
+- Agent Mission Control uses the normal window frame of the desktop, so snapping,
+  maximizing and closing work as for any other window.
+- Scheduled jobs are systemd user timers (`systemctl --user list-timers 'amc-*'`). A job
+  missed while the computer was off runs at the next login.
+- The OAuth token for the jobs is read from `Daily Summary/oauth-token.txt` only.
+
 ## Settings
 
 - `Session HUD\hud-config.json`:
