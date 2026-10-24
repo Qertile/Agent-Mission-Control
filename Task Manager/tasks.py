@@ -1,4 +1,4 @@
-"""Task list for Linux: the counterpart of show-hud.ps1 and sync-sheet.ps1.
+"""Task list for Linux and macOS: the counterpart of show-hud.ps1 and sync-sheet.ps1.
 
 tasks.md parsing and ranking, the Status column of TaskDatabase.xlsx, edits made
 from Agent Mission Control, and the Excel sync. Agent Mission Control imports

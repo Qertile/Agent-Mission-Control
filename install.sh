@@ -11,6 +11,10 @@
 #
 #   ./install.sh --check-only    stops after step 1 and changes nothing.
 
+if [ "$(uname -s)" = Darwin ]; then
+    exec python3 "$(dirname "$0")/install-macos.py" "$@"
+fi
+
 root="$(cd "$(dirname "$0")" && pwd)"
 export PATH="$HOME/.local/bin:$PATH"
 

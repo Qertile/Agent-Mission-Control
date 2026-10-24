@@ -7,19 +7,29 @@ script, so a reused pid is never hit.
 
 import os
 import signal
+import subprocess
 import sys
+import tempfile
 import time
+
+from amc_core import pid_alive
 
 
 def _pid_file(name):
-    base = os.environ.get('XDG_RUNTIME_DIR') or '/tmp'
+    base = os.environ.get('XDG_RUNTIME_DIR') or tempfile.gettempdir()
     return os.path.join(base, f'agent-mission-control-{name}.pid')
 
 
 def _children(pid):
     """Every process descended from `pid`."""
     parents = {}
-    for entry in os.listdir('/proc'):
+    if sys.platform == 'darwin':
+        result = subprocess.run(['ps', '-axo', 'pid=,ppid='],
+                                capture_output=True, text=True, check=True)
+        for line in result.stdout.splitlines():
+            child, parent = map(int, line.split())
+            parents[child] = parent
+    for entry in ([] if sys.platform == 'darwin' else os.listdir('/proc')):
         try:
             with open(f'/proc/{entry}/stat') as f:
                 # The field after the ")" closing the command name: state, then ppid.
@@ -41,18 +51,27 @@ def replace_previous(name):
     try:
         with open(path) as f:
             old = int(f.read().strip())
-        with open(f'/proc/{old}/cmdline', 'rb') as f:
-            cmdline = f.read().decode('utf-8', 'replace')
+        if sys.platform == 'darwin':
+            cmdline = subprocess.run(['ps', '-p', str(old), '-o', 'command='],
+                                     capture_output=True, text=True, check=True).stdout
+        else:
+            with open(f'/proc/{old}/cmdline', 'rb') as f:
+                cmdline = f.read().decode('utf-8', 'replace')
         if old != os.getpid() and script in cmdline:
             # Its children too (the web version's agent tabs): a session the new
             # window starts must be gone from the old one first.
             pids = [old] + _children(old)
             os.kill(old, signal.SIGTERM)
+            for child in reversed(pids[1:]):
+                try:
+                    os.kill(child, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
             for _ in range(100):
-                if not any(os.path.exists(f'/proc/{p}') for p in pids):
+                if not any(pid_alive(p) for p in pids):
                     break
                 time.sleep(0.05)
-    except (OSError, ValueError):
+    except (OSError, ValueError, subprocess.SubprocessError):
         pass
     with open(path, 'w') as f:
         f.write(str(os.getpid()))

@@ -18,6 +18,10 @@ WEB = os.path.join(ROOT, 'Session HUD', 'amc_web.py')
 
 
 def main():
+    if sys.platform == 'darwin':
+        os.environ['PATH'] = os.pathsep.join([
+            os.path.expanduser('~/.local/bin'), '/opt/homebrew/bin', '/usr/local/bin',
+            os.environ.get('PATH', '/usr/bin:/bin')])
     cmd = [sys.executable, WEB]
     if '--dry-run' in sys.argv:
         print(shlex.join(cmd))

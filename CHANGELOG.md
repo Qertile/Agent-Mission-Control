@@ -1,3 +1,11 @@
+## macOS support
+
+- Add macOS setup with an isolated Python environment and a Finder-launchable app.
+- Add opt-in launchd schedules and Terminal.app daily review.
+- Support macOS process detection, single-instance replacement, BSD ps elapsed time,
+  Keychain usage credentials, and Command+C/V in terminal tabs.
+- Preserve Windows/Linux launchers and add a three-platform regression workflow.
+
 # Changelog
 
 All notable changes to this project are listed here, newest first.

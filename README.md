@@ -1,6 +1,6 @@
 # AI-Infra
 
-Tools for running several Claude Code sessions side by side on Windows and Linux.
+Tools for running several Claude Code sessions side by side on Windows, Linux and macOS.
 
 [繁體中文說明在下方](#ai-infra繁體中文)
 
@@ -75,6 +75,68 @@ Differences from Windows:
   missed while the computer was off runs at the next login.
 - The OAuth token for the jobs is read from `Daily Summary/oauth-token.txt` only.
 
+## macOS
+
+Run from Terminal with Python 3.9 or later and Claude Code installed and logged in:
+
+```sh
+./install.sh
+```
+
+On macOS this dispatches to `install-macos.py`, creates a project-local `.venv`,
+installs pywebview's Cocoa/WebKit dependencies, ptyprocess and openpyxl, and creates
+`~/Applications/Agent Mission Control.app`. Open that app from Finder to start.
+The GUI uses the same HTML, terminal tabs and task data as Windows/Linux. Existing
+personal settings are preserved. Run the installer again after moving the folder.
+Every session starts in the folder **containing this repository**, as on Windows/Linux.
+The app includes `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin` on PATH.
+
+```sh
+./install.sh --check-only          # read-only dependency check; nonzero if missing
+./install.sh --schedule            # install/update and register all three jobs
+./install.sh --remove-schedules    # remove only this app's three LaunchAgents
+.venv/bin/python3 "Agents Launcher/launch-agents.py" --dry-run
+```
+
+Schedules are opt-in per-user LaunchAgents under `~/Library/LaunchAgents`, with
+labels `local.agent-mission-control.review`, `.daily`, and `.weekly`. They run
+at 09:30 and 19:00 Monday–Friday, and Friday 19:30, using the Mac's local time.
+The user must be logged in; launchd coalesces calendar jobs missed during sleep
+when the Mac wakes, but jobs missed while logged out or powered off are not
+backfilled. The review opens Terminal.app. Logs are in `Daily Summary/launchd-*.log`.
+These labels identify one installation per user; installing from another checkout
+repoints the same jobs. No jobs run immediately when registered.
+
+Account usage reads `.claude/.credentials.json` when present, otherwise the
+`Claude Code-credentials` item in the macOS login Keychain. Keychain access can
+prompt for permission. If usage cannot be fetched, the existing local transcript
+estimate is used. Optional `Daily Summary/oauth-token.txt` works as on Linux.
+The terminal supports Command+C / Command+V in addition to Ctrl+Shift+C / V.
+DejaVu Sans Mono is optional (the interface falls back to a system monospace font).
+
+The optional standalone task popup needs a Python installation with Tk support;
+the main app does not need Tk. Start it with:
+
+```sh
+.venv/bin/python3 "Task Manager/tasks.py" popup
+```
+
+## Compatibility checks
+
+```sh
+python3 -m pip install openpyxl
+python3 -m unittest discover -s tests -v
+```
+
+The GitHub Actions workflow runs these tests on Windows, Linux and macOS.
+It checks process detection, macOS app/LaunchAgent generation, credentials fallback,
+job cleanup, and task/Excel round trips. Native desktop and Claude login behavior
+still require an interactive check on each target platform.
+
+On macOS, `.venv/bin/python3 tests/smoke_macos_gui.py` opens a temporary Cocoa
+window and shell tab, checks input/output and resizing, then closes and checks
+process cleanup. It does not start Claude or read account credentials.
+
 ## Settings
 
 - `Session HUD\hud-config.json`:
@@ -148,7 +210,7 @@ when that file exists and contains the tag `#work`.
 
 # AI-Infra（繁體中文）
 
-在 Windows 和 Linux 上同時執行多個 Claude Code session 的工具組。
+在 Windows、Linux 和 macOS 上同時執行多個 Claude Code session 的工具組。
 
 | 資料夾 | 功能 |
 |---|---|
@@ -262,3 +324,15 @@ powershell -ExecutionPolicy Bypass -File "AI-Infra\Daily Summary\setup-schedule.
 
 可選的筆記來源：每日總結也會讀取 `<工作資料夾>\Obsidian Vault\MyNotes\<日期>.md`，
 前提是該檔案存在且含有 `#work` 標籤。
+
+## macOS 安裝
+
+需要 Python 3.9 以上，以及已登入的 Claude Code。於 Terminal 執行 `./install.sh`，
+安裝程式會建立專案內的 `.venv`，並在 `~/Applications` 建立
+`Agent Mission Control.app`，之後可從 Finder 開啟。既有的個人設定不會被覆蓋。
+所有 session 的工作目錄仍是本專案的上一層資料夾。
+
+加上 `--check-only` 只檢查依賴；加上 `--schedule` 才會註冊日常回顧、日報與週報，
+使用 Mac 本機時區，並需要使用者登入。`--remove-schedules` 可移除這三個排程。
+回顧使用 Terminal.app；用量支援從 macOS 鑰匙圈讀取 Claude 憑證；
+終端機支援 Command+C／Command+V。細節與測試指令見上方 macOS 一節。

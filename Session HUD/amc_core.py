@@ -5,6 +5,8 @@ runs on Windows too."""
 import glob
 import json
 import os
+import subprocess
+import sys
 import urllib.request
 from datetime import datetime
 
@@ -62,6 +64,14 @@ def from_ms(ms):
 
 
 def pid_alive(pid):
+    if sys.platform == 'darwin':
+        try:
+            os.kill(int(pid), 0)
+            return True
+        except PermissionError:
+            return True
+        except (ProcessLookupError, ValueError):
+            return False
     if os.name != 'nt':
         return os.path.exists(f'/proc/{pid}')
     # os.kill(pid, 0) would end the process on Windows, so ask for its exit code instead.
@@ -116,6 +126,16 @@ def account_usage():
     but Anthropic's usage endpoint and is never shown.
     """
     cred = load_json(os.path.join(CLAUDE_DIR, '.credentials.json'))
+    if not cred and sys.platform == 'darwin':
+        # Claude Code stores its normal macOS login in the user's Keychain.
+        result = subprocess.run(
+            ['security', 'find-generic-password', '-s', 'Claude Code-credentials', '-w'],
+            capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            try:
+                cred = json.loads(result.stdout)
+            except ValueError:
+                pass
     if not cred:
         raise RuntimeError('no .credentials.json')
     token = (cred.get('claudeAiOauth') or {}).get('accessToken')

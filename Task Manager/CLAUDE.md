@@ -66,7 +66,7 @@ P 欄公式（依到期日與狀態算優先度，數字越小越急；已完成
 powershell -ExecutionPolicy Bypass -File "AI-Infra\Task Manager\sync-sheet.ps1"
 ```
 
-**Linux** 上改跑這行（`<套件資料夾>` 是工作資料夾裡放這套工具的那一層，例如 `Agent-Mission-Control`）：
+**Linux 和 macOS** 上改跑這行（`<套件資料夾>` 是工作資料夾裡放這套工具的那一層，例如 `Agent-Mission-Control`）：
 
 ```
 python3 "<套件資料夾>/Task Manager/tasks.py" sync
@@ -75,3 +75,5 @@ python3 "<套件資料夾>/Task Manager/tasks.py" sync
 Linux 上沒有 `show-hud.ps1`：使用者明確要求開獨立彈窗時，改用 `setsid -f python3 "<套件資料夾>/Task Manager/tasks.py" popup`，上面 `conhost.exe` 那段只適用 Windows。
 
 如果同步失敗，最常見原因是使用者正在 Excel 裡開著這個檔案，請提醒使用者關閉檔案後再重試，不要自己嘗試其他繞過方式。
+
+macOS 請使用安裝程式建立的 `.venv/bin/python3` 執行上述 Python 指令。使用者明確要求獨立彈窗時，可用 `subprocess.Popen` 搭配 `start_new_session=True` 分離啟動 `tasks.py popup`；macOS 沒有 `setsid`。獨立彈窗需要 Tk，主視窗不需要。

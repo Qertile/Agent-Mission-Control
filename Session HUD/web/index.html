@@ -231,7 +231,8 @@ const amc = {
     // Ctrl+Shift+C copies the selection; Ctrl+Shift+V is left to the browser's paste,
     // which xterm.js turns into input. Plain Ctrl+C / Ctrl+V still go to the program.
     term.attachCustomKeyEventHandler(e => {
-      if (e.type !== 'keydown' || !e.ctrlKey || !e.shiftKey) return true;
+      const macCommand = /Mac/.test(navigator.platform) && e.metaKey && !e.ctrlKey;
+      if (e.type !== 'keydown' || !(macCommand || (e.ctrlKey && e.shiftKey))) return true;
       if (e.code === 'KeyC') { copyText(term.getSelection()); term.focus(); return false; }
       if (e.code === 'KeyV') return false;
       return true;

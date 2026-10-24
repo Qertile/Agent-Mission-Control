@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The scheduled Claude jobs on Linux: the counterpart of run-daily-review.ps1,
+"""The scheduled Claude jobs on Linux and macOS: the counterpart of run-daily-review.ps1,
 run-daily-summary.ps1 and run-weekly-summary.ps1.
 
     jobs.py review                     weekdays 09:30
@@ -17,6 +17,7 @@ import shlex
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import date, datetime, timedelta
 
@@ -33,6 +34,8 @@ PROJECT_KEY = re.sub(r'[^A-Za-z0-9]', '-', WORK_DIR)
 LIMIT = re.compile(r'usage limit|session limit|rate limit|weekly limit', re.I)
 
 os.environ['PATH'] = os.path.expanduser('~/.local/bin') + os.pathsep + os.environ.get('PATH', '')
+if sys.platform == 'darwin':
+    os.environ['PATH'] = '/opt/homebrew/bin:/usr/local/bin:' + os.environ['PATH']
 if os.path.exists(TOKEN_FILE):
     with open(TOKEN_FILE, encoding='utf-8-sig') as f:
         os.environ['CLAUDE_CODE_OAUTH_TOKEN'] = f.read().strip()
@@ -62,8 +65,6 @@ def review():
     if last == candidate:
         log(log_name, f'最新報告 {candidate}.md 已經問過了，跳過。')
         return
-    with open(marker, 'w', encoding='utf-8') as f:
-        f.write(candidate)
 
     prompt = (f"請讀取 {report} 這份報告，找出裡面「待辦事項彙總」這一段列出的所有項目。逐一唸出來詢問我目前的狀態或請我確認/裁定，"
               "一次只問一項，等我回答完才問下一項，不要一次全部列出來，也不要自己先假設答案。已結案的項目（標示結案、今天結案、已完成、"
@@ -72,17 +73,24 @@ def review():
               "這兩個檔案不由你在這個流程裡編輯，我確認的狀態記在這次對話裡即可，之後會由每日總結或我自己處理，不要為此再問。")
 
     # A temporary start script for the new interactive window avoids nested quoting.
-    launcher = os.path.join(os.environ.get('XDG_RUNTIME_DIR') or '/tmp', 'claude-daily-review-launch.sh')
+    fd, launcher = tempfile.mkstemp(prefix='claude-daily-review-', suffix='.command')
+    os.close(fd)
     with open(launcher, 'w', encoding='utf-8') as f:
         f.write('#!/usr/bin/env bash\n'
                 f'export PATH="$HOME/.local/bin:$PATH"\n'
                 f'if [ -f {shlex.quote(TOKEN_FILE)} ]; then export CLAUDE_CODE_OAUTH_TOKEN="$(tr -d \'\\r\\n\' < {shlex.quote(TOKEN_FILE)})"; fi\n'
                 f'cd {shlex.quote(WORK_DIR)}\n'
                 f'claude {shlex.quote(prompt)}\n'
+                'rm -- "$0"\n'
                 'exec "${SHELL:-bash}"\n')
     os.chmod(launcher, 0o700)
-    subprocess.Popen(['gnome-terminal', '--window', '--title=Claude Daily Review', '--', launcher],
-                     start_new_session=True)
+    if sys.platform == 'darwin':
+        subprocess.run(['open', '-a', 'Terminal', launcher], check=True)
+    else:
+        subprocess.Popen(['gnome-terminal', '--window', '--title=Claude Daily Review', '--', launcher],
+                         start_new_session=True)
+    with open(marker, 'w', encoding='utf-8') as f:
+        f.write(candidate)
     log(log_name, f'開啟互動視窗詢問報告：{candidate}.md')
 
 
@@ -96,17 +104,30 @@ def write_settings():
         f.write(text)
 
 
+def elapsed_seconds(text):
+    """BSD ps elapsed time: [[days-]hours:]minutes:seconds."""
+    days, sep, clock = text.rpartition('-')
+    total = 0
+    for part in (clock if sep else text).split(':'):
+        total = total * 60 + int(part)
+    return total + (int(days) * 86400 if sep else 0)
+
+
 def kill_orphans(log_name):
     """Stop claude processes this job left behind, running for over 2 hours.
 
     Only processes whose command line names this job's settings file are touched,
     never anything judged by a looser rule: an interactive session must not be hit.
     """
-    out = subprocess.run(['ps', '-eo', 'pid=,etimes=,args='], capture_output=True, text=True).stdout
+    fields = 'pid=,etime=,args=' if sys.platform == 'darwin' else 'pid=,etimes=,args='
+    out = subprocess.run(['ps', '-eo', fields], capture_output=True, text=True, check=True).stdout
     killed = []
     for line in out.splitlines():
         parts = line.split(None, 2)
-        if len(parts) == 3 and SETTINGS in parts[2] and 'claude' in parts[2] and int(parts[1]) > 7200:
+        if len(parts) != 3 or SETTINGS not in parts[2] or 'claude' not in parts[2]:
+            continue
+        age = elapsed_seconds(parts[1]) if sys.platform == 'darwin' else int(parts[1])
+        if age > 7200:
             try:
                 os.kill(int(parts[0]), signal.SIGKILL)
                 killed.append(parts[0])
