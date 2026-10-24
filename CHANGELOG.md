@@ -44,8 +44,10 @@ All notable changes to this project are listed here, newest first.
   one window, three columns: tasks (clickable due date with a calendar, clickable status,
   the `Task Reminder` chat box), Session Monitor (usage and pies, the session list with
   sparklines, right-click Copy / Copy all rows / Open on start / Terminate, double-click
-  to pick the chat target, the `Session Manager` chat box), and a terminal tab per
-  `agents.json` session. Tabs run `claude` on the session's fixed id like `agent.sh`
+  to show that session's tab), and a terminal tab per `agents.json` session. The bars
+  between the columns drag to resize them, and the widths are kept for the next start.
+  The two lines under 5H BLOCK are small grey italics, like the note under the list.
+  There is no session chat box: you type into the tab itself. Tabs run `claude` on the session's fixed id like `agent.sh`
   (`--session-id` with the `prompts/<name>.md` first message on the first run, `--resume`
   later); ticked ones start with the window, `+` starts any other listed one, and a tab
   closes when its session ends (its `×`, Terminate, or `/exit`). A session already running

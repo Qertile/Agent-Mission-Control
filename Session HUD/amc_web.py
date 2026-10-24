@@ -441,7 +441,7 @@ def main():
                                    maximized=True, background_color='#060a06')
     api._window = window
     window.events.closed += api._close_all
-    webview.start()
+    webview.start(private_mode=False)      # keeps the page's saved column widths
 
 
 if __name__ == '__main__':
