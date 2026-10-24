@@ -40,6 +40,22 @@ All notable changes to this project are listed here, newest first.
   `"autoOpen"` in `agents.json` (ticked when missing). The Agents Launcher opens only
   ticked sessions; Agent Mission Control started on its own opens the ticked ones that
   are not running yet. Sessions not listed in `agents.json` have it greyed out.
+- **Web version, stage 2 (`Session HUD/amc_web.py`):** the whole Agent Mission Control in
+  one window, three columns: tasks (clickable due date with a calendar, clickable status,
+  the `Task Reminder` chat box), Session Monitor (usage and pies, the session list with
+  sparklines, right-click Copy / Copy all rows / Open on start / Terminate, double-click
+  to pick the chat target, the `Session Manager` chat box), and a terminal tab per
+  `agents.json` session. Tabs run `claude` on the session's fixed id like `agent.sh`
+  (`--session-id` with the `prompts/<name>.md` first message on the first run, `--resume`
+  later); ticked ones start with the window, `+` starts any other listed one, and a tab
+  closes when its session ends (its `×`, Terminate, or `/exit`). A session already running
+  elsewhere (an old tmux tab) is left there. Double-click in the list is detected by hand,
+  since the list is redrawn every second. The chat boxes open
+  a missing `Session Manager` / `Task Reminder` tab as before. `--agents FILE` uses
+  another `agents.json`. Runs beside the Tk HUD and its tmux tabs; nothing launches it yet.
+- **Shared code (`Session HUD/amc_core.py`):** paths, `agents.json`, the session registry,
+  account usage and number formats, used by both `mission_control.py` and `amc_web.py`;
+  no tmux and nothing Linux-only (a Windows-safe process check instead of `/proc`).
 - **Web version, stage 1 prototype (`Session HUD/amc_web.py`):** one window
   (pywebview) with terminal tabs drawn by xterm.js 5.5.0 (kept in `Session HUD/web/vendor`)
   and a two-line chat box that types into the active tab. Each tab is a pseudo-terminal

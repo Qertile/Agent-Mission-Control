@@ -10,7 +10,6 @@ into a session through tmux: the Agents Launcher starts every agent inside the
 process runs in. No window has to be brought to the front.
 """
 
-import glob
 import json
 import os
 import re
@@ -21,23 +20,17 @@ import threading
 import time
 import tkinter as tk
 import tkinter.font as tkfont
-import urllib.request
 import uuid
 from collections import deque
 from datetime import date, datetime, timedelta, timezone
 from queue import Queue, Empty
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)                       # the package folder
-TASK_DIR = os.path.join(ROOT, 'Task Manager')
-TASKS_PATH = os.path.join(TASK_DIR, 'tasks.md')
-XLSX_PATH = os.path.join(TASK_DIR, 'TaskDatabase.xlsx')
-TASKS_SCRIPT = os.path.join(TASK_DIR, 'tasks.py')
-CLAUDE_DIR = os.path.expanduser('~/.claude')
+from amc_core import (HERE, TASKS_PATH, XLSX_PATH, TASKS_SCRIPT, LAUNCHER_DIR, WORK_DIR,
+                      CREATE_ON_SEND, TASK_DIR, load_json, agents, save_agents, set_auto_open,
+                      active_sessions, transcript_path, account_usage, format_tokens,
+                      format_remaining, format_uptime)
+
 TMUX = ['tmux', '-L', 'amc']
-LAUNCHER_DIR = os.path.join(ROOT, 'Agents Launcher')
-WORK_DIR = os.path.dirname(ROOT)                   # every agent tab starts here
-CREATE_ON_SEND = {'Session Manager', 'Task Reminder'}  # opened (and added to agents.json) on first send
 
 sys.path.insert(0, TASK_DIR)
 import tasks  # noqa: E402
@@ -92,99 +85,6 @@ TASK_STATUS_COLORS = {'Ongoing': '#00dcff', 'Checking': '#ffc400'}
 GREY = '#8c96a0'
 
 
-def load_json(path):
-    try:
-        with open(path, encoding='utf-8-sig') as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return None
-
-
-def session_order():
-    """(id, label) pairs from agents.json, read on every refresh so edits show at once."""
-    data = load_json(os.path.join(ROOT, 'agents.json')) or {}
-    return [(s.get('id'), s.get('name')) for s in data.get('sessions') or []]
-
-
-def from_ms(ms):
-    return datetime.fromtimestamp(int(ms) / 1000) if ms else None
-
-
-def active_sessions():
-    """Registry entries whose process is still alive (a crash leaves its json behind)."""
-    sessions = []
-    for path in glob.glob(os.path.join(CLAUDE_DIR, 'sessions', '*.json')):
-        data = load_json(path)
-        if not data or not data.get('pid') or data.get('spare'):
-            continue
-        if not os.path.exists(f"/proc/{data['pid']}"):
-            continue
-        sid = str(data.get('sessionId') or '')
-        name = data.get('name') or (sid[:8] if sid else f"pid {data['pid']}")
-        sessions.append({'pid': int(data['pid']), 'sid': sid, 'name': str(name),
-                         'status': str(data.get('status') or ''),
-                         'started': from_ms(data.get('startedAt')),
-                         'updated': from_ms(data.get('updatedAt'))})
-    order = session_order()
-    for s in sessions:
-        s['rank'] = 1000
-        for i, (sid, label) in enumerate(order):
-            if sid == s['sid']:
-                s['rank'], s['name'] = i, label
-                break
-    sessions.sort(key=lambda s: (s['started'] or datetime.min), reverse=True)
-    sessions.sort(key=lambda s: s['rank'])
-    return sessions
-
-
-def account_usage():
-    """The account-wide 5-hour and weekly utilization the Claude app and /usage show.
-
-    Uses the OAuth token Claude Code keeps in .credentials.json; it goes nowhere
-    but Anthropic's usage endpoint and is never shown.
-    """
-    cred = load_json(os.path.join(CLAUDE_DIR, '.credentials.json'))
-    if not cred:
-        raise RuntimeError('no .credentials.json')
-    token = (cred.get('claudeAiOauth') or {}).get('accessToken')
-    if not token:
-        raise RuntimeError('no OAuth token in .credentials.json')
-    req = urllib.request.Request('https://api.anthropic.com/api/oauth/usage', headers={
-        'Authorization': f'Bearer {token}', 'anthropic-beta': 'oauth-2025-04-20',
-        'Accept': 'application/json'})
-    with urllib.request.urlopen(req, timeout=10) as r:
-        data = json.load(r)
-
-    def reset(block):
-        at = (data.get(block) or {}).get('resets_at')
-        return datetime.fromisoformat(at.replace('Z', '+00:00')).astimezone().replace(tzinfo=None) if at else None
-    return {'five_hour': float(data['five_hour']['utilization']), 'five_hour_reset': reset('five_hour'),
-            'week': float(data['seven_day']['utilization']), 'week_reset': reset('seven_day')}
-
-
-def format_tokens(v):
-    v = float(v or 0)
-    if v >= 1_000_000:
-        return f'{v / 1_000_000:,.1f}M'
-    if v >= 1000:
-        return f'{v / 1000:,.1f}K'
-    return f'{v:,.0f}'
-
-
-def format_remaining(seconds):
-    if seconds <= 0:
-        return 'resetting'
-    h, m = int(seconds // 3600), int(seconds % 3600 // 60)
-    return f'{h}h{m:02d}m' if h >= 1 else f'{m}m'
-
-
-def format_uptime(started):
-    if not started:
-        return ''
-    # Hours only, one decimal, no other unit: "25.1 hrs".
-    return f'{(datetime.now() - started).total_seconds() / 3600:.1f} hrs'
-
-
 # --- typing into a session ------------------------------------------------------
 
 def parent_pid(pid):
@@ -208,15 +108,6 @@ def find_pane(pid):
             return panes[str(pid)]
         pid = parent_pid(pid)
     return None
-
-
-def save_agents(sessions):
-    """Writes agents.json in its one-session-per-line layout."""
-    path = os.path.join(ROOT, 'agents.json')
-    lines = ',\n'.join('    { ' + json.dumps(s, ensure_ascii=False)[1:-1] + ' }' for s in sessions)
-    with open(path + '.tmp', 'w', encoding='utf-8') as f:
-        f.write('{\n  "sessions": [\n' + lines + '\n  ]\n}\n')
-    os.replace(path + '.tmp', path)
 
 
 def tmux_name(name):
@@ -259,7 +150,7 @@ def wait_for_client(name, timeout=5):
 def open_session(name):
     """Opens `name` in a terminal tab the way the Agents Launcher does, adding it to
     agents.json with a new session id first if it is not listed there yet."""
-    sessions = (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []
+    sessions = agents()
     entry = next((s for s in sessions if s.get('name') == name), None)
     if not entry:
         entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1}
@@ -277,7 +168,7 @@ def open_auto_sessions():
     out = subprocess.run(TMUX + ['list-sessions', '-F', '#{session_attached} #{session_name}'],
                          capture_output=True, text=True).stdout       # empty when no tmux server
     attached = {line.split(' ', 1)[1]: line.split(' ', 1)[0] != '0' for line in out.splitlines()}
-    for s in (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []:
+    for s in agents():
         if not s.get('autoOpen', True):
             continue
         name = tmux_name(s['name'])
@@ -307,16 +198,6 @@ def terminate_session(pid):
 def close_all_sessions():
     """Ends every agent tab: the whole "amc" tmux server, so each claude ends and its tab closes."""
     subprocess.run(TMUX + ['kill-server'], stderr=subprocess.DEVNULL)
-
-
-def set_auto_open(sid, on):
-    """Marks the agents.json session `sid` to open, or not, when Agent Mission Control starts."""
-    sessions = (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []
-    for s in sessions:
-        if s.get('id') == sid:
-            s['autoOpen'] = on
-            save_agents(sessions)
-            return
 
 
 def wait_for_session(name, timeout=90):
@@ -770,8 +651,7 @@ class MissionControl:
             if not sid:
                 continue
             if not self.transcripts.get(sid):
-                hits = glob.glob(os.path.join(CLAUDE_DIR, 'projects', '*', f'{sid}.jsonl'))
-                self.transcripts[sid] = hits[0] if hits else ''
+                self.transcripts[sid] = transcript_path(sid)
             try:
                 length = os.path.getsize(self.transcripts[sid]) if self.transcripts[sid] else 0
             except OSError:
@@ -915,7 +795,7 @@ class MissionControl:
         self.grid_click(event)
         # "Open on start" is kept in agents.json, so only sessions listed there have it.
         row = self.row_at(event)
-        sessions = (load_json(os.path.join(ROOT, 'agents.json')) or {}).get('sessions') or []
+        sessions = agents()
         entry = next((s for s in sessions if row and s.get('id') == row['sid']), None)
         self.menu_sid = entry and entry['id']
         self.auto_open.set(bool(entry and entry.get('autoOpen', True)))
