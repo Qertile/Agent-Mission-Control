@@ -4,6 +4,10 @@ All notable changes to this project are listed here, newest first.
 
 ## 2026-10-24 – Linux version
 
+### Changed
+- **One branch:** the Windows and Linux files live side by side on `master`; the
+  separate `linux` branch is merged in and no longer used.
+
 ### Added
 - **Linux:** the same tools run on Linux (tested on Linux Mint 22 / Cinnamon, X11) from
   Python files next to the Windows ones: `install.sh`, `Agents Launcher/launch-agents.py`
@@ -30,6 +34,21 @@ All notable changes to this project are listed here, newest first.
 - **Session list right-click menu (Linux):** it closed as soon as the right button was
   released, so it had to be held down. It now opens on release and stays open until
   an item is clicked or you click elsewhere.
+
+## 2026-10-24 – chat box editing, pane focus
+
+### Changed
+- **Chat boxes:** two lines high; Shift+Enter inserts a newline, Enter sends. A
+  multi-line message is typed into the tab the way Claude Code documents for every
+  terminal (backslash, then Enter, per line). Up on the first line / Down on the last
+  line walk the lines sent from that box, like a shell history (per box, per run).
+  No scrollbar on the box.
+- **Up column:** hours with one decimal (`25.1 hrs`), no other unit.
+
+### Fixed
+- Sending into a tab whose terminal title had changed (Claude Code stops setting it
+  after a self-update) lost the keystrokes: the pane is now found by its control
+  class, not its title.
 
 ## 2026-10-22 – account-wide usage
 
