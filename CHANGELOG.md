@@ -20,6 +20,8 @@ All notable changes to this project are listed here, newest first.
   popup) instead of GNOME Terminal and tmux. `install.ps1` no longer checks Windows
   Terminal; it checks the Python modules pywebview, pywinpty and openpyxl and offers to
   install them with pip, together with a newer `typing_extensions` (Python 3.7).
+- **Linux desktop shortcut:** `install.sh` names it `Agent Mission Control` (with the
+  window's own icon) instead of `Agents Launcher`; it still runs `launch-agents.py`.
 - **README** and `Task Manager/CLAUDE.md` describe the web window: tabs, `+` / `×`,
   double-click, resizable columns, the one `Task Reminder` chat box.
 

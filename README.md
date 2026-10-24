@@ -55,7 +55,7 @@ reports are shared.
 | Windows | Linux |
 |---|---|
 | `install.bat` / `install.ps1` | `./install.sh` (`--check-only` to only check) |
-| `Agents Launcher\Agents Launcher.bat` | `Agents Launcher/launch-agents.py` (desktop shortcut `Agents Launcher.desktop`) |
+| `Agents Launcher\Agents Launcher.bat` | `Agents Launcher/launch-agents.py` (desktop shortcut `Agent Mission Control.desktop`) |
 | `Session HUD\amc_web.py` | the same file |
 | `Task Manager\sync-sheet.ps1`, `show-hud.ps1` | `Task Manager/tasks.py sync`, `tasks.py popup` |
 | `Daily Summary\run-*.ps1` + Task Scheduler | `Daily Summary/jobs.py review / daily / weekly` + systemd user timers |

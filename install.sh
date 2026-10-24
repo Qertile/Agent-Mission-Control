@@ -5,7 +5,7 @@
 #      ptyprocess, openpyxl and Tk, the DejaVu Sans Mono font);
 #   2. making your own agents.json, hud-config.json, tasks.md and TaskDatabase.xlsx
 #      from their templates, if they are not there yet;
-#   3. putting the "Agents Launcher" shortcut on the desktop;
+#   3. putting the "Agent Mission Control" shortcut on the desktop;
 #   4. registering the scheduled jobs you choose as systemd user timers.
 # Run it again after moving the folder: the shortcut and jobs are re-pointed.
 #
@@ -59,15 +59,15 @@ from_template 'Task Manager/TaskDatabase.xlsx' 'Task Manager/TaskDatabase.templa
 
 echo -e "\n\e[36m== 3. Desktop shortcut ==\e[0m"
 desktop="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
-shortcut="$desktop/Agents Launcher.desktop"
+shortcut="$desktop/Agent Mission Control.desktop"
 cat > "$shortcut" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Agents Launcher
+Name=Agent Mission Control
 Comment=Open Agent Mission Control and its agent tabs
 Exec=python3 "$root/Agents Launcher/launch-agents.py"
 Path=$root/Agents Launcher
-Icon=utilities-terminal
+Icon=$root/Session HUD/mission-control.svg
 Terminal=false
 EOF
 chmod +x "$shortcut"
@@ -119,4 +119,4 @@ fi
 
 echo -e "\n\e[32mDone.\e[0m"
 [ "$missing" -gt 0 ] && echo -e "\e[33m$missing item(s) above are still missing - fix them before using the tools.\e[0m"
-echo 'Next: list your tabs in agents.json, then double-click "Agents Launcher" on the desktop.'
+echo 'Next: list your tabs in agents.json, then double-click "Agent Mission Control" on the desktop.'
