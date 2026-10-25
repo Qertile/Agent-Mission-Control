@@ -2,6 +2,16 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-25 – model per session
+
+### Added
+- **Model in the session list's right-click menu:** *Claude default*, `fable`, `opus`,
+  `sonnet` or `haiku`, the current one marked. The choice is saved as `"model"` in the
+  session's `agents.json` entry and passed to `claude` as `--model` on every start and
+  resume (*Claude default* removes it). An idle tab restarts on the new model at once and
+  resumes the same conversation; a busy or waiting one is left running and takes the
+  model at its next start. The result shows under the list.
+
 ## 2026-10-24 – one window (web version, stage 3)
 
 ### Added

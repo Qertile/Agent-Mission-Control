@@ -47,6 +47,8 @@ else:
 ACTIVITY_WINDOW = 60
 STATUS_COLORS = {'busy': '#00dcff', 'running': '#00dcff', 'waiting': '#ffc400', 'idle': '#8cff8c'}
 GREY = '#8c96a0'
+# The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
+MODELS = ['fable', 'opus', 'sonnet', 'haiku']
 
 
 def arg_value(flag):
@@ -59,14 +61,16 @@ def agent_argv(entry):
     """The command a tab runs for the agents.json entry. First run creates the
     session with its fixed id and, when
     Agents Launcher/prompts/<name>.md exists, sends that file as its first message;
-    later runs resume the same conversation. --name pins the name in the registry."""
+    later runs resume the same conversation. --name pins the name in the registry, and
+    the entry's "model", when set, is passed as --model."""
     if '--shell' in sys.argv:
         return [os.environ.get('COMSPEC', 'cmd.exe') if WINDOWS else os.environ.get('SHELL', '/bin/bash')]
     sid, name = entry['id'], entry['name']
     argv = [shutil.which('claude') or 'claude']
+    model = ['--model', entry['model']] if entry.get('model') else []
     if transcript_path(sid):
-        return argv + ['--resume', sid, '--name', name]
-    argv += ['--session-id', sid, '--name', name]
+        return argv + ['--resume', sid, '--name', name] + model
+    argv += ['--session-id', sid, '--name', name] + model
     try:
         with open(os.path.join(LAUNCHER_DIR, 'prompts', f'{name}.md'), encoding='utf-8') as f:
             argv.append(f.read())
@@ -244,6 +248,7 @@ class Api:
                          'up': format_uptime(s['started']),
                          'updated': updated.strftime('%Y-%m-%d %H:%M:%S') if updated else '',
                          'listed': bool(entry), 'autoOpen': bool(entry and entry.get('autoOpen', True)),
+                         'model': (entry or {}).get('model', ''),
                          'tab': s['sid'] in self._terms,
                          'samples': list(self._samples.get(s['sid'], []))})
         note = f"{len(rows)} active · sessions {datetime.now():%H:%M:%S}"
@@ -253,7 +258,7 @@ class Api:
                 note += f" · account {u['account_at']:%H:%M:%S}"
             elif u['account_error']:
                 note += f" · account: {u['account_error']}"
-        return {'rows': rows, 'usage': self._usage_view(), 'note': note}
+        return {'rows': rows, 'usage': self._usage_view(), 'note': note, 'models': MODELS}
 
     def terminate(self, sid, pid):
         """Ends a session: its tab's process here, otherwise the process itself."""
@@ -268,6 +273,37 @@ class Api:
 
     def set_auto_open(self, sid, on):
         core.set_auto_open(sid, bool(on))
+
+    def set_model(self, sid, model):
+        """Saves the model the session starts with ('' = default). When its tab here is
+        idle, the tab restarts so the model applies now; the conversation resumes. A busy
+        or waiting session is not interrupted. Returns what happened."""
+        entry = next((e for e in core.agents() if e['id'] == sid), None)
+        if not entry:
+            return 'not in agents.json'
+        if model and model not in MODELS:
+            return f"unknown model '{model}'"
+        core.set_model(sid, model)
+        entry = dict(entry, model=model)
+        label = model or 'Claude default'
+        term = self._terms.get(sid)
+        if not term:
+            return f'model {label}: applies when the session next starts'
+        if not any(s['sid'] == sid and s['status'] == 'idle' for s in active_sessions()):
+            return f'model {label}: not idle, applies when the session next starts'
+        term.close()
+        for _ in range(50):
+            if not term.alive():
+                break
+            time.sleep(0.1)
+        with self._start_lock:
+            if self._terms.get(sid) is term:
+                del self._terms[sid]
+        try:
+            self._start(entry)
+        except Exception as e:
+            return f'model {label} saved, restart failed: {e}'
+        return f'model {label}: restarted'
 
     # --- page -> python: tasks
 

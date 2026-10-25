@@ -50,8 +50,9 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 3. List your tabs in `agents.json` (it starts with one, `Session Manager`): one entry per
    Claude Code session, with a name and a fixed session id (make one with
    `powershell -c "[guid]::NewGuid()"`). Agent Mission Control shows them in this order
-   under these names. (`"window"` was the Windows Terminal window of the old launcher
-   and is no longer used.)
+   under these names. An optional `"model"` (for example `"sonnet"`) is passed as
+   `--model`; the session list's right-click *Model* sets it. (`"window"` was the Windows
+   Terminal window of the old launcher and is no longer used.)
 
 ## Linux
 
@@ -107,7 +108,13 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   window ends every tab; the conversations are kept and resume next time. A session
   already running in another terminal is left there and gets no tab.
 - **Session list:** double-click a session to show its tab. Right-click for Copy,
-  Copy all rows, Open on start and Terminate.
+  Copy all rows, Model, Open on start and Terminate.
+- **Model:** the right-click menu's *Model* picks what the session runs on: *Claude
+  default* (no `--model`, so Claude Code picks by plan and version), `fable`, `opus`,
+  `sonnet` or `haiku`. The choice is saved as `"model"` in `agents.json` and passed as
+  `--model`. An idle tab restarts on it at once and resumes the same conversation; a busy
+  or waiting one is not interrupted and takes it at its next start. Sessions not in
+  `agents.json` have no Model choice.
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
 - **Tab status:** the dot in each tab is its session's status colour (busy cyan, idle
   green). A tab not on screen blinks when its session finishes or waits for you.
@@ -195,7 +202,9 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 3. 在 `agents.json` 列出你的分頁（一開始已有一筆 `Session Manager`）：每個
    Claude Code session 一筆，包含名稱和固定的 session id（用
    `powershell -c "[guid]::NewGuid()"` 產生）。Agent Mission Control 依這個順序、用這些
-   名稱顯示。（`"window"` 是舊 launcher 的 Windows Terminal 視窗編號，已不再使用。）
+   名稱顯示。可選的 `"model"`（例如 `"sonnet"`）會以 `--model` 傳入，可用 session
+   清單右鍵的 *Model* 設定。（`"window"` 是舊 launcher 的 Windows Terminal 視窗編號，
+   已不再使用。）
 
 ## 設定
 
@@ -227,7 +236,12 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   一個。在分頁裡打字就跟一般終端機一樣。關掉視窗會結束所有分頁；對話會保留，下次接著
   繼續。已經在別的終端機執行的 session 會留在原處，不會有分頁。
 - **Session 清單**：雙擊 session 會切到它的分頁。右鍵有 Copy、Copy all rows、
-  Open on start、Terminate。
+  Model、Open on start、Terminate。
+- **Model**：右鍵選單的 *Model* 選 session 要用的模型：*Claude default*（不加
+  `--model`，由 Claude Code 依方案和版本決定）、`fable`、`opus`、`sonnet`、`haiku`。
+  選擇會存成 `agents.json` 裡的 `"model"`，啟動時以 `--model` 傳入。idle 的分頁會立刻
+  重開並接續同一段對話；busy 或 waiting 的不會被中斷，下次啟動才套用。不在
+  `agents.json` 裡的 session 沒有 Model 可選。
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
 - **分頁狀態**：每個分頁前的圓點是 session 狀態的顏色（busy 藍、idle 綠）。不在畫面上的
   分頁，session 跑完或在等你時會閃爍。

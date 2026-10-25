@@ -52,6 +52,19 @@ def set_auto_open(sid, on):
             return
 
 
+def set_model(sid, model):
+    """Sets the model the agents.json session `sid` starts with; '' goes back to Claude Code's default."""
+    sessions = agents()
+    for s in sessions:
+        if s.get('id') == sid:
+            if model:
+                s['model'] = model
+            else:
+                s.pop('model', None)
+            save_agents(sessions)
+            return
+
+
 def session_order():
     """(id, label) pairs from agents.json."""
     return [(s.get('id'), s.get('name')) for s in agents()]

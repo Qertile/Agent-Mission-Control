@@ -145,6 +145,8 @@
   <div data-act="copy">Copy</div>
   <div data-act="copyall">Copy all rows</div>
   <hr>
+  <div class="disabled">Model</div>
+  <hr id="model-end">
   <div data-act="auto">Open on start</div>
   <div data-act="term">Terminate</div>
 </div>
@@ -493,17 +495,34 @@ document.querySelectorAll('.split').forEach(bar => bar.addEventListener('mousedo
   addEventListener('mousemove', move); addEventListener('mouseup', up);
 }));
 const cells = r => [`${r.name}  ${r.short}  pid ${r.pid}`, r.status, r.tokens, r.up, r.updated].join('\t');
-let menuRow = null;
+let menuRow = null, models = [];
+// One item per model under the menu's "Model" label, the session's current one marked.
+function fillModels(r) {
+  const m = $('row-menu');
+  m.querySelectorAll('.model-item').forEach(it => it.remove());
+  for (const name of ['', ...models]) {
+    const it = document.createElement('div');
+    it.className = 'model-item';
+    it.dataset.act = 'model';
+    it.dataset.model = name;
+    // No --model: Claude Code picks, by plan and version.
+    it.textContent = (r && r.model === name ? '◉ ' : '○ ') + (name || 'Claude default');
+    m.insertBefore(it, $('model-end'));
+  }
+}
 $('grid').addEventListener('contextmenu', e => {
   e.preventDefault();
   menuRow = rowAt(e);
   selected = menuRow ? menuRow.sid : null;
   drawGrid();
+  fillModels(menuRow);
   const m = $('row-menu'), items = m.querySelectorAll('[data-act]');
   items.forEach(it => it.classList.toggle('disabled', !menuRow && it.dataset.act !== 'copyall'));
   const auto = m.querySelector('[data-act="auto"]');
   auto.textContent = (menuRow && menuRow.autoOpen ? '☑ ' : '☐ ') + 'Open on start';
-  auto.classList.toggle('disabled', !menuRow || !menuRow.listed);
+  // Open on start and the model live in agents.json: a session outside it has neither.
+  for (const it of m.querySelectorAll('[data-act="auto"], [data-act="model"]'))
+    it.classList.toggle('disabled', !menuRow || !menuRow.listed);
   showAt(m, e.clientX, e.clientY);
 });
 $('row-menu').addEventListener('click', async e => {
@@ -513,6 +532,15 @@ $('row-menu').addEventListener('click', async e => {
   if (act === 'copyall') copyText(rows.map(cells).join('\n'));
   if (act === 'auto' && r) await api().set_auto_open(r.sid, !r.autoOpen);
   if (act === 'term' && r) await api().terminate(r.sid, r.pid);
+  if (act === 'model' && r) {
+    // An idle tab restarts on the new model; keep it on screen when it was.
+    const wasActive = amc.active === r.sid;
+    $('grid-msg').textContent = `${r.name}: setting model…`;
+    const msg = await api().set_model(r.sid, e.target.dataset.model);
+    $('grid-msg').textContent = `${r.name}: ${msg}`;
+    await amc.syncTabs();
+    if (wasActive && msg.endsWith('restarted')) amc.select(r.sid);
+  }
   refresh();
 });
 
@@ -605,6 +633,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus();
 async function refresh() {
   const s = await api().snapshot();
   rows = s.rows;
+  models = s.models;
   amc.statuses(rows);
   drawGrid();
   drawUsage(s.usage);
