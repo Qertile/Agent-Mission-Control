@@ -2,6 +2,30 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-25 – Codex tabs (stage 1)
+
+### Added
+- **New Codex session… in the `+` menu:** adds a session with `"tool": "codex"` to
+  `agents.json` and starts `codex` in its tab (with `prompts/<name>.md` as its first
+  message when that file exists). Refused when `codex` is not on PATH.
+- **Codex thread found by itself:** Codex chooses its session id and writes the rollout
+  only at the first message, so Agent Mission Control takes the new rollout in the work
+  folder whose thread started with the tab (by the latest Enter when two new tabs
+  started together) and saves its id as `"thread"`. From then on the tab runs
+  `codex resume <thread>`.
+- **Codex in the session list:** this window's Codex tabs are listed with the Claude
+  sessions, in `agents.json` order, with busy / idle from their rollout and the activity
+  sparkline from its growth. The id column shows the thread, or `new` before it is known.
+- **Codex models:** the right-click *Model* menu of a Codex session lists *Codex default*
+  and the models in `~/.codex/models_cache.json` that Codex's picker shows; the choice is
+  passed as `-m`, with the same restart-when-idle as for Claude.
+- **CODEX in the usage panel:** a line with the plan and each limit window (named by its
+  length: 5H, WEEK, 30D) and a pie per window, from the last `token_count` Codex wrote.
+
+### Not yet
+- A Codex session waiting for an approval shows busy, not waiting.
+- The chat boxes and the Daily Summary still cover Claude sessions only.
+
 ## 2026-10-25 – model per session
 
 ### Added

@@ -1,12 +1,12 @@
 """Agent Mission Control's data side: paths, agents.json, the Claude Code session
-registry, account usage and number formats. No UI here, and nothing Linux-only, so it
-runs on Windows too."""
+registry, Codex rollouts, account usage and number formats. No UI here, and nothing
+Linux-only, so it runs on Windows too."""
 
 import glob
 import json
 import os
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)                       # the package folder
@@ -15,6 +15,7 @@ TASKS_PATH = os.path.join(TASK_DIR, 'tasks.md')
 XLSX_PATH = os.path.join(TASK_DIR, 'TaskDatabase.xlsx')
 TASKS_SCRIPT = os.path.join(TASK_DIR, 'tasks.py')
 CLAUDE_DIR = os.path.expanduser('~/.claude')
+CODEX_DIR = os.environ.get('CODEX_HOME') or os.path.expanduser('~/.codex')
 LAUNCHER_DIR = os.path.join(ROOT, 'Agents Launcher')
 WORK_DIR = os.path.dirname(ROOT)                   # every agent tab starts here
 CREATE_ON_SEND = {'Session Manager', 'Task Reminder'}  # opened (and added to agents.json) on first send
@@ -52,17 +53,22 @@ def set_auto_open(sid, on):
             return
 
 
-def set_model(sid, model):
-    """Sets the model the agents.json session `sid` starts with; '' goes back to Claude Code's default."""
+def set_field(sid, key, value):
+    """Sets `key` of the agents.json session `sid`; an empty value removes it."""
     sessions = agents()
     for s in sessions:
         if s.get('id') == sid:
-            if model:
-                s['model'] = model
+            if value:
+                s[key] = value
             else:
-                s.pop('model', None)
+                s.pop(key, None)
             save_agents(sessions)
             return
+
+
+def set_model(sid, model):
+    """Sets the model the agents.json session `sid` starts with; '' goes back to the tool's default."""
+    set_field(sid, 'model', model)
 
 
 def session_order():
@@ -120,6 +126,109 @@ def transcript_path(sid):
     """The session's transcript under ~/.claude/projects, or '' when it has none yet."""
     hits = glob.glob(os.path.join(CLAUDE_DIR, 'projects', '*', f'{sid}.jsonl'))
     return hits[0] if hits else ''
+
+
+# --- Codex. It keeps no registry of running sessions, so Agent Mission Control knows
+# only the Codex tabs it runs; each session's transcript is a rollout file whose first
+# line (session_meta) holds the thread id, cwd and start time. The id exists only once
+# the first message is sent, so a new tab's thread is found afterwards (amc_web.py).
+
+def codex_rollouts():
+    return glob.glob(os.path.join(CODEX_DIR, 'sessions', '*', '*', '*', 'rollout-*.jsonl'))
+
+
+def mtime(path):
+    """The file's modified time, or 0 when it is gone."""
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return 0
+
+
+def codex_rollout(thread):
+    """The thread's rollout file, or '' when it has none."""
+    hits = glob.glob(os.path.join(CODEX_DIR, 'sessions', '*', '*', '*', f'rollout-*-{thread}.jsonl'))
+    return hits[0] if hits else ''
+
+
+def local_time(iso):
+    """An ISO UTC timestamp ('...Z') as a naive local datetime, or None."""
+    try:
+        return datetime.fromisoformat(iso.replace('Z', '+00:00')).astimezone().replace(tzinfo=None)
+    except (AttributeError, ValueError):
+        return None
+
+
+def rollout_meta(path):
+    """{'id', 'cwd', 'started'} from a rollout's session_meta line, or None."""
+    try:
+        with open(path, encoding='utf-8') as f:
+            first = json.loads(f.readline())
+    except (OSError, ValueError):
+        return None
+    meta = first.get('payload') or {}
+    if first.get('type') != 'session_meta' or not meta.get('id'):
+        return None
+    return {'id': meta['id'], 'cwd': meta.get('cwd') or '', 'started': local_time(meta.get('timestamp'))}
+
+
+def _tail_events(path, size=262144):
+    """The rollout's last lines as parsed json, newest first (a partial first line is skipped)."""
+    try:
+        with open(path, 'rb') as f:
+            f.seek(0, os.SEEK_END)
+            f.seek(max(0, f.tell() - size))
+            lines = f.read().decode('utf-8', 'replace').splitlines()
+    except OSError:
+        return []
+    events = []
+    for line in reversed(lines):
+        try:
+            events.append(json.loads(line))
+        except ValueError:
+            pass
+    return events
+
+
+def codex_status(path):
+    """'busy' while a turn runs, otherwise 'idle'. Codex's approval prompts are not
+    told apart yet, so a session waiting on one shows busy."""
+    for e in _tail_events(path):
+        kind = (e.get('payload') or {}).get('type') if e.get('type') == 'event_msg' else None
+        if kind == 'task_started':
+            return 'busy'
+        if kind in ('task_complete', 'turn_aborted'):
+            return 'idle'
+    return 'idle'
+
+
+def codex_rate_limits():
+    """The account limits Codex wrote after its latest turn on this machine, or None:
+    {'plan', 'windows': [{'minutes', 'used', 'reset'}]}. Use elsewhere shows up only
+    after the next turn here."""
+    for path in sorted(codex_rollouts(), key=mtime, reverse=True)[:5]:
+        for e in _tail_events(path):
+            payload = e.get('payload') or {}
+            limits = payload.get('rate_limits') if payload.get('type') == 'token_count' else None
+            if not limits:
+                continue
+            windows = []
+            for key in ('primary', 'secondary'):
+                w = limits.get(key)
+                if w and w.get('window_minutes'):
+                    at = w.get('resets_at')
+                    windows.append({'minutes': int(w['window_minutes']), 'used': float(w.get('used_percent') or 0),
+                                    'reset': datetime.fromtimestamp(at, timezone.utc).astimezone().replace(tzinfo=None)
+                                    if at else None})
+            return {'plan': limits.get('plan_type') or '', 'windows': windows}
+    return None
+
+
+def codex_models():
+    """The model slugs Codex lists in its picker (from its models cache), or []."""
+    data = load_json(os.path.join(CODEX_DIR, 'models_cache.json'))
+    models = data.get('models') if isinstance(data, dict) else data
+    return [m['slug'] for m in models or [] if isinstance(m, dict) and m.get('slug') and m.get('visibility') == 'list']
 
 
 def account_usage():

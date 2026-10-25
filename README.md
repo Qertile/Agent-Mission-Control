@@ -29,6 +29,8 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 
 - Windows 10 or 11
 - Claude Code CLI, with `claude` on PATH
+- Optional, for Codex tabs: Codex CLI with `codex` on PATH (`npm install -g @openai/codex`,
+  which needs Node.js), logged in with `codex login`
 - Python 3 on PATH, with the modules `pywebview`, `pywinpty` and `openpyxl`:
   `python -m pip install -U pywebview pywinpty openpyxl typing_extensions`
   (Python 3.7 needs the newer `typing_extensions`, or pywebview fails with
@@ -51,7 +53,9 @@ and never overwrites it, so a `git pull` leaves your copies alone.
    Claude Code session, with a name and a fixed session id (make one with
    `powershell -c "[guid]::NewGuid()"`). Agent Mission Control shows them in this order
    under these names. An optional `"model"` (for example `"sonnet"`) is passed as
-   `--model`; the session list's right-click *Model* sets it. (`"window"` was the Windows
+   `--model`; the session list's right-click *Model* sets it. A Codex session has
+   `"tool": "codex"` and, once Codex has made it, `"thread"` (see *Codex tabs*); `+` →
+   *New Codex session…* writes both. (`"window"` was the Windows
    Terminal window of the old launcher and is no longer used.)
 
 ## Linux
@@ -114,7 +118,20 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   `sonnet` or `haiku`. The choice is saved as `"model"` in `agents.json` and passed as
   `--model`. An idle tab restarts on it at once and resumes the same conversation; a busy
   or waiting one is not interrupted and takes it at its next start. Sessions not in
-  `agents.json` have no Model choice.
+  `agents.json` have no Model choice. A Codex session lists *Codex default* and the
+  models Codex's own picker shows (from `~/.codex/models_cache.json`), passed as `-m`.
+- **Codex tabs:** `+` → *New Codex session…* adds a session with `"tool": "codex"` and
+  starts `codex` in its tab (with `prompts/<name>.md` as its first message when that file
+  exists). Codex chooses the session id itself and writes its transcript
+  (`~/.codex/sessions/<year>/<month>/<day>/rollout-…-<id>.jsonl`) only at the first
+  message, so the id is saved as `"thread"` in `agents.json` once you have sent one; from
+  then on the tab runs `codex resume <thread>`. Until then the session list shows `new`
+  in place of the id, and a tab closed before its first message starts a new conversation
+  next time. The list shows only the Codex tabs of this window (Codex has no registry of
+  running sessions) and only busy or idle: a Codex session waiting for an approval shows
+  busy. The usage panel's CODEX line and pie are the account limits Codex wrote after its
+  latest turn on this computer, one pie per limit window the plan has (the free plan has
+  one, 30 days), so use elsewhere shows after the next turn here.
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
 - **Tab status:** the dot in each tab is its session's status colour (busy cyan, idle
   green). A tab not on screen blinks when its session finishes or waits for you.
@@ -182,6 +199,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 - Windows 10 或 11
 - Claude Code CLI，且 `claude` 在 PATH 中
+- 選用，給 Codex 分頁用：Codex CLI，且 `codex` 在 PATH 中（`npm install -g @openai/codex`，
+  需要 Node.js），並用 `codex login` 登入
 - Python 3 在 PATH 中，並裝好 `pywebview`、`pywinpty`、`openpyxl` 模組：
   `python -m pip install -U pywebview pywinpty openpyxl typing_extensions`
   （Python 3.7 要裝新版 `typing_extensions`，否則 pywebview 會出現
@@ -203,7 +222,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
    Claude Code session 一筆，包含名稱和固定的 session id（用
    `powershell -c "[guid]::NewGuid()"` 產生）。Agent Mission Control 依這個順序、用這些
    名稱顯示。可選的 `"model"`（例如 `"sonnet"`）會以 `--model` 傳入，可用 session
-   清單右鍵的 *Model* 設定。（`"window"` 是舊 launcher 的 Windows Terminal 視窗編號，
+   清單右鍵的 *Model* 設定。Codex session 會有 `"tool": "codex"`，Codex 建立好之後
+   還會有 `"thread"`（見 *Codex 分頁*）；`+` → *New Codex session…* 會自動寫入這兩個欄位。（`"window"` 是舊 launcher 的 Windows Terminal 視窗編號，
    已不再使用。）
 
 ## 設定
@@ -241,7 +261,19 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   `--model`，由 Claude Code 依方案和版本決定）、`fable`、`opus`、`sonnet`、`haiku`。
   選擇會存成 `agents.json` 裡的 `"model"`，啟動時以 `--model` 傳入。idle 的分頁會立刻
   重開並接續同一段對話；busy 或 waiting 的不會被中斷，下次啟動才套用。不在
-  `agents.json` 裡的 session 沒有 Model 可選。
+  `agents.json` 裡的 session 沒有 Model 可選。Codex session 列出的是 *Codex default*
+  和 Codex 自己選單裡的模型（來自 `~/.codex/models_cache.json`），以 `-m` 傳入。
+- **Codex 分頁**：`+` → *New Codex session…* 會新增一筆 `"tool": "codex"` 的 session，
+  並在分頁裡啟動 `codex`（有 `prompts/<name>.md` 時會當成第一則訊息送出）。Codex 的
+  session id 由它自己決定，而且要送出第一則訊息才會寫出對話紀錄
+  （`~/.codex/sessions/<年>/<月>/<日>/rollout-…-<id>.jsonl`），所以送出第一則訊息後，
+  id 才會存進 `agents.json` 的 `"thread"`；之後這個分頁就以 `codex resume <thread>`
+  啟動。在那之前 session 清單的 id 欄顯示 `new`；還沒送出訊息就關掉的分頁，下次會開
+  新的對話。清單只會列出這個視窗裡的 Codex 分頁（Codex 沒有執行中 session 的登錄檔），
+  狀態也只有 busy 和 idle：等你核准指令的 Codex session 會顯示 busy。用量面板的 CODEX
+  那一行和圓餅圖，是 Codex 在這台電腦上最近一輪對話後記下的帳號額度，方案有幾個額度
+  視窗就有幾個圓餅（免費方案只有一個，30 天），所以在別處的用量要等這裡下一輪對話後
+  才會顯示。
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
 - **分頁狀態**：每個分頁前的圓點是 session 狀態的顏色（busy 藍、idle 綠）。不在畫面上的
   分頁，session 跑完或在等你時會閃爍。

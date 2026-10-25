@@ -327,15 +327,18 @@ $('add-tab').addEventListener('click', e => {
   m.innerHTML = ((amc.stopped || []).length
     ? amc.stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)}</div>`).join('')
     : '<div class="disabled">every session is running</div>') +
-    '<hr><div data-new="1">New session…</div>';
+    '<hr><div data-new="claude">New session…</div><div data-new="codex">New Codex session…</div>';
   const r = $('add-tab').getBoundingClientRect();
   showAt(m, r.left, r.bottom);
 });
+let newTool = 'claude';
 $('add-menu').addEventListener('click', e => {
   // New session: the menu turns into a name box; Enter adds it to agents.json and starts it.
   if (e.target.dataset.new) {
     e.stopPropagation();
-    $('add-menu').innerHTML = '<input id="new-name" placeholder="name, then Enter" spellcheck="false">' +
+    newTool = e.target.dataset.new;
+    const hint = newTool === 'codex' ? 'Codex session name, then Enter' : 'name, then Enter';
+    $('add-menu').innerHTML = `<input id="new-name" placeholder="${hint}" spellcheck="false">` +
                               '<div class="err" id="new-err"></div>';
     $('new-name').focus();
     return;
@@ -346,7 +349,7 @@ $('add-menu').addEventListener('click', e => {
 });
 $('add-menu').addEventListener('keydown', async e => {
   if (e.target.id !== 'new-name' || e.key !== 'Enter') return;
-  const res = await api().new_session(e.target.value);
+  const res = await api().new_session(e.target.value, newTool);
   if (res.error) { $('new-err').textContent = res.error; return; }
   hideMenus();
   await amc.syncTabs();
@@ -419,6 +422,7 @@ function drawUsage(u) {
     `<div class="row d">${esc(u.detail)}</div>` +
     `<div class="row"><span class="k">TODAY/WEEK</span><span class="v">${esc(u.week)}</span></div>` +
     (u.models ? `<div class="row"><span class="k">MODELS</span><span class="s">${esc(u.models)}</span></div>` : '') +
+    (u.codex ? `<div class="row"><span class="k">CODEX</span><span class="s">${esc(u.codex)}</span></div>` : '') +
     (pies ? `<div id="pies">${pies}</div>` : '');
 }
 
@@ -495,18 +499,20 @@ document.querySelectorAll('.split').forEach(bar => bar.addEventListener('mousedo
   addEventListener('mousemove', move); addEventListener('mouseup', up);
 }));
 const cells = r => [`${r.name}  ${r.short}  pid ${r.pid}`, r.status, r.tokens, r.up, r.updated].join('\t');
-let menuRow = null, models = [];
-// One item per model under the menu's "Model" label, the session's current one marked.
+let menuRow = null;
+// One item per model of the session's tool under the menu's "Model" label, the
+// session's current one marked.
 function fillModels(r) {
   const m = $('row-menu');
   m.querySelectorAll('.model-item').forEach(it => it.remove());
-  for (const name of ['', ...models]) {
+  for (const name of ['', ...(r ? r.models : [])]) {
     const it = document.createElement('div');
     it.className = 'model-item';
     it.dataset.act = 'model';
     it.dataset.model = name;
-    // No --model: Claude Code picks, by plan and version.
-    it.textContent = (r && r.model === name ? '◉ ' : '○ ') + (name || 'Claude default');
+    // No --model / -m: the tool picks, by plan and version.
+    const fallback = r && r.tool === 'codex' ? 'Codex default' : 'Claude default';
+    it.textContent = (r && r.model === name ? '◉ ' : '○ ') + (name || fallback);
     m.insertBefore(it, $('model-end'));
   }
 }
@@ -633,7 +639,6 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus();
 async function refresh() {
   const s = await api().snapshot();
   rows = s.rows;
-  models = s.models;
   amc.statuses(rows);
   drawGrid();
   drawUsage(s.usage);
