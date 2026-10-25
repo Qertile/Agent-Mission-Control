@@ -2,6 +2,28 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-25 – panes as in VS Code
+
+### Changed
+- **Free pane layout in place of the two side-by-side panes:** drag a tab onto the
+  terminal area; on a pane's left / right / top / bottom edge it gets a new pane there,
+  on its middle it replaces that pane's tab (and leaves the pane it was in). Panes nest
+  in any mix of rows and columns, in the three-column view as well as at full width. The
+  bars between panes drag to resize (no pane below 120 px), `⊟` at a pane's top right
+  closes it while its session keeps running, and a pane whose session ends closes. The
+  layout and the focused tab are kept in the page's storage and come back at the next
+  start without the sessions not running then. A tab restarting on a new model keeps its
+  pane.
+- **`⇔ full width`** (was *⇔ side by side*) now only hides the task and session columns.
+- **Tabs easier to tell apart:** the tab typed into is lit with a bright underline, a tab
+  shown in another pane has a dim underline; a pane's `⊟` is bigger.
+
+### Added
+- **Tab order by dragging:** drag a tab along the tab bar to move it; a bar marks the
+  spot. The new order is written to `agents.json`, so it is kept and the session list
+  follows it. The tabs now always stand in `agents.json` order (a session started from
+  `+` used to go to the end).
+
 ## 2026-10-25 – Codex tabs (stage 1)
 
 ### Added

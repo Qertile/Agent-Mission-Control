@@ -135,9 +135,18 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
 - **Tab status:** the dot in each tab is its session's status colour (busy cyan, idle
   green). A tab not on screen blinks when its session finishes or waits for you.
-- **Side by side:** `⇔` at the right of the tab bar hides the task and session columns and
-  shows two tabs next to each other. A tab you click goes into the focused pane (click a
-  pane to focus it); `⇔` again goes back.
+- **Panes (as in VS Code):** drag a tab from the tab bar onto the terminal area. Dropped
+  on a pane's left, right, top or bottom edge it gets a new pane there; dropped on a
+  pane's middle it replaces that pane's tab. Panes nest freely (side by side, one above
+  the other, or both), and the bars between them drag to resize. A tab you click goes
+  into the focused pane, or focuses the pane already showing it; click a pane to focus
+  it. `⊟` at a pane's top right closes the pane (its session keeps running and its tab
+  stays in the bar); a pane whose session ends closes by itself. The layout is kept for
+  the next start, minus the sessions not running then.
+- **Tab order:** drag a tab along the tab bar; a bar shows where it will go. The order is
+  saved in `agents.json`, so it stays next time and the session list follows it.
+- **Full width:** `⇔ full width` at the right of the tab bar hides the task and session
+  columns so the panes get the whole window; `⇔` again brings them back.
 
 - **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
   written to `tasks.md` and synced to the Excel file.
@@ -277,8 +286,16 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
 - **分頁狀態**：每個分頁前的圓點是 session 狀態的顏色（busy 藍、idle 綠）。不在畫面上的
   分頁，session 跑完或在等你時會閃爍。
-- **並排**：分頁列最右邊的 `⇔` 會收起任務欄和 Session Monitor，兩個分頁左右並排。點分頁
-  會放進目前選中的那格（點一下格子即可選中）；再按 `⇔` 回到三欄。
+- **窗格（跟 VS Code 一樣）**：把分頁從分頁列拖到終端機區域。放在某個窗格的左、右、
+  上、下邊緣，會在那一側切出新窗格；放在窗格中間，則取代那格原本的分頁。窗格可以自由
+  巢狀（左右、上下或混合），窗格之間的分隔線可以拖動調整大小。點分頁會放進目前選中的
+  窗格，如果它已經顯示在某格，就改選那一格；點一下窗格即可選中。窗格右上角的 `⊟` 會
+  關閉窗格（session 繼續執行，分頁也還在分頁列上）；session 結束的窗格會自動關閉。
+  版面會保留到下次啟動，屆時沒在執行的 session 會被拿掉。
+- **分頁順序**：在分頁列上左右拖曳分頁，會有一條亮綠線標出放下的位置。順序會存進
+  `agents.json`，下次啟動仍然保留，session 清單也會照這個順序排。
+- **全寬**：分頁列最右邊的 `⇔ full width` 會收起任務欄和 Session Monitor，讓窗格佔滿
+  整個視窗；再按一次 `⇔` 回到三欄。
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
   並同步到 Excel。

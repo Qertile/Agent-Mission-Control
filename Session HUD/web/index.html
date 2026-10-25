@@ -77,24 +77,35 @@
   .tab .x:hover { color: #ff5a5a; }
   #add-tab { padding: 6px 12px; cursor: pointer; color: var(--desc); font-weight: bold; }
   #add-tab:hover { color: var(--accent); }
-  .tab.active { color: var(--accent); background: var(--bg); }
-  .tab.shown { color: var(--title); background: var(--bg); }        /* in the other side-by-side pane */
+  /* The tab typed into: bright, lit and underlined (not bold: the tabs would shift); one
+     shown in another pane: underlined dim. */
+  .tab.active { color: var(--accent); background: #12361b; box-shadow: inset 0 -3px 0 var(--accent); }
+  .tab.shown { color: var(--title); background: var(--bg); box-shadow: inset 0 -3px 0 var(--desc); }
+  .tab.mark-before { box-shadow: inset 3px 0 0 var(--accent); }    /* where a dragged tab would go */
+  .tab.mark-after { box-shadow: inset -3px 0 0 var(--accent); }
   .tab .dot { margin-right: 6px; color: #8c96a0; }
   .tab.attn { animation: attn 1s ease-in-out infinite alternate; }  /* finished or waiting, not on screen */
   @keyframes attn { from { background: var(--bar); } to { background: #4a3d00; } }
   #wide-btn { margin-left: auto; padding: 6px 12px; cursor: pointer; color: var(--desc); }
   #wide-btn:hover, body.wide #wide-btn { color: var(--accent); }
-  #terms { flex: 1; position: relative; min-height: 0; }
-  .term { position: absolute; inset: 4px 4px 4px 8px; visibility: hidden; }
+  #terms { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+  .term { position: absolute; visibility: hidden; }        /* placed in its pane by amc.render() */
   .term.active { visibility: visible; }
-  /* Wide: the task and session columns are hidden and two tabs sit side by side. */
+  .term.focus { outline: 1px solid var(--line); outline-offset: 2px; }
+  /* Panes: the bars between them drag; a tab dropped on a pane's edge splits it there. */
+  .sash { position: absolute; z-index: 2; background: var(--line); }
+  .sash.row { cursor: col-resize; }
+  .sash.col { cursor: row-resize; }
+  .sash:hover, .sash.on { background: var(--desc); }
+  #terms.resizing .term { pointer-events: none; }          /* the terminals under the cursor stay out of it */
+  .pane-x { position: absolute; z-index: 2; padding: 3px 8px; font-size: 20px; line-height: 1; cursor: pointer;
+            color: var(--desc); background: var(--bar); border: 1px solid var(--line); }
+  .pane-x:hover { color: var(--accent); border-color: var(--desc); }
+  #drop { position: absolute; z-index: 3; display: none; pointer-events: none;
+          background: rgba(51, 255, 102, 0.12); border: 1px solid var(--accent); }
+  /* Wide: the task and session columns are hidden, the panes get the whole window. */
   body.wide { grid-template-columns: 1fr; }
   body.wide > .col:not(#term-col), body.wide > .split { display: none; }
-  body.wide .term.p0:not(.solo) { right: calc(50% + 4px); }
-  body.wide .term.p1 { left: calc(50% + 8px); }
-  body.wide.two #terms::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
-                                background: var(--line); }
-  body.wide .term.focus { outline: 1px solid var(--line); outline-offset: 2px; }
   #no-tabs { color: var(--note); padding: 14px; }
 
   /* menus and the calendar */
@@ -137,8 +148,8 @@
 <div class="split" data-col="2"></div>
 <div class="col" id="term-col">
   <div id="tabs"><div id="add-tab" title="start a session, or a new one">+</div>
-    <div id="wide-btn" title="hide the task and session columns and show two tabs side by side">⇔ side by side</div></div>
-  <div id="terms"><div id="no-tabs">No session running: start one with +.</div></div>
+    <div id="wide-btn" title="hide the task and session columns; drag a tab onto a pane's edge to split it">⇔ full width</div></div>
+  <div id="terms"><div id="no-tabs">No session running: start one with +.</div><div id="drop"></div></div>
 </div>
 
 <div class="menu" id="row-menu">
@@ -165,13 +176,24 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', 
 const TASK_STATUS_COLORS = {Ongoing: '#00dcff', Checking: '#ffc400'};
 
 // ---------------------------------------------------------------- terminals
+// The panes are a tree, as in VS Code: a leaf {id} shows one tab (id null: none yet),
+// a split {dir: 'row' | 'col', sizes, children} lays its children out side by side
+// ('row') or one above the other ('col'), sizes being their shares (summing to 1).
+// A tab is in at most one pane; the focused pane's tab is the one typed into.
+const SASH = 5, MIN_PANE = 120, LAYOUT_KEY = 'amc-layout';
+// Read before anything saves: the first tab shown at start would overwrite it.
+const SAVED_LAYOUT = (() => { try { return localStorage.getItem(LAYOUT_KEY); } catch (e) { return null; } })();
 const amc = {
   tabs: {},            // id -> {name, term, fit, el, tabEl, running}
   pending: {},         // output for a tab the page has not drawn yet
-  active: null,        // the tab typed into
-  wide: false,         // side by side: panes[0] left, panes[1] right, panes[focus] is active
-  panes: [null, null],
-  focus: 0,
+  active: null,        // the tab typed into: the focused pane's
+  wide: false,         // the task and session columns hidden
+  layout: {id: null},
+  focusLeaf: null,     // set below to the layout's one leaf
+  rects: new Map(),    // leaf -> {x, y, w, h} in #terms, from the last render
+  keep: new Set(),     // tabs restarting (a Model change): their panes stay meanwhile
+  dragging: null,      // the tab being dragged onto the panes
+  sashOn: null,        // [split, i] of the bar being dragged, kept lit across renders
   status: {},          // id -> last session status, to spot busy -> idle
 
   output(id, data) {
@@ -179,7 +201,8 @@ const amc = {
     if (t) t.term.write(data); else amc.pending[id] = (amc.pending[id] || '') + data;
   },
 
-  // Only a running session has a tab; one that ends (Terminate, x, or /exit) loses it.
+  // Only a running session has a tab; one that ends (Terminate, x, or /exit) loses it,
+  // and its pane closes. The tabs stand in agents.json order, which dragging them changes.
   async syncTabs() {
     const list = await api().tabs();
     amc.stopped = list.filter(t => !t.running);
@@ -190,21 +213,125 @@ const amc = {
       t.running = running;
       t.tabEl.classList.toggle('off', !running);
       if (!running) t.el.classList.remove('active');
+      $('tabs').insertBefore(t.tabEl, $('add-tab'));
     }
-    const live = list.filter(t => t.running);
-    $('no-tabs').style.display = live.length ? 'none' : '';
-    const isLive = id => live.some(t => t.id === id);
-    amc.panes = amc.panes.map(id => isLive(id) ? id : null);
-    if (!amc.panes[0]) amc.panes = [amc.panes[1], null];
-    if (!amc.panes[amc.focus]) amc.focus = 0;
-    if (!isLive(amc.active)) {
-      amc.active = null;
-      if (amc.wide && amc.panes[0]) amc.select(amc.panes[amc.focus]);
-      else if (live.length) amc.select(live[0].id);
-      else amc.render();
+    $('no-tabs').style.display = list.some(t => t.running) ? 'none' : '';
+    amc.prune();
+    amc.fill();
+  },
+
+  // --- the pane tree
+  leaves(node = amc.layout) { return node.children ? node.children.flatMap(c => amc.leaves(c)) : [node]; },
+  parentOf(target, node = amc.layout) {
+    for (const c of node.children || []) {
+      if (c === target) return node;
+      const p = amc.parentOf(target, c);
+      if (p) return p;
+    }
+    return null;
+  },
+  leafOf(id) { return amc.leaves().find(l => l.id === id) || null; },
+  live(id) { return !!id && ((amc.tabs[id] && amc.tabs[id].running) || amc.keep.has(id)); },
+
+  // Closes a pane: its neighbours share its space, a split left with one child becomes
+  // that child, and the focus goes to the neighbour. The last pane only empties.
+  removeLeaf(leaf) {
+    const parent = amc.parentOf(leaf);
+    if (!parent) { leaf.id = null; return; }
+    const i = parent.children.indexOf(leaf);
+    parent.children.splice(i, 1);
+    parent.sizes.splice(i, 1);
+    const sum = parent.sizes.reduce((a, b) => a + b, 0);
+    parent.sizes = parent.sizes.map(s => s / sum);
+    const next = parent.children[Math.min(i, parent.children.length - 1)];
+    if (parent.children.length === 1) {
+      const gp = amc.parentOf(parent);
+      if (gp) gp.children[gp.children.indexOf(parent)] = next;
+      else amc.layout = next;
+    }
+    if (!amc.leaves().includes(amc.focusLeaf)) amc.focusLeaf = amc.leaves(next)[0];
+  },
+
+  // Puts tab `id` in a new pane beside `leaf` (zone left / right / top / bottom); the two
+  // share the leaf's space. Returns the new pane.
+  split(leaf, zone, id) {
+    const dir = zone === 'left' || zone === 'right' ? 'row' : 'col';
+    const before = zone === 'left' || zone === 'top';
+    const fresh = {id}, parent = amc.parentOf(leaf);
+    if (parent && parent.dir === dir) {
+      const i = parent.children.indexOf(leaf), half = parent.sizes[i] / 2;
+      parent.sizes.splice(i, 1, half, half);
+      parent.children.splice(before ? i : i + 1, 0, fresh);
     } else {
-      amc.render();
+      // The leaf becomes the split, so whatever points at it still finds its place.
+      const old = {id: leaf.id};
+      if (amc.focusLeaf === leaf) amc.focusLeaf = old;
+      delete leaf.id;
+      Object.assign(leaf, {dir, sizes: [0.5, 0.5], children: before ? [fresh, old] : [old, fresh]});
     }
+    return fresh;
+  },
+
+  // A tab dropped on a pane: on its middle it replaces the pane's tab, on an edge it
+  // gets a new pane there. It leaves the pane it was in.
+  move(id, leaf, zone) {
+    const from = amc.leafOf(id);
+    if (from === leaf) {
+      if (zone === 'center') return;
+      // Splitting a tab off its own pane: the pane keeps another tab, if there is one.
+      const spare = Object.keys(amc.tabs).find(k => amc.live(k) && !amc.leafOf(k));
+      if (!spare) return;
+      leaf.id = spare;
+    } else if (from) {
+      amc.removeLeaf(from);
+    }
+    if (zone === 'center') leaf.id = id;
+    else leaf = amc.split(leaf, zone, id);
+    amc.focusLeaf = leaf;
+    amc.select(id);
+  },
+
+  // Panes whose tab ended close; a layout read back is checked the same way.
+  prune() {
+    const seen = new Set();
+    for (const leaf of amc.leaves()) {
+      if (!amc.live(leaf.id) || seen.has(leaf.id)) amc.removeLeaf(leaf);
+      seen.add(leaf.id);
+    }
+    if (!amc.leaves().includes(amc.focusLeaf)) amc.focusLeaf = amc.leaves()[0];
+  },
+
+  // An empty focused pane gets a running tab that is not on screen.
+  fill() {
+    amc.active = amc.focusLeaf.id;
+    if (!amc.active) {
+      const spare = Object.keys(amc.tabs).find(k => amc.live(k) && !amc.leafOf(k));
+      if (spare) { amc.select(spare); return; }
+    }
+    amc.render();
+  },
+
+  save() {
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify({layout: amc.layout, active: amc.active})); } catch (e) {}
+  },
+
+  // The layout of the last window, without the tabs that are not running now.
+  restore() {
+    try {
+      const saved = JSON.parse(SAVED_LAYOUT);
+      const ok = n => n && (n.children ? Array.isArray(n.sizes) && n.children.length === n.sizes.length &&
+                                         n.children.length > 1 && n.children.every(ok) : true);
+      if (saved && ok(saved.layout)) {
+        amc.layout = saved.layout;
+        amc.focusLeaf = amc.leaves()[0];
+        amc.prune();
+        amc.focusLeaf = amc.leafOf(saved.active) || amc.focusLeaf;
+      }
+    } catch (e) {
+      amc.layout = {id: null};
+      amc.focusLeaf = amc.layout;
+    }
+    amc.fill();
   },
 
   addTab(id, name) {
@@ -215,6 +342,14 @@ const amc = {
       if (e.target.classList.contains('x')) api().terminate(id, 0);    // its tab goes when it ends
       else amc.select(id);
     };
+    // Dragged onto the panes: a pane's middle shows it there, an edge splits the pane.
+    tabEl.draggable = true;
+    tabEl.addEventListener('dragstart', e => {
+      amc.dragging = id;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', name);
+    });
+    tabEl.addEventListener('dragend', () => { amc.dragging = null; $('drop').style.display = 'none'; tabMark(null); });
     $('tabs').insertBefore(tabEl, $('add-tab'));
     const el = document.createElement('div');
     el.className = 'term';
@@ -242,38 +377,74 @@ const amc = {
     if (amc.pending[id]) { term.write(amc.pending[id]); delete amc.pending[id]; }
   },
 
-  // Side by side, a tab already in a pane gets the focus there; any other replaces
-  // the tab in the focused pane.
+  // A tab already in a pane gets the focus there; any other replaces the tab in the
+  // focused pane.
   select(id) {
     const t = amc.tabs[id];
     if (!t || !t.running) return;
-    if (amc.wide) {
-      const at = amc.panes.indexOf(id);
-      if (at >= 0) amc.focus = at;
-      else if (!amc.panes[0]) { amc.panes[0] = id; amc.focus = 0; }
-      else if (!amc.panes[1]) { amc.panes[1] = id; amc.focus = 1; }
-      else amc.panes[amc.focus] = id;
-    }
+    const leaf = amc.leafOf(id);
+    if (leaf) amc.focusLeaf = leaf;
+    else amc.focusLeaf.id = id;
     amc.active = id;
     amc.render();
+    amc.save();
     t.term.focus();
   },
 
-  // Which tabs are on screen and where; fits each to its pane.
+  // Lays the pane tree out in #terms: places each shown tab, draws the bars between
+  // panes and a close button on each pane when there are several, fits the terminals.
   render() {
-    const shown = amc.wide ? amc.panes.filter(Boolean) : [amc.active].filter(Boolean);
     document.body.classList.toggle('wide', amc.wide);
-    document.body.classList.toggle('two', amc.wide && shown.length === 2);
+    const box = $('terms');
+    box.querySelectorAll('.sash, .pane-x').forEach(el => el.remove());
+    amc.rects = new Map();
+    const several = amc.leaves().length > 1;
+    const place = (node, x, y, w, h) => {
+      if (!node.children) { amc.rects.set(node, {x, y, w, h}); return; }
+      const row = node.dir === 'row', n = node.children.length;
+      const free = Math.max(0, (row ? w : h) - SASH * (n - 1));
+      let at = row ? x : y;
+      node.children.forEach((c, i) => {
+        const len = i === n - 1 ? (row ? x + w : y + h) - at : Math.round(free * node.sizes[i]);
+        if (row) place(c, at, y, len, h); else place(c, x, at, w, len);
+        at += len;
+        if (i < n - 1) {
+          const bar = document.createElement('div');
+          bar.className = 'sash ' + node.dir;
+          if (amc.sashOn && amc.sashOn[0] === node && amc.sashOn[1] === i) bar.classList.add('on');
+          Object.assign(bar.style, row ? {left: at + 'px', top: y + 'px', width: SASH + 'px', height: h + 'px'}
+                                       : {left: x + 'px', top: at + 'px', width: w + 'px', height: SASH + 'px'});
+          bar.addEventListener('mousedown', e => amc.dragSash(e, node, i, free));
+          box.appendChild(bar);
+          at += SASH;
+        }
+      });
+    };
+    place(amc.layout, 0, 0, box.clientWidth, box.clientHeight);
+    const shown = [];
     for (const [k, x] of Object.entries(amc.tabs)) {
-      const pane = amc.wide ? amc.panes.indexOf(k) : (k === amc.active ? 0 : -1);
-      x.el.classList.toggle('active', pane >= 0);
-      x.el.classList.toggle('p0', pane === 0);
-      x.el.classList.toggle('p1', pane === 1);
-      x.el.classList.toggle('solo', shown.length < 2);
-      x.el.classList.toggle('focus', k === amc.active && shown.length === 2);
+      const leaf = amc.leafOf(k), r = leaf && amc.rects.get(leaf);
+      x.el.classList.toggle('active', !!r);
+      x.el.classList.toggle('focus', !!r && several && leaf === amc.focusLeaf);
       x.tabEl.classList.toggle('active', k === amc.active);
-      x.tabEl.classList.toggle('shown', pane >= 0 && k !== amc.active);
-      if (pane >= 0) x.tabEl.classList.remove('attn');
+      x.tabEl.classList.toggle('shown', !!r && k !== amc.active);
+      if (!r) continue;
+      x.tabEl.classList.remove('attn');
+      Object.assign(x.el.style, {left: r.x + 8 + 'px', top: r.y + 4 + 'px',
+                                 width: Math.max(0, r.w - 12) + 'px', height: Math.max(0, r.h - 8) + 'px'});
+      shown.push(k);
+    }
+    if (several) {
+      for (const [leaf, r] of amc.rects) {
+        if (!leaf.id) continue;
+        const close = document.createElement('div');
+        close.className = 'pane-x';
+        close.textContent = '⊟';
+        close.title = 'close this pane (the session keeps running)';
+        Object.assign(close.style, {right: box.clientWidth - r.x - r.w + 'px', top: r.y + 'px'});
+        close.addEventListener('click', () => { amc.removeLeaf(leaf); amc.fill(); amc.save(); });
+        box.appendChild(close);
+      }
     }
     for (const k of shown) {
       const x = amc.tabs[k];
@@ -282,15 +453,55 @@ const amc = {
     }
   },
 
+  // Dragging a bar moves the border between pane i and i+1 of `node`; neither gets
+  // smaller than MIN_PANE (or a third of the space, when that is smaller).
+  dragSash(e, node, i, free) {
+    e.preventDefault();
+    const row = node.dir === 'row', start = row ? e.clientX : e.clientY;
+    const a = node.sizes[i], b = node.sizes[i + 1], min = Math.min(MIN_PANE, free / 3) / (free || 1);
+    document.body.style.cursor = row ? 'col-resize' : 'row-resize';
+    $('terms').classList.add('resizing');
+    e.target.classList.add('on');
+    amc.sashOn = [node, i];
+    let frame = 0;
+    const move = ev => {
+      const d = ((row ? ev.clientX : ev.clientY) - start) / (free || 1);
+      const na = Math.min(Math.max(a + d, min), a + b - min);
+      node.sizes[i] = na;
+      node.sizes[i + 1] = a + b - na;
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; amc.render(); });
+    };
+    const up = () => {
+      removeEventListener('mousemove', move); removeEventListener('mouseup', up);
+      document.body.style.cursor = '';
+      $('terms').classList.remove('resizing');
+      amc.sashOn = null;
+      amc.render();
+      amc.save();
+    };
+    addEventListener('mousemove', move); addEventListener('mouseup', up);
+  },
+
+  // Where a dragged tab would land: the pane under (x, y) in #terms and the zone - its
+  // middle, or the edge it is nearest to - with the rectangle to highlight.
+  dropAt(x, y) {
+    for (const [leaf, r] of amc.rects) {
+      if (x < r.x || x >= r.x + r.w || y < r.y || y >= r.y + r.h) continue;
+      const fx = (x - r.x) / r.w, fy = (y - r.y) / r.h;
+      let zone = 'center';
+      if (fx < 0.25 || fx > 0.75 || fy < 0.25 || fy > 0.75) {
+        const edges = {left: fx, right: 1 - fx, top: fy, bottom: 1 - fy};
+        zone = Object.keys(edges).reduce((m, k) => edges[k] < edges[m] ? k : m);
+      }
+      const half = {center: r, left: {...r, w: r.w / 2}, right: {...r, x: r.x + r.w / 2, w: r.w / 2},
+                    top: {...r, h: r.h / 2}, bottom: {...r, y: r.y + r.h / 2, h: r.h / 2}}[zone];
+      return {leaf, zone, area: half};
+    }
+    return null;
+  },
+
   toggleWide() {
     amc.wide = !amc.wide;
-    if (amc.wide) {
-      const other = Object.keys(amc.tabs).find(k => k !== amc.active && amc.tabs[k].running) || null;
-      amc.panes = [amc.active, other];
-      amc.focus = 0;
-    } else {
-      amc.active = amc.panes[amc.focus] || amc.active;
-    }
     amc.render();
     const t = amc.tabs[amc.active];
     if (t) t.term.focus();
@@ -321,6 +532,65 @@ const amc = {
     amc.select(id);
   },
 };
+amc.focusLeaf = amc.layout;
+
+// A tab dragged over the panes: the zone it would land in lights up. Caught on the way
+// down, so the terminals' own text areas never take the drop as typed text.
+function dropEvent(e) {
+  if (!amc.dragging) return null;
+  e.preventDefault();
+  e.stopPropagation();
+  const b = $('terms').getBoundingClientRect();
+  return amc.dropAt(e.clientX - b.left, e.clientY - b.top);
+}
+$('terms').addEventListener('dragover', e => {
+  const at = dropEvent(e);
+  if (!at) { $('drop').style.display = 'none'; return; }
+  e.dataTransfer.dropEffect = 'move';
+  const r = at.area;
+  Object.assign($('drop').style, {display: 'block', left: r.x + 'px', top: r.y + 'px',
+                                  width: r.w + 'px', height: r.h + 'px'});
+}, true);
+// A tab dragged along the tab bar: a bar marks where it would go - before or after the
+// tab under the pointer, by which half it is over - and dropping it moves it there, in
+// agents.json too, so the order stays (the session list follows it).
+let tabTarget = null;            // [id, after] of the marked spot
+function tabMark(target) {
+  document.querySelectorAll('.tab.mark-before, .tab.mark-after')
+    .forEach(el => el.classList.remove('mark-before', 'mark-after'));
+  tabTarget = target;
+  if (target) amc.tabs[target[0]].tabEl.classList.add(target[1] ? 'mark-after' : 'mark-before');
+}
+$('tabs').addEventListener('dragover', e => {
+  if (!amc.dragging) return;
+  e.preventDefault();
+  const el = e.target.closest('.tab');
+  const id = el && Object.keys(amc.tabs).find(k => amc.tabs[k].tabEl === el);
+  if (!id || id === amc.dragging) { tabMark(null); return; }
+  const r = el.getBoundingClientRect();
+  e.dataTransfer.dropEffect = 'move';
+  tabMark([id, e.clientX > r.left + r.width / 2]);
+});
+$('tabs').addEventListener('dragleave', e => { if (!$('tabs').contains(e.relatedTarget)) tabMark(null); });
+$('tabs').addEventListener('drop', async e => {
+  if (!amc.dragging) return;
+  e.preventDefault();
+  const id = amc.dragging, target = tabTarget;
+  amc.dragging = null;
+  tabMark(null);
+  if (!target) return;
+  await api().move_session(id, target[0], target[1]);
+  await amc.syncTabs();
+});
+$('terms').addEventListener('dragleave', e => {
+  if (!$('terms').contains(e.relatedTarget)) $('drop').style.display = 'none';
+}, true);
+$('terms').addEventListener('drop', e => {
+  const at = dropEvent(e), id = amc.dragging;
+  $('drop').style.display = 'none';
+  amc.dragging = null;
+  if (at) amc.move(id, at.leaf, at.zone);
+}, true);
 $('add-tab').addEventListener('click', e => {
   e.stopPropagation();
   const m = $('add-menu');
@@ -356,8 +626,9 @@ $('add-menu').addEventListener('keydown', async e => {
   amc.select(res.id);
 });
 $('wide-btn').addEventListener('click', () => amc.toggleWide());
+let resizeFrame = 0;
 new ResizeObserver(() => {
-  for (const x of Object.values(amc.tabs)) if (x.el.classList.contains('active')) x.fit.fit();
+  if (!resizeFrame) resizeFrame = requestAnimationFrame(() => { resizeFrame = 0; amc.render(); });
 }).observe($('terms'));
 
 function copyText(text) {
@@ -539,10 +810,13 @@ $('row-menu').addEventListener('click', async e => {
   if (act === 'auto' && r) await api().set_auto_open(r.sid, !r.autoOpen);
   if (act === 'term' && r) await api().terminate(r.sid, r.pid);
   if (act === 'model' && r) {
-    // An idle tab restarts on the new model; keep it on screen when it was.
+    // An idle tab restarts on the new model; its pane stays meanwhile, and the focus
+    // comes back to it when it had it.
     const wasActive = amc.active === r.sid;
     $('grid-msg').textContent = `${r.name}: setting model…`;
-    const msg = await api().set_model(r.sid, e.target.dataset.model);
+    amc.keep.add(r.sid);
+    let msg;
+    try { msg = await api().set_model(r.sid, e.target.dataset.model); } finally { amc.keep.delete(r.sid); }
     $('grid-msg').textContent = `${r.name}: ${msg}`;
     await amc.syncTabs();
     if (wasActive && msg.endsWith('restarted')) amc.select(r.sid);
@@ -647,6 +921,7 @@ async function refresh() {
 async function init() {
   await api().init();
   await amc.syncTabs();
+  amc.restore();
   await refresh();
   await refreshTasks();
   setInterval(refresh, 1000);

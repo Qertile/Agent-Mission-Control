@@ -328,6 +328,20 @@ class Api:
     def set_auto_open(self, sid, on):
         core.set_auto_open(sid, bool(on))
 
+    def move_session(self, sid, target, after):
+        """Moves the agents.json session `sid` just before (or, `after`, just after)
+        session `target`: the tab bar's order after a drag, kept for next time."""
+        sessions = core.agents()
+        moving = next((s for s in sessions if s.get('id') == sid), None)
+        if not moving or sid == target:
+            return
+        sessions.remove(moving)
+        at = next((i for i, s in enumerate(sessions) if s.get('id') == target), None)
+        if at is None:
+            return
+        sessions.insert(at + 1 if after else at, moving)
+        core.save_agents(sessions)
+
     def set_model(self, sid, model):
         """Saves the model the session starts with ('' = default). When its tab here is
         idle, the tab restarts so the model applies now; the conversation resumes. A busy
