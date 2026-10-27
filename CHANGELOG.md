@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## v2.1 – 2026-10-27
+
+Tagged `v2.1`. Since `v2.0` (the sections below, down to *one window*):
+- A model per session, picked from the session list's right-click menu.
+- Codex tabs: *New Codex session…* in the `+` menu (stage 1).
+- Panes as in VS Code: drag a tab onto a pane's edge to split it; the bars between panes
+  resize them; tab order by dragging along the tab bar.
+- Files dragged onto a pane type their full paths into that tab.
+- Ctrl+Tab / Ctrl+Shift+Tab switch tabs; the tab bar has no scrollbar and the
+  `⇔ full width` button stays on one line.
+
 ## 2026-10-27 – drop files on a tab
 
 ### Added
