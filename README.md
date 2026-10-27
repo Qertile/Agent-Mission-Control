@@ -150,8 +150,12 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   the next start, minus the sessions not running then.
 - **Tab order:** drag a tab along the tab bar; a bar shows where it will go. The order is
   saved in `agents.json`, so it stays next time and the session list follows it.
-- **Full width:** `⇔ full width` at the right of the tab bar hides the task and session
-  columns so the panes get the whole window; `⇔` again brings them back.
+- **Full width:** `⇔` at the right of the tab bar hides the task and session columns so
+  the panes get the whole window; `⇔` again brings them back.
+- **Theme:** `⚙` at the right of the tab bar lists the themes: Classic (the original
+  green on black, the default), Dark, Light, Monokai, Solarized Dark, Solarized Light,
+  Dracula, Nord, Gruvbox Dark and One Dark. The theme colours the whole window and the
+  terminals, and is kept for the next start.
 
 - **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
   written to `tasks.md` and synced to the Excel file.
@@ -302,8 +306,11 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   版面會保留到下次啟動，屆時沒在執行的 session 會被拿掉。
 - **分頁順序**：在分頁列上左右拖曳分頁，會有一條亮綠線標出放下的位置。順序會存進
   `agents.json`，下次啟動仍然保留，session 清單也會照這個順序排。
-- **全寬**：分頁列最右邊的 `⇔ full width` 會收起任務欄和 Session Monitor，讓窗格佔滿
-  整個視窗；再按一次 `⇔` 回到三欄。
+- **全寬**：分頁列右邊的 `⇔` 會收起任務欄和 Session Monitor，讓窗格佔滿整個視窗；
+  再按一次 `⇔` 回到三欄。
+- **主題**：分頁列右邊的 `⚙` 列出主題：Classic（原本的黑底綠字，預設）、Dark、Light、
+  Monokai、Solarized Dark、Solarized Light、Dracula、Nord、Gruvbox Dark、One Dark。
+  主題會套用到整個視窗和終端機，下次啟動仍然保留。
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
   並同步到 Excel。

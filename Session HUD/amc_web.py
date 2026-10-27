@@ -47,8 +47,9 @@ else:
     from ptyprocess import PtyProcessUnicode as PtyProcess
 
 ACTIVITY_WINDOW = 60
-STATUS_COLORS = {'busy': '#00dcff', 'running': '#00dcff', 'waiting': '#ffc400', 'idle': '#8cff8c'}
-GREY = '#8c96a0'
+# The page's theme variables, so the status colors follow the theme.
+STATUS_COLORS = {'busy': 'var(--busy)', 'running': 'var(--busy)', 'waiting': 'var(--wait)', 'idle': 'var(--idle)'}
+GREY = 'var(--grey)'
 # The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
 # Codex's list comes from its models cache (amc_core.codex_models).
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']

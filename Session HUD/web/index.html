@@ -5,8 +5,10 @@
 <title>Agent Mission Control</title>
 <link rel="stylesheet" href="vendor/xterm.css">
 <style>
-  :root { --bg: #060a06; --bar: #0a100a; --accent: #33ff66; --title: #8cff8c; --desc: #46a05a;
-          --note: #5a9664; --spark: #124d20; --line: #16301c; }
+  /* Classic (the original HUD colors); the other themes (THEMES below) replace these from script. */
+  :root { --bg: #060a06; --bar: #0a100a; --line: #16301c; --accent: #33ff66; --title: #8cff8c;
+          --desc: #46a05a; --note: #5a9664; --spark: #124d20; --tabon: #12361b; --attn: #4a3d00;
+          --busy: #00dcff; --wait: #ffc400; --idle: #8cff8c; --grey: #8c96a0; --red: #ff5a5a; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--title);
                font-family: 'DejaVu Sans Mono', Consolas, monospace; font-size: 14px; overflow: hidden; }
   body { display: grid; grid-template-columns: var(--c1, 16%) 5px var(--c2, 42%) 5px 1fr; }
@@ -77,22 +79,22 @@
   .tab { padding: 6px 14px; cursor: pointer; color: var(--desc); white-space: nowrap; }
   .tab.off { display: none; }
   .tab .x { margin-left: 10px; color: var(--note); }
-  .tab .x:hover { color: #ff5a5a; }
+  .tab .x:hover { color: var(--red); }
   #add-tab { padding: 6px 12px; cursor: pointer; color: var(--desc); font-weight: bold; }
   #add-tab:hover { color: var(--accent); }
   /* The tab typed into: bright, lit and underlined (not bold: the tabs would shift); one
      shown in another pane: underlined dim. */
-  .tab.active { color: var(--accent); background: #12361b; box-shadow: inset 0 -3px 0 var(--accent); }
+  .tab.active { color: var(--accent); background: var(--tabon); box-shadow: inset 0 -3px 0 var(--accent); }
   .tab.shown { color: var(--title); background: var(--bg); box-shadow: inset 0 -3px 0 var(--desc); }
   .tab.mark-before { box-shadow: inset 3px 0 0 var(--accent); }    /* where a dragged tab would go */
   .tab.mark-after { box-shadow: inset -3px 0 0 var(--accent); }
-  .tab .dot { margin-right: 6px; color: #8c96a0; }
+  .tab .dot { margin-right: 6px; color: var(--grey); }
   .tab.attn { animation: attn 1s ease-in-out infinite alternate; }  /* finished or waiting, not on screen */
-  @keyframes attn { from { background: var(--bar); } to { background: #4a3d00; } }
+  @keyframes attn { from { background: var(--bar); } to { background: var(--attn); } }
   /* Pinned to the right end of the tab bar, on one line, however many tabs there are. */
-  #wide-btn { margin-left: auto; padding: 6px 12px; cursor: pointer; color: var(--desc); white-space: nowrap;
-              flex-shrink: 0; position: sticky; right: 0; background: var(--bar); }
-  #wide-btn:hover, body.wide #wide-btn { color: var(--accent); }
+  #tab-tools { margin-left: auto; display: flex; flex-shrink: 0; position: sticky; right: 0; background: var(--bar); }
+  #tab-tools > div { padding: 0 10px; cursor: pointer; color: var(--desc); font-size: 24px; line-height: 30px; }
+  #tab-tools > div:hover, body.wide #wide-btn { color: var(--accent); }
   #terms { flex: 1; position: relative; min-height: 0; overflow: hidden; }
   .term { position: absolute; visibility: hidden; }        /* placed in its pane by amc.render() */
   .term.active { visibility: visible; }
@@ -107,7 +109,7 @@
             color: var(--desc); background: var(--bar); border: 1px solid var(--line); }
   .pane-x:hover { color: var(--accent); border-color: var(--desc); }
   #drop { position: absolute; z-index: 3; display: none; pointer-events: none;
-          background: rgba(51, 255, 102, 0.12); border: 1px solid var(--accent); }
+          background: var(--tabon); opacity: 0.6; border: 1px solid var(--accent); }
   /* Wide: the task and session columns are hidden, the panes get the whole window. */
   body.wide { grid-template-columns: 1fr; }
   body.wide > .col:not(#term-col), body.wide > .split { display: none; }
@@ -118,11 +120,11 @@
           min-width: 150px; display: none; }
   .menu div { padding: 4px 14px; cursor: pointer; }
   .menu div:hover { background: var(--bg); color: var(--accent); }
-  .menu div.disabled { color: #3a5a40; pointer-events: none; }
+  .menu div.disabled { color: var(--note); pointer-events: none; }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
   .menu input { margin: 3px 8px; width: 180px; background: var(--bg); color: var(--title);
                 border: 1px solid var(--desc); font: inherit; padding: 2px 4px; outline: none; }
-  .menu .err { color: #ff6b6b; cursor: default; padding: 0 10px 3px; font-size: 11px; }
+  .menu .err { color: var(--red); cursor: default; padding: 0 10px 3px; font-size: 11px; }
   #cal { position: fixed; z-index: 10; background: var(--bar); border: 1px solid var(--desc); padding: 6px;
          display: none; font-size: 12px; }
   #cal .nav { display: flex; justify-content: space-between; color: var(--accent); margin-bottom: 4px; }
@@ -153,7 +155,9 @@
 <div class="split" data-col="2"></div>
 <div class="col" id="term-col">
   <div id="tabs"><div id="add-tab" title="start a session, or a new one">+</div>
-    <div id="wide-btn" title="hide the task and session columns; drag a tab onto a pane's edge to split it">⇔ full width</div></div>
+    <div id="tab-tools">
+      <div id="wide-btn" title="full width: hide the task and session columns; drag a tab onto a pane's edge to split it">⇔</div>
+      <div id="set-btn" title="settings">⚙</div></div></div>
   <div id="terms"><div id="no-tabs">No session running: start one with +.</div><div id="drop"></div></div>
 </div>
 
@@ -170,6 +174,7 @@
   <div>Pending</div><div>Ongoing</div><div>Checking</div><div>Finished</div>
 </div>
 <div class="menu" id="add-menu"></div>
+<div class="menu" id="set-menu"></div>
 <div id="cal"></div>
 
 <script src="vendor/xterm.js"></script>
@@ -178,7 +183,86 @@
 const api = () => window.pywebview.api;
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-const TASK_STATUS_COLORS = {Ongoing: '#00dcff', Checking: '#ffc400'};
+const TASK_STATUS_COLORS = {Ongoing: 'var(--busy)', Checking: 'var(--wait)'};
+
+// ---------------------------------------------------------------- themes
+// ui: the page's CSS variables; term: the terminals' colors, the 16 ANSI ones included.
+const THEME_KEY = 'amc-theme';
+const ansi = (black, red, green, yellow, blue, magenta, cyan, white,
+              brightBlack, brightRed, brightGreen, brightYellow, brightBlue, brightMagenta, brightCyan, brightWhite) =>
+  ({black, red, green, yellow, blue, magenta, cyan, white,
+    brightBlack, brightRed, brightGreen, brightYellow, brightBlue, brightMagenta, brightCyan, brightWhite});
+const ui = (bg, bar, line, accent, title, desc, note, spark, tabon, attn, busy, wait, idle, grey, red) =>
+  ({bg, bar, line, accent, title, desc, note, spark, tabon, attn, busy, wait, idle, grey, red});
+const THEMES = {
+  'Classic': {        // the terminals keep xterm.js's own 16 ANSI colors, as before themes
+    ui: ui('#060a06', '#0a100a', '#16301c', '#33ff66', '#8cff8c', '#46a05a', '#5a9664', '#124d20', '#12361b',
+           '#4a3d00', '#00dcff', '#ffc400', '#8cff8c', '#8c96a0', '#ff5a5a'),
+    term: {background: '#060a06', foreground: '#c8e6c8', cursor: '#33ff66', selectionBackground: '#2a5a34'}},
+  'Dark': {
+    ui: ui('#1e1e1e', '#252526', '#3c3c3c', '#4fa3e0', '#d4d4d4', '#9d9d9d', '#808080', '#264f78', '#37373d',
+           '#5a4a1a', '#4fc1ff', '#dcdcaa', '#b5cea8', '#8c8c8c', '#f48771'),
+    term: {background: '#1e1e1e', foreground: '#cccccc', cursor: '#aeafad', selectionBackground: '#264f78',
+           ...ansi('#000000', '#cd3131', '#0dbc79', '#e5e510', '#2472c8', '#bc3fbc', '#11a8cd', '#e5e5e5',
+                   '#666666', '#f14c4c', '#23d18b', '#f5f543', '#3b8eea', '#d670d6', '#29b8db', '#e5e5e5')}},
+  'Light': {
+    ui: ui('#ffffff', '#f3f3f3', '#d4d4d4', '#005fb8', '#333333', '#616161', '#808080', '#c8ddf0', '#dce8f5',
+           '#fff0b3', '#0070c1', '#a06800', '#2e7d32', '#777777', '#c72e2e'),
+    term: {background: '#ffffff', foreground: '#333333', cursor: '#333333', selectionBackground: '#add6ff',
+           ...ansi('#000000', '#cd3131', '#00a000', '#949800', '#0451a5', '#bc05bc', '#0598bc', '#555555',
+                   '#666666', '#cd3131', '#14ce14', '#b5ba00', '#0451a5', '#bc05bc', '#0598bc', '#a5a5a5')}},
+  'Monokai': {
+    ui: ui('#272822', '#1e1f1c', '#3e3d32', '#a6e22e', '#f8f8f2', '#a59f85', '#75715e', '#3e4a22', '#3e3d32',
+           '#5a4a1a', '#66d9ef', '#e6db74', '#a6e22e', '#90908a', '#f92672'),
+    term: {background: '#272822', foreground: '#f8f8f2', cursor: '#f8f8f0', selectionBackground: '#49483e',
+           ...ansi('#272822', '#f92672', '#a6e22e', '#f4bf75', '#66d9ef', '#ae81ff', '#a1efe4', '#f8f8f2',
+                   '#75715e', '#f92672', '#a6e22e', '#f4bf75', '#66d9ef', '#ae81ff', '#a1efe4', '#f9f8f5')}},
+  'Solarized Dark': {
+    ui: ui('#002b36', '#073642', '#094352', '#268bd2', '#93a1a1', '#839496', '#586e75', '#114b5f', '#0d4a5a',
+           '#4a3f00', '#2aa198', '#b58900', '#859900', '#657b83', '#dc322f'),
+    term: {background: '#002b36', foreground: '#839496', cursor: '#93a1a1', selectionBackground: '#274642',
+           ...ansi('#073642', '#dc322f', '#859900', '#b58900', '#268bd2', '#d33682', '#2aa198', '#eee8d5',
+                   '#586e75', '#cb4b16', '#859900', '#b58900', '#268bd2', '#6c71c4', '#2aa198', '#fdf6e3')}},
+  'Solarized Light': {
+    ui: ui('#fdf6e3', '#eee8d5', '#d9d2bd', '#268bd2', '#586e75', '#657b83', '#93a1a1', '#d5e3ea', '#e3dcc6',
+           '#f5e3a0', '#2aa198', '#b58900', '#859900', '#93a1a1', '#dc322f'),
+    term: {background: '#fdf6e3', foreground: '#657b83', cursor: '#586e75', selectionBackground: '#e0d9c3',
+           ...ansi('#073642', '#dc322f', '#859900', '#b58900', '#268bd2', '#d33682', '#2aa198', '#586e75',
+                   '#93a1a1', '#cb4b16', '#859900', '#b58900', '#268bd2', '#6c71c4', '#2aa198', '#073642')}},
+  'Dracula': {
+    ui: ui('#282a36', '#21222c', '#44475a', '#bd93f9', '#f8f8f2', '#b0b3c6', '#6272a4', '#44395e', '#44475a',
+           '#5a4a1a', '#8be9fd', '#f1fa8c', '#50fa7b', '#8a8fa8', '#ff5555'),
+    term: {background: '#282a36', foreground: '#f8f8f2', cursor: '#f8f8f2', selectionBackground: '#44475a',
+           ...ansi('#21222c', '#ff5555', '#50fa7b', '#f1fa8c', '#bd93f9', '#ff79c6', '#8be9fd', '#f8f8f2',
+                   '#6272a4', '#ff6e6e', '#69ff94', '#ffffa5', '#d6acff', '#ff92df', '#a4ffff', '#ffffff')}},
+  'Nord': {
+    ui: ui('#2e3440', '#3b4252', '#434c5e', '#88c0d0', '#e5e9f0', '#a3b1c6', '#7b88a1', '#3f5160', '#434c5e',
+           '#5a4f30', '#88c0d0', '#ebcb8b', '#a3be8c', '#8f9bb3', '#bf616a'),
+    term: {background: '#2e3440', foreground: '#d8dee9', cursor: '#d8dee9', selectionBackground: '#434c5e',
+           ...ansi('#3b4252', '#bf616a', '#a3be8c', '#ebcb8b', '#81a1c1', '#b48ead', '#88c0d0', '#e5e9f0',
+                   '#616e88', '#bf616a', '#a3be8c', '#ebcb8b', '#81a1c1', '#b48ead', '#8fbcbb', '#eceff4')}},
+  'Gruvbox Dark': {
+    ui: ui('#282828', '#1d2021', '#3c3836', '#fabd2f', '#ebdbb2', '#bdae93', '#928374', '#504945', '#3c3836',
+           '#5a4a1a', '#83a598', '#fabd2f', '#b8bb26', '#928374', '#fb4934'),
+    term: {background: '#282828', foreground: '#ebdbb2', cursor: '#ebdbb2', selectionBackground: '#504945',
+           ...ansi('#282828', '#cc241d', '#98971a', '#d79921', '#458588', '#b16286', '#689d6a', '#a89984',
+                   '#928374', '#fb4934', '#b8bb26', '#fabd2f', '#83a598', '#d3869b', '#8ec07c', '#ebdbb2')}},
+  'One Dark': {
+    ui: ui('#282c34', '#21252b', '#3e4451', '#61afef', '#d7dae0', '#abb2bf', '#7f848e', '#2f4560', '#3e4451',
+           '#5a4a1a', '#56b6c2', '#e5c07b', '#98c379', '#7f848e', '#e06c75'),
+    term: {background: '#282c34', foreground: '#abb2bf', cursor: '#528bff', selectionBackground: '#3e4451',
+           ...ansi('#282c34', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#abb2bf',
+                   '#5c6370', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#ffffff')}},
+};
+let themeName = (() => { try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; } })();
+if (!THEMES[themeName]) themeName = 'Classic';
+const termTheme = () => THEMES[themeName].term;
+function applyTheme(name) {
+  themeName = name;
+  for (const [k, v] of Object.entries(THEMES[name].ui)) document.documentElement.style.setProperty('--' + k, v);
+  for (const t of Object.values(amc.tabs)) t.term.options.theme = termTheme();
+  try { localStorage.setItem(THEME_KEY, name); } catch (e) {}
+}
 
 // ---------------------------------------------------------------- terminals
 // The panes are a tree, as in VS Code: a leaf {id} shows one tab (id null: none yet),
@@ -362,7 +446,7 @@ const amc = {
     const term = new Terminal({
       fontFamily: "'DejaVu Sans Mono', Consolas, monospace", fontSize: 14, cursorBlink: true,
       scrollback: 5000, allowProposedApi: true,
-      theme: { background: '#060a06', foreground: '#c8e6c8', cursor: '#33ff66', selectionBackground: '#2a5a34' },
+      theme: termTheme(),
     });
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
@@ -538,6 +622,7 @@ const amc = {
   },
 };
 amc.focusLeaf = amc.layout;
+applyTheme(themeName);                     // the saved theme (Classic: :root's own values)
 
 // A tab dragged over the panes: the zone it would land in lights up. Caught on the way
 // down, so the terminals' own text areas never take the drop as typed text.
@@ -668,6 +753,18 @@ $('add-menu').addEventListener('keydown', async e => {
   amc.select(res.id);
 });
 $('wide-btn').addEventListener('click', () => amc.toggleWide());
+// Settings: for now the theme, the current one ticked.
+$('set-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  const m = $('set-menu');
+  m.innerHTML = '<div class="disabled">Theme</div>' + Object.keys(THEMES).map(n =>
+    `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('');
+  const r = $('set-btn').getBoundingClientRect();
+  showAt(m, r.right - m.offsetWidth, r.bottom);
+});
+$('set-menu').addEventListener('click', e => {
+  if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
+});
 let resizeFrame = 0;
 new ResizeObserver(() => {
   if (!resizeFrame) resizeFrame = requestAnimationFrame(() => { resizeFrame = 0; amc.render(); });
@@ -715,15 +812,15 @@ chatBox($('task-chat'), () => 'Task Reminder');
 // ---------------------------------------------------------------- usage
 function pieSvg(frac) {
   const d = 64, r = d / 2, f = Math.min(1, frac);
-  const fill = f >= 0.9 ? '#ff5a5a' : f >= 0.7 ? '#ffc400' : '#33ff66';
+  const fill = f >= 0.9 ? 'var(--red)' : f >= 0.7 ? 'var(--wait)' : 'var(--accent)';
   let slice = '';
-  if (f >= 0.999) slice = `<circle cx="${r}" cy="${r}" r="${r}" fill="${fill}"/>`;
+  if (f >= 0.999) slice = `<circle cx="${r}" cy="${r}" r="${r}" style="fill:${fill}"/>`;
   else if (f > 0) {
     const a = 2 * Math.PI * f, x = r + r * Math.sin(a), y = r - r * Math.cos(a);
-    slice = `<path d="M${r},${r} L${r},0 A${r},${r} 0 ${f > 0.5 ? 1 : 0} 1 ${x},${y} Z" fill="${fill}"/>`;
+    slice = `<path d="M${r},${r} L${r},0 A${r},${r} 0 ${f > 0.5 ? 1 : 0} 1 ${x},${y} Z" style="fill:${fill}"/>`;
   }
-  return `<svg width="${d}" height="${d}" viewBox="-1 -1 ${d + 2} ${d + 2}"><circle cx="${r}" cy="${r}" r="${r}" fill="#0a100a"/>` +
-         `${slice}<circle cx="${r}" cy="${r}" r="${r}" fill="none" stroke="#46a05a"/></svg>`;
+  return `<svg width="${d}" height="${d}" viewBox="-1 -1 ${d + 2} ${d + 2}"><circle cx="${r}" cy="${r}" r="${r}" style="fill:var(--bar)"/>` +
+         `${slice}<circle cx="${r}" cy="${r}" r="${r}" style="fill:none;stroke:var(--desc)"/></svg>`;
 }
 function drawUsage(u) {
   if (u.message) { $('usage').innerHTML = `<div class="s">${esc(u.message)}</div>`; return; }
@@ -748,8 +845,8 @@ function spark(samples, scale) {
   const pts = samples.map((v, k) => [(off + k) * step, h - 1 - (v / scale) * (h - 2)]);
   const line = pts.map(p => p.join(',')).join(' ');
   const area = `${pts[0][0]},${h} ${line} ${pts[pts.length - 1][0]},${h}`;
-  return `<svg width="${w}" height="${h}"><polygon points="${area}" fill="#124d20"/>` +
-         `<polyline points="${line}" fill="none" stroke="#33ff66" stroke-width="1.4"/></svg>`;
+  return `<svg width="${w}" height="${h}"><polygon points="${area}" style="fill:var(--spark)"/>` +
+         `<polyline points="${line}" style="fill:none;stroke:var(--accent)" stroke-width="1.4"/></svg>`;
 }
 function drawGrid() {
   const scale = Math.max(2048, ...rows.flatMap(r => r.samples));
@@ -872,7 +969,7 @@ async function refreshTasks() {
   const {tasks, remaining} = await api().task_list();
   $('task-list').innerHTML = tasks.length ? tasks.map((t, i) => {
     const title = t.text.charAt(0).toUpperCase() + t.text.slice(1);
-    const color = TASK_STATUS_COLORS[t.status] || (t.status ? '#8c96a0' : '#5a9664');
+    const color = TASK_STATUS_COLORS[t.status] || (t.status ? 'var(--grey)' : 'var(--note)');
     return `<div class="task"><div class="t">▸ ${esc(title)}</div>` +
       t.description.map(d => `<div class="d">▸ ${esc(d)}</div>`).join('') +
       `<div class="m">&gt;&gt; <span class="click" data-due="${i}">${esc(t.due || 'no due')}</span>` +
@@ -947,7 +1044,7 @@ function showAt(el, x, y) {
   el.style.left = Math.min(x, innerWidth - el.offsetWidth - 4) + 'px';
   el.style.top = Math.min(y, innerHeight - el.offsetHeight - 4) + 'px';
 }
-function hideMenus() { for (const id of ['row-menu', 'status-menu', 'add-menu', 'cal']) $(id).style.display = 'none'; }
+function hideMenus() { for (const id of ['row-menu', 'status-menu', 'add-menu', 'set-menu', 'cal']) $(id).style.display = 'none'; }
 document.addEventListener('click', hideMenus);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus(); });
 

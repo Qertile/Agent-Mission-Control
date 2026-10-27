@@ -2,6 +2,18 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-27 – themes
+
+### Added
+- **Themes**, under the new `⚙` (settings) at the right of the tab bar: Classic (the original
+  colors, the default), Dark, Light, Monokai, Solarized Dark, Solarized Light, Dracula, Nord,
+  Gruvbox Dark and One Dark. A theme colors the page, the usage pies, the sparklines and the
+  terminals (their 16 ANSI colors too), and is kept for the next start.
+
+### Changed
+- `⇔ full width` is now just `⇔` (its tooltip says what it does); `⇔` and `⚙` are 24px.
+- Session status colors come from the theme (`amc_web.py` sends `var(--busy)` and the like).
+
 ## 2026-10-27 – taskbar icon
 
 ### Changed
