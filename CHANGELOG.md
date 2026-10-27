@@ -12,6 +12,7 @@ Tagged `v2.1`. Since `v2.0` (the sections below, down to *one window*):
 - Files dragged onto a pane type their full paths into that tab.
 - Ctrl+Tab / Ctrl+Shift+Tab switch tabs; the tab bar has no scrollbar and the
   `⇔ full width` button stays on one line.
+- README: `v2.1` in the Versions table (both languages).
 
 ## 2026-10-27 – drop files on a tab
 

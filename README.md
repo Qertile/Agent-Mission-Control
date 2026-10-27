@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.0` (current) | One Agent Mission Control window (`amc_web.py`, pywebview + xterm.js) with the task list, the session monitor and a terminal tab per session; the same code on Windows and Linux. The Agents Launcher only starts this window. |
+| `v2.1` (current) | `v2.0` plus a model per session, Codex tabs, panes as in VS Code (split by dragging a tab onto a pane's edge, tab order by dragging), files dropped on a pane typed in as paths, and Ctrl+Tab between tabs. See `CHANGELOG.md`. |
+| `v2.0` | One Agent Mission Control window (`amc_web.py`, pywebview + xterm.js) with the task list, the session monitor and a terminal tab per session; the same code on Windows and Linux. The Agents Launcher only starts this window. |
 | `v1.0` | The earlier setup: each session in its own terminal tab (Windows Terminal; on Linux GNOME Terminal with tmux) next to a separate HUD window (`show-session-hud.ps1` / `mission_control.py`). Get it back with `git checkout v1.0`. |
 
 Your own lists and settings - `agents.json`, `Session HUD/hud-config.json`,
@@ -200,7 +201,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.0`（目前） | 單一 Agent Mission Control 視窗（`amc_web.py`，pywebview 加 xterm.js），裡面有任務清單、Session Monitor，每個 session 一個終端機分頁；Windows 和 Linux 用同一份程式。Agents Launcher 只負責啟動這個視窗。 |
+| `v2.1`（目前） | `v2.0` 再加上：每個 session 可選模型、Codex 分頁、像 VS Code 的窗格（把分頁拖到窗格邊緣來分割、拖曳分頁排順序）、檔案拖到窗格會打出路徑、Ctrl+Tab 切換分頁。詳見 `CHANGELOG.md`。 |
+| `v2.0` | 單一 Agent Mission Control 視窗（`amc_web.py`，pywebview 加 xterm.js），裡面有任務清單、Session Monitor，每個 session 一個終端機分頁；Windows 和 Linux 用同一份程式。Agents Launcher 只負責啟動這個視窗。 |
 | `v1.0` | 舊的做法：每個 session 開在各自的終端機分頁（Windows Terminal；Linux 上是 GNOME Terminal 加 tmux），旁邊另有一個 HUD 視窗（`show-session-hud.ps1`／`mission_control.py`）。用 `git checkout v1.0` 可以拿回來。 |
 
 你自己的清單和設定——`agents.json`、`Session HUD/hud-config.json`、
