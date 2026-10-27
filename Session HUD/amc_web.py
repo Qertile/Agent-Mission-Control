@@ -30,6 +30,7 @@ from collections import deque
 from datetime import date, datetime, timedelta
 
 import webview
+from webview.dom import DOMEventHandler
 
 import amc_core as core
 from amc_core import (HERE, TASK_DIR, TASKS_PATH, XLSX_PATH, TASKS_SCRIPT, LAUNCHER_DIR, WORK_DIR,
@@ -173,6 +174,7 @@ class Api:
 
     def __init__(self):
         self._window = None
+        self._drop_hooked = False
         self._terms = {}                   # agents.json id -> Term while its process runs
         self._out = {}                     # id -> output not yet handed to the page
         self._out_lock = threading.Lock()
@@ -628,6 +630,18 @@ class Api:
                 'models': ' · '.join(parts),
                 'pies': [{'caption': c, 'frac': f} for c, f in pies if f >= 0]}
 
+    def _on_drop(self, event):
+        # pywebview adds each dropped file's full path; the page only sees the names.
+        files = (event.get('dataTransfer') or {}).get('files') or []
+        paths = [f['pywebviewFullPath'] for f in files if f.get('pywebviewFullPath')]
+        if paths:
+            self._js(f'amc.dropFiles({json.dumps(paths)})')
+
+    def _loaded(self):
+        if not self._drop_hooked:
+            self._drop_hooked = True
+            self._window.dom.get_element('#terms').events.drop += DOMEventHandler(self._on_drop, True)
+
     def _close_all(self):
         for t in list(self._terms.values()):
             t.close()
@@ -648,6 +662,7 @@ def main():
                                    maximized=True, background_color='#060a06')
     api._window = window
     window.events.closed += api._close_all
+    window.events.loaded += api._loaded         # files dropped on the terminals
     webview.start(private_mode=False)      # keeps the page's saved column widths
 
 

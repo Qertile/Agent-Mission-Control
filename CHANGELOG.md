@@ -2,6 +2,20 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-27 – drop files on a tab
+
+### Added
+- **Files dragged onto the terminals:** dropping files from the file manager on a pane
+  types their full paths into that pane's tab (quoted when they hold spaces or other
+  special characters, followed by a space), as a terminal does. On Linux the page reads
+  the `file://` addresses WebKitGTK puts in the drop (in its `text/html`, not its empty
+  `text/uri-list`); on Windows, where the page only sees file names, `amc_web.py` takes
+  the paths from pywebview's drop event. A path is typed once either way.
+
+### Fixed
+- **`⇔ full width`** wrapped to two lines when the tabs filled the bar. It stays on one
+  line, pinned at the right end of the tab bar, and the tabs scroll under it.
+
 ## 2026-10-25 – panes as in VS Code
 
 ### Changed

@@ -86,7 +86,9 @@
   .tab .dot { margin-right: 6px; color: #8c96a0; }
   .tab.attn { animation: attn 1s ease-in-out infinite alternate; }  /* finished or waiting, not on screen */
   @keyframes attn { from { background: var(--bar); } to { background: #4a3d00; } }
-  #wide-btn { margin-left: auto; padding: 6px 12px; cursor: pointer; color: var(--desc); }
+  /* Pinned to the right end of the tab bar, on one line, however many tabs there are. */
+  #wide-btn { margin-left: auto; padding: 6px 12px; cursor: pointer; color: var(--desc); white-space: nowrap;
+              flex-shrink: 0; position: sticky; right: 0; background: var(--bar); }
   #wide-btn:hover, body.wide #wide-btn { color: var(--accent); }
   #terms { flex: 1; position: relative; min-height: 0; overflow: hidden; }
   .term { position: absolute; visibility: hidden; }        /* placed in its pane by amc.render() */
@@ -585,6 +587,43 @@ $('tabs').addEventListener('drop', async e => {
 $('terms').addEventListener('dragleave', e => {
   if (!$('terms').contains(e.relatedTarget)) $('drop').style.display = 'none';
 }, true);
+// Files dragged in from the file manager: their full paths are typed into the pane
+// they are dropped on, quoted when needed, as a terminal does. On Linux the drop
+// carries them as file:// URIs; on Windows the page only sees file names, so
+// amc_web.py takes the paths from pywebview and hands them to dropFiles.
+const isFileDrag = e => !amc.dragging &&
+  [...e.dataTransfer.types].some(t => t === 'Files' || t === 'text/uri-list');
+$('terms').addEventListener('dragover', e => {
+  if (!isFileDrag(e)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+}, true);
+$('terms').addEventListener('drop', e => {
+  if (!isFileDrag(e)) return;
+  e.preventDefault();             // not as text into the terminal, not as a page to open
+  const b = $('terms').getBoundingClientRect();
+  const at = amc.dropAt(e.clientX - b.left, e.clientY - b.top);
+  amc.fileTarget = at && at.leaf.id ? at.leaf.id : amc.active;
+  if (amc.fileTarget) amc.select(amc.fileTarget);
+  // WebKitGTK leaves text/uri-list empty and puts the URIs in text/html (as links).
+  const raw = ['text/uri-list', 'text/html', 'text/plain'].map(t => e.dataTransfer.getData(t) || '').join('\n');
+  const uris = [...new Set(raw.match(/file:\/\/[^\s"'<>]+/g) || [])];
+  const paths = uris.map(u => decodeURIComponent(new URL(u).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
+  amc.droppedHere = paths.length > 0;     // then pywebview's copy of the paths is not typed again
+  if (paths.length) amc.typePaths(paths);
+}, true);
+amc.typePaths = paths => {
+  const id = amc.fileTarget || amc.active;
+  if (!id || !paths.length) return;
+  const win = navigator.platform.startsWith('Win');
+  const quote = p => !/[^\w@%+=:,./\\-]/.test(p) ? p
+    : win ? `"${p}"` : `'${p.replace(/'/g, `'\\''`)}'`;
+  api().write(id, paths.map(quote).join(' ') + ' ');
+};
+amc.dropFiles = paths => {
+  if (amc.droppedHere) { amc.droppedHere = false; return; }
+  amc.typePaths(paths);
+};
 $('terms').addEventListener('drop', e => {
   const at = dropEvent(e), id = amc.dragging;
   $('drop').style.display = 'none';

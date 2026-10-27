@@ -133,6 +133,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   latest turn on this computer, one pie per limit window the plan has (the free plan has
   one, 30 days), so use elsewhere shows after the next turn here.
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
+- **Files:** drag files from the file manager onto a pane to type their full paths
+  into that tab.
 - **Tab status:** the dot in each tab is its session's status colour (busy cyan, idle
   green). A tab not on screen blinks when its session finishes or waits for you.
 - **Panes (as in VS Code):** drag a tab from the tab bar onto the terminal area. Dropped
@@ -284,6 +286,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   視窗就有幾個圓餅（免費方案只有一個，30 天），所以在別處的用量要等這裡下一輪對話後
   才會顯示。
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
+- **檔案**：從檔案管理員把檔案拖到某一格，會把完整路徑打進那個分頁。
 - **分頁狀態**：每個分頁前的圓點是 session 狀態的顏色（busy 藍、idle 綠）。不在畫面上的
   分頁，session 跑完或在等你時會閃爍。
 - **窗格（跟 VS Code 一樣）**：把分頁從分頁列拖到終端機區域。放在某個窗格的左、右、
