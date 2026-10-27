@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-27 – busy tab dot pulses
+
+### Changed
+- A tab's status dot pulses while its session is busy, so busy and idle differ without the
+  colors: in Nord the busy dot is the active tab's text color, and the Solarized themes' busy,
+  waiting and idle colors are equally bright. Only the dot fades, so it stays apart from the
+  tab's own background blink (finished or waiting, not on screen).
+
 ## 2026-10-27 – themes
 
 ### Added

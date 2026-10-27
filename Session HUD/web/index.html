@@ -89,6 +89,9 @@
   .tab.mark-before { box-shadow: inset 3px 0 0 var(--accent); }    /* where a dragged tab would go */
   .tab.mark-after { box-shadow: inset -3px 0 0 var(--accent); }
   .tab .dot { margin-right: 6px; color: var(--grey); }
+  /* Busy: the dot pulses, so busy and idle differ without the colors (some themes' are alike). */
+  .tab .dot.busy { animation: dotpulse 0.8s ease-in-out infinite alternate; }
+  @keyframes dotpulse { to { opacity: 0.2; } }
   .tab.attn { animation: attn 1s ease-in-out infinite alternate; }  /* finished or waiting, not on screen */
   @keyframes attn { from { background: var(--bar); } to { background: var(--attn); } }
   /* Pinned to the right end of the tab bar, on one line, however many tabs there are. */
@@ -602,7 +605,9 @@ const amc = {
     for (const r of rows) {
       const t = amc.tabs[r.sid];
       if (!t) continue;
-      t.tabEl.querySelector('.dot').style.color = r.color;
+      const dot = t.tabEl.querySelector('.dot');
+      dot.style.color = r.color;
+      dot.classList.toggle('busy', r.status === 'busy' || r.status === 'running');
       t.tabEl.title = r.status;
       const prev = amc.status[r.sid];
       amc.status[r.sid] = r.status;
