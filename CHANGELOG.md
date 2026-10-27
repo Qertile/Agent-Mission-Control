@@ -5,6 +5,11 @@ All notable changes to this project are listed here, newest first.
 ## 2026-10-27 – drop files on a tab
 
 ### Added
+- **Ctrl+Tab / Ctrl+Shift+Tab** switch to the next / previous running tab in tab bar
+  order (wrapping around), from the terminals and the chat box alike; the tab is scrolled
+  into view.
+- **Tab bar without a scrollbar:** the bar is hidden; the mouse wheel over the tabs
+  scrolls them sideways.
 - **Files dragged onto the terminals:** dropping files from the file manager on a pane
   types their full paths into that pane's tab (quoted when they hold spaces or other
   special characters, followed by a space), as a terminal does. On Linux the page reads

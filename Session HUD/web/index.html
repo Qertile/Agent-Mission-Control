@@ -70,7 +70,10 @@
   .chat textarea:focus { border-color: var(--accent); }
 
   /* terminals */
-  #tabs { display: flex; background: var(--bar); border-bottom: 1px solid var(--desc); overflow-x: auto; }
+  /* No scrollbar: the mouse wheel scrolls the tabs sideways, and Ctrl+Tab brings the tab into view. */
+  #tabs { display: flex; background: var(--bar); border-bottom: 1px solid var(--desc); overflow-x: auto;
+          scrollbar-width: none; }
+  #tabs::-webkit-scrollbar { display: none; }
   .tab { padding: 6px 14px; cursor: pointer; color: var(--desc); white-space: nowrap; }
   .tab.off { display: none; }
   .tab .x { margin-left: 10px; color: var(--note); }
@@ -947,6 +950,26 @@ function showAt(el, x, y) {
 function hideMenus() { for (const id of ['row-menu', 'status-menu', 'add-menu', 'cal']) $(id).style.display = 'none'; }
 document.addEventListener('click', hideMenus);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus(); });
+
+// Ctrl+Tab / Ctrl+Shift+Tab: the next / previous running tab, in tab bar order. Caught on
+// the way down, so a terminal or the chat box never sees it.
+document.addEventListener('keydown', e => {
+  if (!e.ctrlKey || e.key !== 'Tab') return;
+  e.preventDefault();
+  e.stopPropagation();
+  const order = [...$('tabs').querySelectorAll('.tab:not(.off)')]
+    .map(el => Object.keys(amc.tabs).find(k => amc.tabs[k].tabEl === el)).filter(Boolean);
+  if (!order.length) return;
+  const at = order.indexOf(amc.active);
+  const next = order[(at + (e.shiftKey ? -1 : 1) + order.length) % order.length];
+  amc.select(next);
+  amc.tabs[next].tabEl.scrollIntoView({block: 'nearest', inline: 'nearest'});
+}, true);
+$('tabs').addEventListener('wheel', e => {
+  if (!e.deltaY) return;
+  e.preventDefault();
+  $('tabs').scrollLeft += e.deltaY;
+}, {passive: false});
 
 // ---------------------------------------------------------------- refresh
 async function refresh() {
