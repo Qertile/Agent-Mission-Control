@@ -8,7 +8,7 @@ $sh  = New-Object -ComObject WScript.Shell
 $lnk = $sh.CreateShortcut($lnkPath)
 $lnk.TargetPath       = $target
 $lnk.WorkingDirectory = $PSScriptRoot
-$lnk.IconLocation     = '%SystemRoot%\System32\imageres.dll,144'
+$lnk.IconLocation     = Join-Path (Split-Path $PSScriptRoot -Parent) 'Session HUD\mission-control.ico'
 $lnk.Description      = 'Open Agent Mission Control and its agent tabs'
 $lnk.Save()
 

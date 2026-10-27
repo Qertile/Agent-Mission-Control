@@ -642,6 +642,20 @@ class Api:
             self._drop_hooked = True
             self._window.dom.get_element('#terms').events.drop += DOMEventHandler(self._on_drop, True)
 
+    def _set_icon(self):
+        """Windows: the window and its taskbar button get the desktop shortcut's
+        icon instead of python's."""
+        import ctypes
+        user32 = ctypes.windll.user32
+        user32.LoadImageW.restype = ctypes.c_void_p
+        user32.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p]
+        hwnd = self._window.native.Handle.ToInt64()
+        ico = os.path.join(HERE, 'mission-control.ico')
+        for which, size in ((0, 16), (1, 32)):          # ICON_SMALL, ICON_BIG
+            h = user32.LoadImageW(None, ico, 1, size, size, 0x10)   # IMAGE_ICON, LR_LOADFROMFILE
+            if h:
+                user32.SendMessageW(hwnd, 0x80, which, h)            # WM_SETICON
+
     def _close_all(self):
         for t in list(self._terms.values()):
             t.close()
@@ -663,6 +677,17 @@ def main():
     api._window = window
     window.events.closed += api._close_all
     window.events.loaded += api._loaded         # files dropped on the terminals
+    if WINDOWS:
+        # Its own taskbar button, not grouped under python, showing _set_icon's icon.
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('AgentMissionControl')
+        window.events.shown += api._set_icon
+    else:
+        # Taskbar icon: the same one as the desktop shortcut, not python's.
+        import gi
+        gi.require_version('Gtk', '3.0')
+        from gi.repository import Gtk
+        Gtk.Window.set_default_icon_from_file(os.path.join(HERE, 'mission-control.svg'))
     webview.start(private_mode=False)      # keeps the page's saved column widths
 
 

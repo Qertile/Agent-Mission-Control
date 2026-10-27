@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-27 – taskbar icon
+
+### Changed
+- The window's taskbar icon is the desktop shortcut's (`Session HUD/mission-control.svg`)
+  instead of python's. Linux: set before the window opens. Windows: set when it shows, and the
+  window gets its own taskbar button instead of grouping under python (not yet tested on Windows).
+- Windows desktop shortcut (`create-shortcut.ps1`) uses the same icon, from the new
+  `Session HUD/mission-control.ico`, instead of a built-in Windows one.
+
 ## v2.1 – 2026-10-27
 
 Tagged `v2.1`. Since `v2.0` (the sections below, down to *one window*):
