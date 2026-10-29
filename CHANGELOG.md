@@ -2,6 +2,30 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-29 – Antigravity tabs, usage per tool
+
+### Added
+- **Antigravity (`agy`) tabs:** `+` → *New Antigravity session…* (`"tool": "agy"`). The
+  conversation agy makes at the first message is found (new since the tab started, in the
+  working folder, after the tab's latest Enter) and saved as `"conversation"`; later starts
+  run `agy --conversation <id>`. Model per session from `agy models` (`--model`). Busy /
+  idle from the conversation's last step (status 8 while a reply runs).
+- **Usage per tool:** the usage panel has a CLAUDE, a CODEX and an ANTIGRAVITY section,
+  each with its own pies. CLAUDE shows when the week resets; CODEX each window's reset with
+  the time left. ANTIGRAVITY shows the weekly limit of each model group (GEMINI,
+  CLAUDE/GPT), read from a hidden `agy` → `/usage` every 10 minutes.
+- **Background jobs:** double-clicking a session with no terminal (a scheduled `claude -p`)
+  says "<name> is a background job (no window)" instead of "runs outside this window"
+  (Linux; `/proc/<pid>/stat`'s tty).
+
+### Changed
+- Time left over a day reads `6d5h`, not `149h12m`.
+
+### Fixed
+- An *Open on start* session whose tool is not installed (for example `codex`) stopped the
+  window from starting any tab or showing usage. It now says "could not start" in its tab
+  and the rest start.
+
 ## 2026-10-27 – busy tab dot pulses
 
 ### Changed

@@ -2,11 +2,11 @@
 """Agent Mission Control: one window for everything. The Agents Launcher starts it.
 
 Left, the task list; middle, account usage and the live Claude Code sessions (and
-this window's Codex tabs) with a 60-second activity sparkline each; right, a terminal
+this window's Codex and Antigravity tabs) with a 60-second activity sparkline each; right, a terminal
 tab per agents.json session, drawn by xterm.js. Each tab is a pseudo-terminal this
 process owns - ptyprocess on Linux, ConPTY (pywinpty) on Windows - running `claude` on
-the session's fixed id, or `codex` for an entry with "tool": "codex", so closing the
-window ends them; their conversations are kept and resume next time.
+the session's fixed id, `codex` for an entry with "tool": "codex" or `agy` for one with
+"tool": "agy", so closing the window ends them; their conversations are kept and resume next time.
 
     python3 amc_web.py                    the agents.json tabs ticked "Open on start"
     python3 amc_web.py --agents FILE      another agents.json, e.g. for testing
@@ -51,7 +51,7 @@ ACTIVITY_WINDOW = 60
 STATUS_COLORS = {'busy': 'var(--busy)', 'running': 'var(--busy)', 'waiting': 'var(--wait)', 'idle': 'var(--idle)'}
 GREY = 'var(--grey)'
 # The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
-# Codex's list comes from its models cache (amc_core.codex_models).
+# Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
 # Codex makes a tab's thread as the tab starts (session_meta's time) but writes the
 # rollout only at the first message, so a new tab's thread is the new rollout in
@@ -92,6 +92,79 @@ def codex_thread(entry):
     return thread if thread and core.codex_rollout(thread) else ''
 
 
+def headless(pid):
+    """True for a process with no terminal, such as a scheduled `claude -p` job: there
+    is no window to find it in. Linux only (the tty field of /proc/<pid>/stat)."""
+    if WINDOWS:
+        return False
+    try:
+        with open(f'/proc/{int(pid)}/stat') as f:
+            stat = f.read()
+        return int(stat[stat.rindex(')') + 2:].split()[4]) == 0
+    except (OSError, ValueError, IndexError):
+        return False
+
+
+def is_agy(entry):
+    return (entry or {}).get('tool') == 'agy'
+
+
+def agy_conversation(entry):
+    """The entry's Antigravity conversation when its file is still there, otherwise ''."""
+    cid = entry.get('conversation') or ''
+    return cid if core.agy_conversation(cid) else ''
+
+
+def agy_usage():
+    """agy's weekly limits (amc_core.parse_agy_usage), read the way a person would: a
+    hidden `agy` in WORK_DIR, typed /usage, its screen read, then closed. It only looks
+    the limits up, so no model quota is spent and no conversation is made. None when
+    agy is missing, asks something first (such as trusting the folder) or shows no limits."""
+    exe = shutil.which('agy')
+    if not exe:
+        return None
+    env = dict(os.environ)
+    if not WINDOWS:
+        env.update(TERM='xterm-256color')
+    proc = PtyProcess.spawn([exe], cwd=WORK_DIR, env=env, dimensions=(50, 140))
+    out = []
+
+    def pump():
+        while True:
+            try:
+                out.append(proc.read(65536))
+            except (EOFError, OSError):
+                return
+    threading.Thread(target=pump, daemon=True).start()
+    plain = lambda start=0: re.sub(r'\x1b\[[0-9;?<>=]*[a-zA-Z~]|\x1b[()][0-9A-Z]|\x1b\][^\x07]*\x07', '',
+                                   ''.join(out[start:]))
+
+    def wait(done, seconds):
+        end = time.time() + seconds
+        while time.time() < end:
+            if done():
+                return True
+            time.sleep(0.3)
+        return False
+    try:
+        if not wait(lambda: 'for shortcuts' in plain() or 'trust' in plain(), 30) or 'trust' in plain():
+            return None
+        proc.write('\x1b')                 # a notice over the prompt, if any
+        time.sleep(1)
+        mark = len(out)
+        proc.write('/usage')
+        time.sleep(1.5)
+        proc.write('\r')
+        # Every group's limit is drawn once each has its reset line.
+        wait(lambda: 0 < plain(mark).count('Weekly Limit') <=
+             plain(mark).count('Refreshes in') + plain(mark).count('Quota available'), 20)
+        time.sleep(0.5)
+        screen = plain(mark)
+        return core.parse_agy_usage(screen[screen.rfind('Models & Quota'):])
+    finally:
+        proc.terminate(force=True)
+
+
 def agent_argv(entry):
     """The command a tab runs for the agents.json entry. First run creates the
     session with its fixed id and, when
@@ -101,7 +174,10 @@ def agent_argv(entry):
 
     A Codex entry cannot choose its id: a new one starts plain `codex` (with the prompt
     file as its first message) and its "thread" is filled in once Codex has made one;
-    from then on it runs `codex resume <thread>`. Its model is passed as -m."""
+    from then on it runs `codex resume <thread>`. Its model is passed as -m.
+
+    An Antigravity entry works the same way: plain `agy` (the prompt file through -i)
+    until its "conversation" is found, then `agy --conversation <id>`; model as --model."""
     if '--shell' in sys.argv:
         return [os.environ.get('COMSPEC', 'cmd.exe') if WINDOWS else os.environ.get('SHELL', '/bin/bash')]
     sid, name = entry['id'], entry['name']
@@ -113,6 +189,13 @@ def agent_argv(entry):
         if thread:
             return argv + ['resume', thread] + model
         return argv + model + ([prompt] if prompt else [])
+    if is_agy(entry):
+        argv = [shutil.which('agy') or 'agy']
+        model = ['--model', entry['model']] if entry.get('model') else []
+        cid = agy_conversation(entry)
+        if cid:
+            return argv + ['--conversation', cid] + model
+        return argv + model + (['-i', prompt] if prompt else [])
     argv = [shutil.which('claude') or 'claude']
     model = ['--model', entry['model']] if entry.get('model') else []
     if transcript_path(sid):
@@ -133,7 +216,8 @@ class Term:
         self.proc = PtyProcess.spawn(argv, cwd=WORK_DIR, env=env, dimensions=(30, 100))
         self.lock = threading.Lock()
         self.started = datetime.now()
-        self.enters = deque(maxlen=20)     # when Enter was typed: tells apart Codex tabs started together
+        self.enters = deque(maxlen=20)     # when Enter was typed: tells apart Codex/agy tabs started together
+        self.before = set()                # agy: the conversations there when it started
         threading.Thread(target=self.pump, args=(tid, on_output, on_exit), daemon=True).start()
 
     def pump(self, tid, on_output, on_exit):
@@ -182,10 +266,12 @@ class Api:
         self._start_lock = threading.Lock()
         self._config = load_json(os.path.join(HERE, 'hud-config.json')) or {}
         self._usage = {'snap': None, 'fetched': None, 'failed': False, 'week': None, 'week_at': None,
-                       'account': None, 'account_at': None, 'account_error': None, 'codex': None}
+                       'account': None, 'account_at': None, 'account_error': None, 'codex': None,
+                       'agy': None, 'agy_at': None}
         self._samples, self._transcripts, self._last_len = {}, {}, {}
         self._sessions = []
         self._codex_models = []
+        self._agy_models, self._agy_models_at = [], None
         self._metas = {}                   # rollout path -> its session_meta, read once
         self._seen = {}                    # rollout path -> when this window first saw it
 
@@ -196,11 +282,16 @@ class Api:
         threading.Thread(target=self._flush_loop, daemon=True).start()
         threading.Thread(target=self._usage_loop, daemon=True).start()
         threading.Thread(target=self._activity_loop, daemon=True).start()
+        threading.Thread(target=self._agy_usage_loop, daemon=True).start()
         running = {s['sid'] for s in active_sessions()}
         for e in core.agents():
             # A session already running elsewhere (another terminal) is left there.
             if e.get('autoOpen', True) and e['id'] not in running:
-                self._start(e)
+                # One that cannot start (its tool not installed) must not stop the rest.
+                try:
+                    self._start(e)
+                except Exception as err:
+                    self._output(e['id'], f'\x1b[31mcould not start: {err}\x1b[0m\r\n')
         return self.tabs()
 
     def tabs(self):
@@ -223,7 +314,7 @@ class Api:
 
     def new_session(self, name, tool='claude'):
         """Adds a session named `name` with a new id to agents.json and starts its tab;
-        tool 'codex' makes it a Codex session. Returns {'id': ...} or {'error': ...}."""
+        tool 'codex' makes it a Codex session, 'agy' an Antigravity one. Returns {'id': ...} or {'error': ...}."""
         name = ' '.join(str(name).split())
         if not name:
             return {'error': 'type a name'}
@@ -234,6 +325,10 @@ class Api:
             if not shutil.which('codex') and '--shell' not in sys.argv:
                 return {'error': 'codex is not on PATH'}
             entry['tool'] = 'codex'
+        elif tool == 'agy':
+            if not shutil.which('agy') and '--shell' not in sys.argv:
+                return {'error': 'agy is not on PATH'}
+            entry['tool'] = 'agy'
         core.save_agents(core.agents() + [entry])
         try:
             self._start(entry)
@@ -305,8 +400,9 @@ class Api:
                          'updated': updated.strftime('%Y-%m-%d %H:%M:%S') if updated else '',
                          'listed': bool(entry), 'autoOpen': bool(entry and entry.get('autoOpen', True)),
                          'model': (entry or {}).get('model', ''),
-                         'tool': 'codex' if is_codex(entry) else 'claude', 'models': self._models_for(entry),
+                         'tool': (entry or {}).get('tool') or 'claude', 'models': self._models_for(entry),
                          'tab': s['sid'] in self._terms,
+                         'headless': s['sid'] not in self._terms and headless(s['pid']),
                          'samples': list(self._samples.get(s['sid'], []))})
         note = f"{len(rows)} active · sessions {datetime.now():%H:%M:%S}"
         if u['fetched']:
@@ -356,7 +452,7 @@ class Api:
             return f"unknown model '{model}'"
         core.set_model(sid, model)
         entry = dict(entry, model=model)
-        label = model or ('Codex default' if is_codex(entry) else 'Claude default')
+        label = model or {'codex': 'Codex default', 'agy': 'Antigravity default'}.get(entry.get('tool'), 'Claude default')
         term = self._terms.get(sid)
         if not term:
             return f'model {label}: applies when the session next starts'
@@ -411,13 +507,19 @@ class Api:
         with self._start_lock:
             if entry['id'] not in self._terms:
                 term = Term(entry['id'], agent_argv(entry), self._output, self._exited)
-                # Started with its first message: its rollout appears without an Enter.
-                if is_codex(entry) and not codex_thread(entry) and first_prompt(entry['name']):
+                # Started with its first message: its rollout / conversation appears without an Enter.
+                if ((is_codex(entry) and not codex_thread(entry) or is_agy(entry) and not agy_conversation(entry))
+                        and first_prompt(entry['name'])):
                     term.enters.append(term.started)
+                # A new agy tab's conversation is one that did not exist when it started.
+                if is_agy(entry) and not agy_conversation(entry):
+                    term.before = set(core.agy_conversations())
                 self._terms[entry['id']] = term
 
     def _models_for(self, entry):
-        return self._codex_models if is_codex(entry) else MODELS
+        if is_codex(entry):
+            return self._codex_models
+        return self._agy_models if is_agy(entry) else MODELS
 
     def _codex_rows(self):
         """Rows shaped like active_sessions()' for this window's running Codex tabs,
@@ -480,6 +582,55 @@ class Api:
                 break
         return found
 
+    def _agy_rows(self):
+        """Rows shaped like active_sessions()' for this window's running Antigravity
+        tabs, finding a new tab's conversation on the way."""
+        tabs = [(rank, e, self._terms.get(e['id'])) for rank, e in enumerate(core.agents())]
+        tabs = [(rank, e, term) for rank, e, term in tabs if is_agy(e) and term]
+        pending = [(e, term) for _, e, term in tabs if not agy_conversation(e)]
+        found = self._find_conversations(pending) if pending else {}
+        rows = []
+        for rank, e, term in tabs:
+            cid = found.get(e['id']) or agy_conversation(e)
+            path = core.agy_conversation(cid)
+            modified = max(core.mtime(path), core.mtime(path + '-wal')) if path else 0
+            rows.append({'pid': term.proc.pid, 'sid': e['id'], 'name': e['name'],
+                         'short': cid[:8] if cid else 'new',
+                         'status': core.agy_status(path) if path else 'idle', 'started': term.started,
+                         'updated': datetime.fromtimestamp(modified) if modified else None,
+                         'transcript': path, 'rank': rank})
+        return rows
+
+    def _find_conversations(self, pending):
+        """Gives each new conversation in WORK_DIR that no agents.json session has yet to
+        a pending (entry, term) Antigravity tab started before it, saving it as the
+        entry's "conversation". agy makes the conversation at the first message, so
+        when several such tabs wait, it goes to the one whose latest Enter came just
+        before the file appeared. Returns {entry id: conversation} for the tabs given one."""
+        claimed = {e.get('conversation') for e in core.agents()}
+        here = os.path.normcase(os.path.normpath(WORK_DIR))
+        oldest = min(term.started for _, term in pending).timestamp() - 5
+        found = {}
+        for path in core.agy_conversations():
+            cid = os.path.basename(path)[:-len('.db')]
+            if cid in claimed or core.mtime(path) < oldest:     # older than every pending tab
+                continue
+            seen = self._seen.setdefault(path, datetime.now())
+            if here not in {os.path.normcase(os.path.normpath(w)) for w in core.agy_workspaces(cid)}:
+                continue
+            typed = [(max(t for t in list(term.enters) if t <= seen), e, term) for e, term in pending
+                     if path not in term.before and any(t <= seen for t in list(term.enters))]
+            if not typed:
+                continue
+            e, term = max(typed, key=lambda x: x[0])[1:]
+            core.set_field(e['id'], 'conversation', cid)
+            found[e['id']] = cid
+            claimed.add(cid)
+            pending = [p for p in pending if p[0]['id'] != e['id']]
+            if not pending:
+                break
+        return found
+
     def _wait_idle(self, sid, timeout=90):
         """True once the session is registered and idle at its prompt."""
         if '--shell' in sys.argv:
@@ -527,12 +678,13 @@ class Api:
         """One sample a second: bytes each session appended to its transcript."""
         while True:
             # Both lists come in agents.json order (rank); sorted() keeps the rest as they are.
-            self._sessions = sorted(active_sessions() + self._codex_rows(), key=lambda s: s['rank'])
+            self._sessions = sorted(active_sessions() + self._codex_rows() + self._agy_rows(),
+                                    key=lambda s: s['rank'])
             for s in self._sessions:
                 sid = s['sid']
                 if not sid:
                     continue
-                if 'transcript' in s:              # a Codex tab: its rollout, once it has one
+                if 'transcript' in s:              # a Codex / agy tab: its rollout / conversation, once it has one
                     self._transcripts[sid] = s['transcript']
                 elif not self._transcripts.get(sid):
                     self._transcripts[sid] = transcript_path(sid)
@@ -576,13 +728,39 @@ class Api:
             # Codex: the limits its latest turn here wrote, and the models its picker lists.
             u['codex'] = core.codex_rate_limits()
             self._codex_models = core.codex_models()
+            # agy asks its server for the list, so only every 10 minutes.
+            if not self._agy_models_at or (now - self._agy_models_at).total_seconds() >= 600:
+                self._agy_models = core.agy_models() or self._agy_models
+                self._agy_models_at = now
             time.sleep(15)
 
+    def _agy_usage_loop(self):
+        """agy's limits every 10 minutes, while agents.json has an agy session. A hidden
+        agy takes about 10 seconds, so it runs here, not in _usage_loop. A failed read
+        keeps the last one."""
+        while True:
+            if any(is_agy(e) for e in core.agents()) and '--shell' not in sys.argv:
+                try:
+                    groups = agy_usage()
+                except Exception:
+                    groups = None
+                if groups:
+                    self._usage['agy'], self._usage['agy_at'] = groups, datetime.now()
+                time.sleep(600)
+            else:
+                time.sleep(15)
+
     def _usage_view(self):
-        """The usage panel as text and pie fractions."""
+        """The usage panel, one section per tool: Claude's, Codex's when it has written
+        its limits, and Antigravity's when agents.json has an agy session."""
         u, snap = self._usage, self._usage['snap']
         if not snap:
-            return {'message': 'USAGE  scanner unavailable (needs python3)' if u['failed'] else 'USAGE  scanning...'}
+            return {'message': 'USAGE  scanning...' if not u['failed'] else 'USAGE  scanner unavailable (needs python3)'}
+        agy = self._agy_view() if any(is_agy(e) for e in core.agents()) else None
+        return {'claude': self._claude_usage(), 'codex': self._codex_usage(), 'agy': agy}
+
+    def _claude_usage(self):
+        u, snap = self._usage, self._usage['snap']
         block, acct = snap['block'], u['account']
         headline = f"tokens · {block['requests']} req"
         # Reset time from the account when known: the block the account is in is what counts.
@@ -594,6 +772,16 @@ class Api:
             headline += f" · resets {to:%H:%M} · {format_remaining(snap['blockSecondsLeft'] or 0)} left"
         else:
             headline += ' · no block running'
+        # The weekly reset: the account's, otherwise the day and hour in hud-config.json.
+        week_reset = acct and acct.get('week_reset')
+        if not week_reset:
+            day = self._config.get('weekResetWeekday', 4)
+            hour = self._config.get('weekResetHour', 21)
+            week_reset = datetime.now().replace(hour=hour, minute=0, second=0, microsecond=0)
+            week_reset += timedelta(days=(day - week_reset.weekday()) % 7)
+            if week_reset <= datetime.now():
+                week_reset += timedelta(days=7)
+        left = format_remaining((week_reset - datetime.now()).total_seconds())
         # The account's own percentages when they could be fetched, otherwise this
         # machine's spend against the caps in hud-config.json.
         cap5h = float(self._config.get('costCap5h') or 0)
@@ -613,23 +801,40 @@ class Api:
         if len(models) > 3:
             parts.append(f'+{len(models) - 3} more')
         week_total = format_tokens(u['week']['total']) if u['week'] else '...'
-        # Codex's windows are named by length (the free plan has one, 30D).
-        codex = ''
-        if u['codex'] and u['codex']['windows']:
-            parts_cx = [u['codex']['plan']] if u['codex']['plan'] else []
-            for w in u['codex']['windows']:
-                caption = window_caption(w['minutes'])
-                pies.append((f'CODEX {caption}', w['used'] / 100))
-                parts_cx.append(f"{caption} {w['used']:.0f}%" +
-                                (f" · resets {w['reset']:%m-%d %H:%M}" if w['reset'] else ''))
-            codex = ' · '.join(parts_cx)
-        return {'total': format_tokens(block['total']), 'headline': headline, 'codex': codex,
+        return {'total': format_tokens(block['total']), 'headline': headline,
                 'detail': (f"new input {format_tokens(block['input'])} · output {format_tokens(block['output'])} · "
                            f"cache write {format_tokens(block['cacheCreate'])} · "
                            f"cache read {format_tokens(block['cacheRead'])}"),
                 'week': f"{format_tokens(snap['today']['total'])} tokens / {week_total} tokens",
+                'week_reset': f"week resets {week_reset:%a %m-%d %H:%M} · {left} left",
                 'models': ' · '.join(parts),
                 'pies': [{'caption': c, 'frac': f} for c, f in pies if f >= 0]}
+
+    def _agy_view(self):
+        """agy's weekly limit per model group ({'groups': []} until the first read)."""
+        groups = []
+        for g in self._usage['agy'] or []:
+            text = f"{g['used']:.0f}%"
+            if g['reset']:
+                left = format_remaining((g['reset'] - datetime.now()).total_seconds())
+                text += f" · resets {g['reset']:%a %m-%d %H:%M} · {left} left"
+            groups.append({'caption': g['group'].replace(' AND ', '/'), 'text': text, 'frac': g['used'] / 100})
+        at = self._usage['agy_at']
+        return {'groups': groups, 'at': f'{at:%H:%M}' if at else ''}
+
+    def _codex_usage(self):
+        """Codex's limit windows, named by length (the free plan has one, 30D), or None."""
+        cx = self._usage['codex']
+        if not cx or not cx['windows']:
+            return None
+        windows = []
+        for w in cx['windows']:
+            text = f"{w['used']:.0f}%"
+            if w['reset']:
+                left = format_remaining((w['reset'] - datetime.now()).total_seconds())
+                text += f" · resets {w['reset']:%a %m-%d %H:%M} · {left} left"
+            windows.append({'caption': window_caption(w['minutes']), 'text': text, 'frac': w['used'] / 100})
+        return {'plan': cx['plan'], 'windows': windows}
 
     def _on_drop(self, event):
         # pywebview adds each dropped file's full path; the page only sees the names.

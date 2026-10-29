@@ -1,12 +1,16 @@
 """Agent Mission Control's data side: paths, agents.json, the Claude Code session
-registry, Codex rollouts, account usage and number formats. No UI here, and nothing
+registry, Codex rollouts, Antigravity conversations, account usage and number formats. No UI here, and nothing
 Linux-only, so it runs on Windows too."""
 
 import glob
 import json
 import os
+import re
+import shutil
+import sqlite3
+import subprocess
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)                       # the package folder
@@ -16,6 +20,7 @@ XLSX_PATH = os.path.join(TASK_DIR, 'TaskDatabase.xlsx')
 TASKS_SCRIPT = os.path.join(TASK_DIR, 'tasks.py')
 CLAUDE_DIR = os.path.expanduser('~/.claude')
 CODEX_DIR = os.environ.get('CODEX_HOME') or os.path.expanduser('~/.codex')
+AGY_DIR = os.path.expanduser('~/.gemini/antigravity-cli')
 LAUNCHER_DIR = os.path.join(ROOT, 'Agents Launcher')
 WORK_DIR = os.path.dirname(ROOT)                   # every agent tab starts here
 CREATE_ON_SEND = {'Session Manager', 'Task Reminder'}  # opened (and added to agents.json) on first send
@@ -231,6 +236,92 @@ def codex_models():
     return [m['slug'] for m in models or [] if isinstance(m, dict) and m.get('slug') and m.get('visibility') == 'list']
 
 
+# --- Antigravity (`agy`). Like Codex it keeps no registry of running sessions. Each
+# conversation is conversations/<id>.db (SQLite), made at its first message, and
+# conversation_summaries.db lists each one's workspace (the folder it ran in).
+
+def _sqlite_rows(path, sql, args=()):
+    """The query's rows from a SQLite file opened read-only, or [] when it cannot be read."""
+    try:
+        con = sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=1)
+        try:
+            return con.execute(sql, args).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return []
+
+
+def agy_conversation(cid):
+    """The conversation's file, or '' when it has none."""
+    path = os.path.join(AGY_DIR, 'conversations', f'{cid}.db')
+    return path if cid and os.path.exists(path) else ''
+
+
+def agy_conversations():
+    return glob.glob(os.path.join(AGY_DIR, 'conversations', '*.db'))
+
+
+def agy_workspaces(cid):
+    """The folders the conversation runs in, as local paths ([] when not listed yet)."""
+    rows = _sqlite_rows(os.path.join(AGY_DIR, 'conversation_summaries.db'),
+                        'select workspace_uris from conversation_summaries where conversation_id = ?', (cid,))
+    try:
+        uris = json.loads(rows[0][0]) if rows else []
+    except ValueError:
+        return []
+    return [urllib.request.url2pathname(u[len('file://'):]) for u in uris if u.startswith('file://')]
+
+
+def agy_status(path):
+    """'busy' while a turn runs, otherwise 'idle'. A turn ends with a finished model
+    reply (step type 15, status 3); its steps while it runs have status 8. Between the
+    message and the reply every step is finished, so then the file's last write tells:
+    a turn left unanswered (stopped with Esc) shows idle a minute later."""
+    rows = _sqlite_rows(path, 'select step_type, status from steps order by idx desc limit 1')
+    if not rows:
+        return 'idle'
+    kind, status = rows[0]
+    if status == 8:
+        return 'busy'
+    if kind != 15 and datetime.now().timestamp() - max(mtime(path), mtime(path + '-wal')) < 60:
+        return 'busy'
+    return 'idle'
+
+
+def agy_models():
+    """The model ids `agy models` lists (it asks the server, so a few seconds), or []."""
+    exe = shutil.which('agy')
+    if not exe:
+        return []
+    try:
+        out = subprocess.run([exe, 'models'], capture_output=True, text=True, timeout=30,
+                             stdin=subprocess.DEVNULL).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [line.split('\t')[0] for line in out.splitlines() if '\t' in line]
+
+
+def parse_agy_usage(screen):
+    """agy's /usage screen (escape codes removed) as [{'group', 'used', 'reset'}], or
+    None when it is not there. Each model group has a weekly limit, shown as
+    'Weekly Limit Remaining ... 94.85%' then 'Refreshes in 167h 37m' (or 'Quota
+    available' when untouched)."""
+    groups = []
+    parts = re.split(r'\b([A-Z][A-Z ]*MODELS)\b', screen)
+    for name, body in zip(parts[1::2], parts[2::2]):
+        pct = re.search(r'([\d.]+)%', body)
+        if 'Weekly Limit' not in body or not pct:
+            continue
+        reset = re.search(r'Refreshes in (?:(\d+)h)?\s*(?:(\d+)m)?', body)
+        at = None
+        if reset and (reset.group(1) or reset.group(2)):
+            at = datetime.now() + timedelta(hours=int(reset.group(1) or 0), minutes=int(reset.group(2) or 0))
+        groups.append({'group': name.replace(' MODELS', '').strip(), 'used': 100 - float(pct.group(1)),
+                       'reset': at})
+    return groups or None
+
+
 def account_usage():
     """The account-wide 5-hour and weekly utilization the Claude app and /usage show.
 
@@ -269,6 +360,8 @@ def format_remaining(seconds):
     if seconds <= 0:
         return 'resetting'
     h, m = int(seconds // 3600), int(seconds % 3600 // 60)
+    if h >= 24:
+        return f'{h // 24}d{h % 24}h'
     return f'{h}h{m:02d}m' if h >= 1 else f'{m}m'
 
 

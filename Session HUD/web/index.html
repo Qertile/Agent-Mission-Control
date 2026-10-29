@@ -31,18 +31,22 @@
   .st { font-weight: bold; }
 
   /* usage */
-  #usage { position: relative; min-height: 140px; border-bottom: 1px solid var(--bar);
-           padding: 8px 210px 4px 12px; box-sizing: border-box; font-size: 13px; }
+  #usage { border-bottom: 1px solid var(--bar); font-size: 13px; }
+  /* One section per tool, each with its own pies at the right. */
+  #usage .sec { position: relative; padding: 6px 210px 2px 12px; }
+  #usage .sec + .sec { border-top: 1px solid var(--line); }
+  #usage .sec.with-pies { min-height: 104px; }
+  #usage .tool { color: var(--accent); font-weight: bold; font-size: 11px; letter-spacing: 1px; margin-bottom: 4px; }
   #usage .k { color: var(--accent); font-weight: bold; display: inline-block; width: 120px; }
   #usage .v { color: var(--title); }
   #usage .s { color: var(--desc); }
   #usage .d { color: var(--note); font-style: italic; font-size: 11px; }   /* same look as .note */
   #usage .big { font-size: 22px; font-weight: bold; color: var(--title); margin-right: 14px; }
   #usage .row { margin-bottom: 7px; }
-  #pies { position: absolute; right: 14px; top: 8px; display: flex; gap: 18px; text-align: center;
-          font-weight: bold; background: var(--bg); padding-left: 10px; }
-  #pies .cap { color: var(--desc); font-size: 12px; }
-  #pies .pct { color: var(--title); font-size: 12px; }
+  #usage .pies { position: absolute; right: 14px; top: 8px; display: flex; gap: 18px; text-align: center;
+                 font-weight: bold; background: var(--bg); padding-left: 10px; }
+  #usage .pies .cap { color: var(--desc); font-size: 12px; }
+  #usage .pies .pct { color: var(--title); font-size: 12px; }
 
   /* session list */
   #grid-head, .row-s { display: grid; grid-template-columns: 1fr 70px 70px 72px 82px; align-items: center; }
@@ -729,7 +733,8 @@ $('add-tab').addEventListener('click', e => {
   m.innerHTML = ((amc.stopped || []).length
     ? amc.stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)}</div>`).join('')
     : '<div class="disabled">every session is running</div>') +
-    '<hr><div data-new="claude">New session…</div><div data-new="codex">New Codex session…</div>';
+    '<hr><div data-new="claude">New session…</div><div data-new="codex">New Codex session…</div>' +
+    '<div data-new="agy">New Antigravity session…</div>';
   const r = $('add-tab').getBoundingClientRect();
   showAt(m, r.left, r.bottom);
 });
@@ -739,7 +744,8 @@ $('add-menu').addEventListener('click', e => {
   if (e.target.dataset.new) {
     e.stopPropagation();
     newTool = e.target.dataset.new;
-    const hint = newTool === 'codex' ? 'Codex session name, then Enter' : 'name, then Enter';
+    const hint = {codex: 'Codex session name, then Enter', agy: 'Antigravity session name, then Enter'}[newTool]
+                 || 'name, then Enter';
     $('add-menu').innerHTML = `<input id="new-name" placeholder="${hint}" spellcheck="false">` +
                               '<div class="err" id="new-err"></div>';
     $('new-name').focus();
@@ -828,17 +834,31 @@ function pieSvg(frac) {
          `${slice}<circle cx="${r}" cy="${r}" r="${r}" style="fill:none;stroke:var(--desc)"/></svg>`;
 }
 function drawUsage(u) {
-  if (u.message) { $('usage').innerHTML = `<div class="s">${esc(u.message)}</div>`; return; }
-  const pies = u.pies.map(p => `<div><div class="cap">${p.caption}</div>${pieSvg(p.frac)}` +
-                               `<div class="pct">${Math.round(Math.min(1, p.frac) * 100)}%</div></div>`).join('');
-  $('usage').innerHTML =
-    `<div class="row"><span class="k">5H BLOCK</span><span class="big">${esc(u.total)}</span></div>` +
-    `<div class="row d">${esc(u.headline)}</div>` +
-    `<div class="row d">${esc(u.detail)}</div>` +
-    `<div class="row"><span class="k">TODAY/WEEK</span><span class="v">${esc(u.week)}</span></div>` +
-    (u.models ? `<div class="row"><span class="k">MODELS</span><span class="s">${esc(u.models)}</span></div>` : '') +
-    (u.codex ? `<div class="row"><span class="k">CODEX</span><span class="s">${esc(u.codex)}</span></div>` : '') +
-    (pies ? `<div id="pies">${pies}</div>` : '');
+  if (u.message) { $('usage').innerHTML = `<div class="sec"><div class="s">${esc(u.message)}</div></div>`; return; }
+  const pies = list => list.length ? '<div class="pies">' + list.map(p => `<div><div class="cap">${esc(p.caption)}</div>` +
+    `${pieSvg(p.frac)}<div class="pct">${Math.round(Math.min(1, p.frac) * 100)}%</div></div>`).join('') + '</div>' : '';
+  const sec = (title, body, list) =>
+    `<div class="sec${list.length ? ' with-pies' : ''}"><div class="tool">${esc(title)}</div>${body}${pies(list)}</div>`;
+  const row = (k, v, cls = 'v') => `<div class="row"><span class="k">${k}</span><span class="${cls}">${esc(v)}</span></div>`;
+  const c = u.claude;
+  let html = sec('CLAUDE',
+    `<div class="row"><span class="k">5H BLOCK</span><span class="big">${esc(c.total)}</span></div>` +
+    `<div class="row d">${esc(c.headline)}</div>` +
+    `<div class="row d">${esc(c.detail)}</div>` +
+    row('TODAY/WEEK', c.week) +
+    `<div class="row d">${esc(c.week_reset)}</div>` +
+    (c.models ? row('MODELS', c.models, 's') : ''), c.pies);
+  if (u.codex)
+    html += sec('CODEX' + (u.codex.plan ? ' · ' + u.codex.plan.toUpperCase() : ''),
+      u.codex.windows.map(w => row(w.caption, w.text, 's')).join(''),
+      u.codex.windows.map(w => ({caption: w.caption, frac: w.frac})));
+  // agy's weekly limit per model group, read from its /usage every 10 minutes.
+  if (u.agy)
+    html += sec('ANTIGRAVITY' + (u.agy.at ? ' · read ' + u.agy.at : ''),
+      u.agy.groups.length ? u.agy.groups.map(g => row(g.caption, g.text, 's')).join('')
+                          : '<div class="row s">reading agy\'s /usage...</div>',
+      u.agy.groups.map(g => ({caption: g.caption, frac: g.frac})));
+  $('usage').innerHTML = html;
 }
 
 // ---------------------------------------------------------------- session list
@@ -878,7 +898,8 @@ $('grid').addEventListener('click', e => {
   // Double-click a session: its tab, ready to type into.
   if (double) {
     if (r.tab) amc.select(r.sid);
-    else $('grid-msg').textContent = `${r.name} runs outside this window`;
+    else $('grid-msg').textContent = r.headless ? `${r.name} is a background job (no window)`
+                                                : `${r.name} runs outside this window`;
   }
 });
 
@@ -926,7 +947,7 @@ function fillModels(r) {
     it.dataset.act = 'model';
     it.dataset.model = name;
     // No --model / -m: the tool picks, by plan and version.
-    const fallback = r && r.tool === 'codex' ? 'Codex default' : 'Claude default';
+    const fallback = {codex: 'Codex default', agy: 'Antigravity default'}[r && r.tool] || 'Claude default';
     it.textContent = (r && r.model === name ? '◉ ' : '○ ') + (name || fallback);
     m.insertBefore(it, $('model-end'));
   }

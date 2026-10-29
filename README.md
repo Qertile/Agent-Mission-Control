@@ -32,6 +32,7 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 - Claude Code CLI, with `claude` on PATH
 - Optional, for Codex tabs: Codex CLI with `codex` on PATH (`npm install -g @openai/codex`,
   which needs Node.js), logged in with `codex login`
+- Optional, for Antigravity tabs: the Antigravity CLI with `agy` on PATH, signed in
 - Python 3 on PATH, with the modules `pywebview`, `pywinpty` and `openpyxl`:
   `python -m pip install -U pywebview pywinpty openpyxl typing_extensions`
   (Python 3.7 needs the newer `typing_extensions`, or pywebview fails with
@@ -56,7 +57,8 @@ and never overwrites it, so a `git pull` leaves your copies alone.
    under these names. An optional `"model"` (for example `"sonnet"`) is passed as
    `--model`; the session list's right-click *Model* sets it. A Codex session has
    `"tool": "codex"` and, once Codex has made it, `"thread"` (see *Codex tabs*); `+` →
-   *New Codex session…* writes both. (`"window"` was the Windows
+   *New Codex session…* writes both. An Antigravity session has `"tool": "agy"` and, once
+   agy has made it, `"conversation"` (see *Antigravity tabs*). (`"window"` was the Windows
    Terminal window of the old launcher and is no longer used.)
 
 ## Linux
@@ -112,7 +114,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   any other listed one, `×` ends one. Type into a tab as into any terminal. Closing the
   window ends every tab; the conversations are kept and resume next time. A session
   already running in another terminal is left there and gets no tab.
-- **Session list:** double-click a session to show its tab. Right-click for Copy,
+- **Session list:** double-click a session to show its tab (a session with no terminal,
+  such as a scheduled `claude -p` job, says it is a background job). Right-click for Copy,
   Copy all rows, Model, Open on start and Terminate.
 - **Model:** the right-click menu's *Model* picks what the session runs on: *Claude
   default* (no `--model`, so Claude Code picks by plan and version), `fable`, `opus`,
@@ -121,6 +124,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   or waiting one is not interrupted and takes it at its next start. Sessions not in
   `agents.json` have no Model choice. A Codex session lists *Codex default* and the
   models Codex's own picker shows (from `~/.codex/models_cache.json`), passed as `-m`.
+  An Antigravity session lists *Antigravity default* and what `agy models` lists, passed
+  as `--model`.
 - **Codex tabs:** `+` → *New Codex session…* adds a session with `"tool": "codex"` and
   starts `codex` in its tab (with `prompts/<name>.md` as its first message when that file
   exists). Codex chooses the session id itself and writes its transcript
@@ -133,6 +138,20 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   busy. The usage panel's CODEX line and pie are the account limits Codex wrote after its
   latest turn on this computer, one pie per limit window the plan has (the free plan has
   one, 30 days), so use elsewhere shows after the next turn here.
+- **Antigravity tabs:** `+` → *New Antigravity session…* adds a session with
+  `"tool": "agy"` and starts `agy` in its tab (with `prompts/<name>.md` through `-i` when
+  that file exists). Like Codex, agy makes the conversation at the first message
+  (`~/.gemini/antigravity-cli/conversations/<id>.db`); its id is then saved as
+  `"conversation"` and the tab runs `agy --conversation <id>` from then on. The first
+  start in the working folder asks whether to trust it; answer it in the tab. Busy or
+  idle comes from the conversation's last step; a turn stopped with Esc shows idle about a
+  minute later.
+- **Usage:** one section per tool. CLAUDE: the 5-hour block, today and this week, when
+  the week resets (the account's time, otherwise `weekResetWeekday` / `weekResetHour`),
+  and the models used. CODEX: each limit window with its reset. ANTIGRAVITY (when
+  `agents.json` has an agy session): the weekly limit of each model group, read from a
+  hidden `agy` → `/usage` every 10 minutes (about 5 seconds; no model quota is used and
+  no conversation is made).
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
 - **Keys:** Ctrl+Tab / Ctrl+Shift+Tab switch to the next / previous tab; the mouse
   wheel over the tab bar scrolls it.
@@ -220,6 +239,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - Claude Code CLI，且 `claude` 在 PATH 中
 - 選用，給 Codex 分頁用：Codex CLI，且 `codex` 在 PATH 中（`npm install -g @openai/codex`，
   需要 Node.js），並用 `codex login` 登入
+- 選用，給 Antigravity 分頁用：Antigravity CLI，且 `agy` 在 PATH 中，並已登入
 - Python 3 在 PATH 中，並裝好 `pywebview`、`pywinpty`、`openpyxl` 模組：
   `python -m pip install -U pywebview pywinpty openpyxl typing_extensions`
   （Python 3.7 要裝新版 `typing_extensions`，否則 pywebview 會出現
@@ -242,7 +262,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
    `powershell -c "[guid]::NewGuid()"` 產生）。Agent Mission Control 依這個順序、用這些
    名稱顯示。可選的 `"model"`（例如 `"sonnet"`）會以 `--model` 傳入，可用 session
    清單右鍵的 *Model* 設定。Codex session 會有 `"tool": "codex"`，Codex 建立好之後
-   還會有 `"thread"`（見 *Codex 分頁*）；`+` → *New Codex session…* 會自動寫入這兩個欄位。（`"window"` 是舊 launcher 的 Windows Terminal 視窗編號，
+   還會有 `"thread"`（見 *Codex 分頁*）；`+` → *New Codex session…* 會自動寫入這兩個欄位。Antigravity session 會有 `"tool": "agy"`，agy 建立好對話後還會有 `"conversation"`（見 *Antigravity 分頁*）。（`"window"` 是舊 launcher 的 Windows Terminal 視窗編號，
    已不再使用。）
 
 ## 設定
@@ -274,7 +294,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   （session 清單的右鍵選單）的會隨視窗啟動；`+` 可啟動清單裡其他的 session，`×` 結束
   一個。在分頁裡打字就跟一般終端機一樣。關掉視窗會結束所有分頁；對話會保留，下次接著
   繼續。已經在別的終端機執行的 session 會留在原處，不會有分頁。
-- **Session 清單**：雙擊 session 會切到它的分頁。右鍵有 Copy、Copy all rows、
+- **Session 清單**：雙擊 session 會切到它的分頁（沒有終端機的 session，例如排程跑的
+  `claude -p`，會顯示它是背景工作）。右鍵有 Copy、Copy all rows、
   Model、Open on start、Terminate。
 - **Model**：右鍵選單的 *Model* 選 session 要用的模型：*Claude default*（不加
   `--model`，由 Claude Code 依方案和版本決定）、`fable`、`opus`、`sonnet`、`haiku`。
@@ -282,6 +303,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   重開並接續同一段對話；busy 或 waiting 的不會被中斷，下次啟動才套用。不在
   `agents.json` 裡的 session 沒有 Model 可選。Codex session 列出的是 *Codex default*
   和 Codex 自己選單裡的模型（來自 `~/.codex/models_cache.json`），以 `-m` 傳入。
+  Antigravity session 列出的是 *Antigravity default* 和 `agy models` 列出的模型，以
+  `--model` 傳入。
 - **Codex 分頁**：`+` → *New Codex session…* 會新增一筆 `"tool": "codex"` 的 session，
   並在分頁裡啟動 `codex`（有 `prompts/<name>.md` 時會當成第一則訊息送出）。Codex 的
   session id 由它自己決定，而且要送出第一則訊息才會寫出對話紀錄
@@ -293,6 +316,18 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   那一行和圓餅圖，是 Codex 在這台電腦上最近一輪對話後記下的帳號額度，方案有幾個額度
   視窗就有幾個圓餅（免費方案只有一個，30 天），所以在別處的用量要等這裡下一輪對話後
   才會顯示。
+- **Antigravity 分頁**：`+` → *New Antigravity session…* 會新增一筆 `"tool": "agy"` 的
+  session，並在分頁裡啟動 `agy`（有 `prompts/<name>.md` 時用 `-i` 當成第一則訊息）。跟
+  Codex 一樣，agy 要送出第一則訊息才會建立對話
+  （`~/.gemini/antigravity-cli/conversations/<id>.db`），之後 id 存進 `"conversation"`，
+  分頁就以 `agy --conversation <id>` 啟動。第一次在工作資料夾啟動時 agy 會問要不要信任
+  這個資料夾，在分頁裡回答即可。busy／idle 看對話的最後一步；按 Esc 中斷的那一輪，大約
+  一分鐘後才會變回 idle。
+- **用量**：每個工具一段。CLAUDE：5 小時區段、今天和本週用量、本週何時重置（用帳號的
+  時間，讀不到時用 `weekResetWeekday`／`weekResetHour`）、用了哪些模型。CODEX：每個額度
+  視窗和重置時間。ANTIGRAVITY（`agents.json` 有 agy session 時）：每組模型的週額度，每
+  10 分鐘在背景開一個看不到的 `agy` 打 `/usage` 讀出來（約 5 秒，不會用到模型額度，也不
+  會新增對話）。
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
 - **按鍵**：Ctrl+Tab／Ctrl+Shift+Tab 切到下一個／上一個分頁；滑鼠滾輪在分頁列上可以左右捲動。
 - **檔案**：從檔案管理員把檔案拖到某一格，會把完整路徑打進那個分頁。
