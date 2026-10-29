@@ -2,6 +2,34 @@
 
 All notable changes to this project are listed here, newest first.
 
+## v2.3 – 2026-10-29
+
+Tagged `v2.3`. Since `v2.2`: Cross-check (below).
+- README: `v2.3` in the Versions table, *Cross-check* under *Working in the window* (both
+  languages).
+
+## 2026-10-29 – Cross-check
+
+### Added
+- **Cross-check** (`Session HUD/discuss.py`): `+` → *Cross-check…* asks Claude, Codex and
+  Antigravity one question, each in print mode on a conversation of its own, resumed every
+  turn. Modes *discuss* (all answer, then revise on the others' answers; the lead sums up)
+  and *review* (the lead answers, the others review, the lead replies; the first reviewer
+  sums up). Rounds 1–3, default 2; a word limit per reply, default 100. Models default to
+  Sonnet and agy's medium Flash.
+- **Discussion tab** (`⚖`): the rounds side by side; a follow-up goes to every participant
+  and then one writes the conclusion. *Send to…* on a summary or conclusion pastes it into
+  a running session's tab and submits it.
+- **Session list:** open or running discussions show with `⚖` and the tokens of all their
+  models. Right-click: Open on start, Terminate (kills the step under way, closes the tab),
+  Settings… (name, models, lead, word limit; who takes part, the mode and the rounds stay).
+- A conversation that cannot go on (agy has answered `INVALID_ARGUMENT`) is retried once on
+  a new one, given the question and the latest summary or conclusion.
+- Discussions are saved in `Session HUD/discussions/` (git-ignored).
+
+### Not tested
+- Codex as a participant (no codex on the test machine); Cross-check on Windows.
+
 ## v2.2 – 2026-10-29
 
 Tagged `v2.2`. Since `v2.1` (the sections below, down to *taskbar icon*):

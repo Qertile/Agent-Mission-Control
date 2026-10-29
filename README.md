@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.2` (current) | `v2.1` plus themes (`⚙`), Antigravity (`agy`) tabs, the usage panel split per tool (Claude, Codex, Antigravity) with each weekly reset, a pulsing dot on busy tabs, the taskbar icon, and `+` `⇔` `⚙` pinned at the right of the tab bar. See `CHANGELOG.md`. |
+| `v2.3` (current) | `v2.2` plus Cross-check: Claude, Codex and Antigravity discuss or review one question in a `⚖` tab, with a summary, follow-ups with a conclusion, the total tokens in the session list, and *Send to…* a session's tab. See `CHANGELOG.md`. |
+| `v2.2` | `v2.1` plus themes (`⚙`), Antigravity (`agy`) tabs, the usage panel split per tool (Claude, Codex, Antigravity) with each weekly reset, a pulsing dot on busy tabs, the taskbar icon, and `+` `⇔` `⚙` pinned at the right of the tab bar. See `CHANGELOG.md`. |
 | `v2.1` | `v2.0` plus a model per session, Codex tabs, panes as in VS Code (split by dragging a tab onto a pane's edge, tab order by dragging), files dropped on a pane typed in as paths, and Ctrl+Tab between tabs. See `CHANGELOG.md`. |
 | `v2.0` | One Agent Mission Control window (`amc_web.py`, pywebview + xterm.js) with the task list, the session monitor and a terminal tab per session; the same code on Windows and Linux. The Agents Launcher only starts this window. |
 | `v1.0` | The earlier setup: each session in its own terminal tab (Windows Terminal; on Linux GNOME Terminal with tmux) next to a separate HUD window (`show-session-hud.ps1` / `mission_control.py`). Get it back with `git checkout v1.0`. |
@@ -147,6 +148,20 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   start in the working folder asks whether to trust it; answer it in the tab. Busy or
   idle comes from the conversation's last step; a turn stopped with Esc shows idle about a
   minute later.
+- **Cross-check:** `+` → *Cross-check…* asks Claude, Codex and Antigravity (each with
+  its model; Sonnet and agy's medium Flash by default) one question. *discuss*: all answer,
+  then each round sees the others' answers and revises; the lead sums up. *review*: the
+  lead answers, the others review, the lead replies; the first reviewer sums up. Rounds 1–3
+  (default 2) and a word limit per reply (default 100, 0 = none). It opens as a `⚖` tab:
+  the rounds side by side, a follow-up box at the bottom (every participant answers, then
+  one writes the conclusion). Each participant runs in print mode (`claude -p`, `codex
+  exec`, `agy -p`) on a conversation of its own, resumed every turn; it can read the
+  working folder but changes nothing, and every turn uses that tool's quota. *Send to…* on
+  a summary or conclusion types it into a session's tab, to be acted on there. In the
+  session list a discussion shows with `⚖` and the tokens of all its models; right-click:
+  Open on start, Terminate (ends the step under way and closes the tab), Settings… (name,
+  models, lead, word limit). Saved in `Session HUD/discussions/` (not in git); the latest
+  ones reopen from `+`. Codex in a discussion is not tried yet.
 - **Usage:** one section per tool. CLAUDE: the 5-hour block, today and this week, when
   the week resets (the account's time, otherwise `weekResetWeekday` / `weekResetHour`),
   and the models used. CODEX: each limit window with its reset. ANTIGRAVITY (when
@@ -225,7 +240,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.2`（目前） | `v2.1` 再加上：主題（`⚙`）、Antigravity（`agy`）分頁、用量面板依工具分段（Claude、Codex、Antigravity）並顯示各自的週重置時間、busy 分頁的圓點會閃、工作列圖示，以及 `+` `⇔` `⚙` 固定在分頁列右邊。詳見 `CHANGELOG.md`。 |
+| `v2.3`（目前） | `v2.2` 再加上 Cross-check：Claude、Codex、Antigravity 在 `⚖` 分頁裡討論或審查同一個問題，最後整理；追問會附結論；session 清單顯示所有模型的 token 總數；結論可用 *Send to…* 送進 session 分頁。詳見 `CHANGELOG.md`。 |
+| `v2.2` | `v2.1` 再加上：主題（`⚙`）、Antigravity（`agy`）分頁、用量面板依工具分段（Claude、Codex、Antigravity）並顯示各自的週重置時間、busy 分頁的圓點會閃、工作列圖示，以及 `+` `⇔` `⚙` 固定在分頁列右邊。詳見 `CHANGELOG.md`。 |
 | `v2.1` | `v2.0` 再加上：每個 session 可選模型、Codex 分頁、像 VS Code 的窗格（把分頁拖到窗格邊緣來分割、拖曳分頁排順序）、檔案拖到窗格會打出路徑、Ctrl+Tab 切換分頁。詳見 `CHANGELOG.md`。 |
 | `v2.0` | 單一 Agent Mission Control 視窗（`amc_web.py`，pywebview 加 xterm.js），裡面有任務清單、Session Monitor，每個 session 一個終端機分頁；Windows 和 Linux 用同一份程式。Agents Launcher 只負責啟動這個視窗。 |
 | `v1.0` | 舊的做法：每個 session 開在各自的終端機分頁（Windows Terminal；Linux 上是 GNOME Terminal 加 tmux），旁邊另有一個 HUD 視窗（`show-session-hud.ps1`／`mission_control.py`）。用 `git checkout v1.0` 可以拿回來。 |
@@ -325,6 +341,17 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   分頁就以 `agy --conversation <id>` 啟動。第一次在工作資料夾啟動時 agy 會問要不要信任
   這個資料夾，在分頁裡回答即可。busy／idle 看對話的最後一步；按 Esc 中斷的那一輪，大約
   一分鐘後才會變回 idle。
+- **Cross-check**：`+` → *Cross-check…* 讓 Claude、Codex、Antigravity 一起回答同一個問題
+  （各自選模型，預設 Sonnet 和 agy 的 medium Flash）。*discuss*：大家先各自回答，之後每一輪
+  看到別人的答案再修正，最後由 lead 整理。*review*：lead 回答，其他人審查，lead 回覆修正，
+  最後由第一位審查者整理。輪數 1–3（預設 2），每則回覆有字數上限（預設 100，0 = 不限）。
+  會開成一個 `⚖` 分頁：每一輪並排顯示，最下面可以追問（每個參加者回答後，再由一位寫結論）。
+  參加者以 print 模式執行（`claude -p`、`codex exec`、`agy -p`），各有自己的對話，每一輪接續；
+  能讀工作資料夾裡的檔案但不會修改，每一輪都會用到該工具的額度。整理或結論卡片上的
+  *Send to…* 會把它打進某個 session 分頁，讓那個 session 去執行。session 清單裡討論以 `⚖`
+  顯示，tokens 是所有模型的總和；右鍵有 Open on start、Terminate（停掉正在跑的步驟並關閉
+  分頁）、Settings…（名稱、模型、lead、字數上限）。存在 `Session HUD/discussions/`（不進
+  git），最近的可以從 `+` 再打開。Codex 參加討論還沒實測過。
 - **用量**：每個工具一段。CLAUDE：5 小時區段、今天和本週用量、本週何時重置（用帳號的
   時間，讀不到時用 `weekResetWeekday`／`weekResetHour`）、用了哪些模型。CODEX：每個額度
   視窗和重置時間。ANTIGRAVITY（`agents.json` 有 agy session 時）：每組模型的週額度，每

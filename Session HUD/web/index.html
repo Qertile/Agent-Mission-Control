@@ -120,6 +120,52 @@
   body.wide > .col:not(#term-col), body.wide > .split { display: none; }
   #no-tabs { color: var(--note); padding: 14px; }
 
+  /* cross-check: a discussion tab and the form that starts one */
+  .term.disc { overflow-y: auto; background: var(--bg); color: var(--title); font-size: 13px; box-sizing: border-box;
+               padding: 6px 10px 0; outline: none; }
+  .disc .d-head { color: var(--accent); font-weight: bold; }
+  .disc .d-sub { color: var(--note); font-style: italic; font-size: 11px; margin: 2px 0 6px; }
+  .disc .d-q { white-space: pre-wrap; color: var(--title); border-left: 3px solid var(--desc); padding: 2px 8px; margin-bottom: 8px; }
+  .disc .stage { color: var(--desc); font-weight: bold; margin: 10px 0 4px; border-bottom: 1px solid var(--line); }
+  .disc .cards { display: grid; gap: 8px; }
+  .disc .card { background: var(--bar); padding: 6px 8px; min-width: 0; }
+  .disc .card .who { color: var(--accent); font-weight: bold; margin-bottom: 3px; }
+  .disc .card .who span { color: var(--note); font-weight: normal; font-style: italic; font-size: 11px; margin-left: 6px; }
+  .disc .card .send { float: right; color: var(--desc); cursor: pointer; font-weight: normal; font-size: 11px; }
+  .disc .card .send:hover { color: var(--accent); }
+  .disc .card .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .disc .card.thinking .txt { color: var(--note); font-style: italic; animation: dotpulse 0.8s ease-in-out infinite alternate; }
+  .disc .card.error .txt { color: var(--red); }
+  .disc .d-foot { position: sticky; bottom: 0; background: var(--bg); padding: 8px 0; }
+  .disc textarea { width: 100%; box-sizing: border-box; resize: none; background: var(--bar); color: var(--title);
+                   border: 1px solid var(--desc); outline: none; font: inherit; padding: 3px 5px; }
+  .disc textarea:disabled { opacity: 0.5; }
+  #xc { position: fixed; z-index: 20; left: 50%; top: 12%; transform: translateX(-50%); width: min(640px, 90vw);
+        background: var(--bar); border: 1px solid var(--desc); padding: 12px 14px; display: none; font-size: 13px; }
+  #xc .t { color: var(--accent); font-weight: bold; margin-bottom: 6px; }
+  #xc textarea { width: 100%; box-sizing: border-box; resize: vertical; background: var(--bg); color: var(--title);
+                 border: 1px solid var(--desc); outline: none; font: inherit; padding: 3px 5px; }
+  #xc .line { margin-top: 8px; }
+  #xc .line > b { color: var(--desc); display: inline-block; width: 90px; vertical-align: top; }
+  #xc label { margin-right: 14px; }
+  #xc .opt { display: block; margin-left: 90px; }
+  #xc .hint { color: var(--note); font-style: italic; font-size: 11px; }
+  /* appearance: none, or WebKitGTK draws its own light box and ignores the colours */
+  #xc select { -webkit-appearance: none; appearance: none; background-color: var(--bg); color: var(--title);
+               border: 1px solid var(--desc); font: inherit; padding: 2px 22px 2px 6px; background-repeat: no-repeat;
+               background-image: linear-gradient(45deg, transparent 50%, var(--desc) 50%),
+                                 linear-gradient(135deg, var(--desc) 50%, transparent 50%);
+               background-position: calc(100% - 12px) 55%, calc(100% - 7px) 55%; background-size: 5px 5px; }
+  #xc select:disabled { color: var(--note); border-color: var(--note); }
+  #xc option { background: var(--bg); color: var(--title); }
+  #xc #xc-name { width: calc(100% - 100px); }
+  #xc input[type=number], #xc #xc-name { width: 5em; background: var(--bg); color: var(--title); border: 1px solid var(--desc);
+                           font: inherit; padding: 2px 4px; }
+  #xc button { background: var(--bg); color: var(--accent); border: 1px solid var(--desc); font: inherit;
+               padding: 3px 14px; cursor: pointer; margin-right: 8px; }
+  #xc button:hover { border-color: var(--accent); }
+  #xc .err { color: var(--red); min-height: 14px; }
+
   /* menus and the calendar */
   .menu { position: fixed; z-index: 10; background: var(--bar); border: 1px solid var(--desc); padding: 3px 0;
           min-width: 150px; display: none; }
@@ -174,13 +220,34 @@
   <div data-act="auto">Open on start</div>
   <div data-act="term">Terminate</div>
   <hr>
-  <div class="disabled">Model</div>
+  <div data-act="settings">Settings…</div>
+  <div class="disabled" id="model-label">Model</div>
 </div>
 <div class="menu" id="status-menu">
   <div>Pending</div><div>Ongoing</div><div>Checking</div><div>Finished</div>
 </div>
 <div class="menu" id="add-menu"></div>
 <div class="menu" id="set-menu"></div>
+<div class="menu" id="send-menu"></div>
+<div id="xc">
+  <div class="t" id="xc-t">Cross-check</div>
+  <div class="line" id="xc-name-line"><b>Name</b><input id="xc-name" spellcheck="false"></div>
+  <textarea id="xc-q" rows="5" placeholder="the question or task" spellcheck="false"></textarea>
+  <div class="line"><b>Who</b><span id="xc-who"></span></div>
+  <div class="line"><b>Mode</b>
+    <label class="opt"><input type="radio" name="xc-mode" value="discuss" checked> discuss
+      <span class="hint">- all answer, then each sees the others' answers and revises; the lead sums up</span></label>
+    <label class="opt"><input type="radio" name="xc-mode" value="review"> review
+      <span class="hint">- the lead answers, the others review it, the lead replies; the first reviewer sums up</span></label></div>
+  <div class="line"><b>Lead</b><select id="xc-lead"></select>
+    <b style="width:auto;margin-left:20px">Rounds</b> <select id="xc-rounds"><option>1</option><option selected>2</option><option>3</option></select>
+    <b style="width:auto;margin-left:20px">Words</b> <input id="xc-words" type="number" min="0" step="50" value="100">
+    <span class="hint">per reply, 0 = no limit</span></div>
+  <div class="line hint" id="xc-note">Each runs on a new conversation of its own in the working folder: it can read files there but
+    changes nothing. Every turn uses that tool's quota.</div>
+  <div class="line err" id="xc-err"></div>
+  <div class="line"><button id="xc-go">Start</button><button id="xc-cancel">Cancel</button></div>
+</div>
 <div id="cal"></div>
 
 <script src="vendor/xterm.js"></script>
@@ -310,7 +377,8 @@ const amc = {
       if (!running) t.el.classList.remove('active');
       $('tabs').insertBefore(t.tabEl, $('tab-tools'));
     }
-    $('no-tabs').style.display = list.some(t => t.running) ? 'none' : '';
+    for (const t of Object.values(amc.tabs)) if (t.disc) $('tabs').insertBefore(t.tabEl, $('tab-tools'));
+    $('no-tabs').style.display = list.some(t => t.running) || Object.values(amc.tabs).some(t => t.disc) ? 'none' : '';
     amc.prune();
     amc.fill();
   },
@@ -429,12 +497,13 @@ const amc = {
     amc.fill();
   },
 
-  addTab(id, name) {
+  // The tab in the tab bar; × calls onClose.
+  tabEl(id, name, onClose, closeTip) {
     const tabEl = document.createElement('div');
     tabEl.className = 'tab';
-    tabEl.innerHTML = `<span class="dot">●</span>${esc(name)}<span class="x" title="end this session">×</span>`;
+    tabEl.innerHTML = `<span class="dot">●</span>${esc(name)}<span class="x" title="${closeTip}">×</span>`;
     tabEl.onclick = e => {
-      if (e.target.classList.contains('x')) api().terminate(id, 0);    // its tab goes when it ends
+      if (e.target.classList.contains('x')) onClose();
       else amc.select(id);
     };
     // Dragged onto the panes: a pane's middle shows it there, an edge splits the pane.
@@ -446,6 +515,11 @@ const amc = {
     });
     tabEl.addEventListener('dragend', () => { amc.dragging = null; $('drop').style.display = 'none'; tabMark(null); });
     $('tabs').insertBefore(tabEl, $('tab-tools'));
+    return tabEl;
+  },
+
+  addTab(id, name) {
+    const tabEl = amc.tabEl(id, name, () => api().terminate(id, 0), 'end this session');  // its tab goes when it ends
     const el = document.createElement('div');
     el.className = 'term';
     $('terms').appendChild(el);
@@ -630,6 +704,194 @@ const amc = {
   },
 };
 amc.focusLeaf = amc.layout;
+
+// ---------------------------------------------------------------- cross-check
+// A discussion has a tab like a session's, but its pane is a page, not a terminal: the
+// rounds side by side, redrawn from discussions/<id>.json every 1.5 s while it is open.
+amc.openDiscussion = async did => {
+  const id = 'disc-' + did;
+  if (amc.tabs[id]) { amc.select(id); return; }
+  const d = await api().discussion(did);
+  if (!d) return;
+  const tabEl = amc.tabEl(id, '⚖ ' + d.title, () => amc.closeDiscussion(id), 'close (the discussion is kept)');
+  const el = document.createElement('div');
+  el.className = 'term disc';
+  el.tabIndex = 0;
+  $('terms').appendChild(el);
+  el.addEventListener('mousedown', () => { if (amc.tabs[id] && id !== amc.active) amc.select(id); }, true);
+  // In place of a terminal: what select(), render() and the themes call on one.
+  const term = {cols: 0, rows: 0, options: {}, write() {}, getSelection: () => '',
+                focus() { const box = el.querySelector('textarea'); (box && !box.disabled ? box : el).focus(); }};
+  const t = amc.tabs[id] = {name: d.title, term, fit: {fit() {}}, el, tabEl, running: true, disc: did, shown: ''};
+  t.timer = setInterval(() => amc.drawDiscussion(id), 1500);
+  api().discussion_tab(did, true);           // the session list shows it while its tab is open
+  amc.drawDiscussion(id, d);
+  $('no-tabs').style.display = 'none';
+  amc.select(id);
+};
+amc.closeDiscussion = id => {
+  const t = amc.tabs[id];
+  clearInterval(t.timer);
+  api().discussion_tab(t.disc, false);
+  t.tabEl.remove(); t.el.remove();
+  delete amc.tabs[id];
+  amc.prune(); amc.fill(); amc.save();
+};
+amc.drawDiscussion = async (id, d) => {
+  const t = amc.tabs[id];
+  if (!t) return;
+  d = d || await api().discussion(t.disc);
+  if (!d) return;
+  const json = JSON.stringify(d);
+  if (json === t.shown) return;          // unchanged: keep the scroll and what is typed
+  t.shown = json;
+  if (d.title !== t.name) {                // renamed in its settings
+    t.name = d.title;
+    t.tabEl.childNodes[1].textContent = '⚖ ' + d.title;
+  }
+  const el = t.el, atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
+  const old = el.querySelector('textarea'), typed = old ? old.value : '';
+  const n = d.participants.length, who = d.participants.map(p => p.label);
+  const lead = who[d.lead];
+  // Consecutive entries of one stage side by side.
+  let html = '', stage = null;
+  for (const [k, e] of d.entries.entries()) {
+    if (e.stage !== stage) {
+      if (stage !== null) html += '</div>';
+      stage = e.stage;
+      const cols = d.entries.filter(x => x.stage === stage).length;
+      html += `<div class="stage">${esc(stage)}</div><div class="cards" style="grid-template-columns: repeat(${cols}, 1fr)">`;
+    }
+    const text = e.status === 'thinking' ? 'thinking…' : e.text;
+    // A summary or conclusion can go to a session's tab, to be acted on there.
+    const send = e.status === 'done' && /Summary|Conclusion/.test(e.stage)
+      ? `<span class="send" data-send="${k}" title="type this into a session's tab and send it">Send to… ▸</span>` : '';
+    html += `<div class="card ${e.status}"><div class="who">${esc(e.label || who[e.who])}<span>${esc([e.note, e.at].filter(Boolean).join(' · '))}</span>${send}</div>` +
+            `<div class="txt">${esc(text)}</div></div>`;
+  }
+  if (stage !== null) html += '</div>';
+  const sub = `${d.mode} · ${d.rounds} round${d.rounds > 1 ? 's' : ''} · ${who.join(', ')} · lead ${lead}` +
+              (d.words ? ` · ${d.words} words` : '') + ` · ${d.created}` +
+              (d.running ? ' · running' : '');
+  el.innerHTML = `<div class="d-head">⚖ ${esc(d.title)}</div><div class="d-sub">${esc(sub)}</div>` +
+    `<div class="d-q">${esc(d.question)}</div>${html}` +
+    `<div class="d-foot"><textarea rows="2" spellcheck="false" ${d.running ? 'disabled' : ''} placeholder="${
+      d.running ? 'running - a follow-up can be sent when this step is done'
+                : 'follow-up to everyone: Enter sends, Shift+Enter is a newline'}"></textarea>` +
+    `<div class="d-sub" id="fu-err-${esc(id)}"></div></div>`;
+  for (const b of el.querySelectorAll('[data-send]'))
+    b.addEventListener('click', ev => { ev.stopPropagation(); sendMenu(t.disc, +b.dataset.send, ev); });
+  const box = el.querySelector('textarea');
+  box.value = typed;
+  box.addEventListener('keydown', async e => {
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    e.preventDefault();
+    const err = await api().discussion_followup(t.disc, box.value);
+    if (err) { el.querySelector('.d-foot .d-sub').textContent = err; return; }
+    box.value = '';
+    t.shown = '';
+    amc.drawDiscussion(id);
+  });
+  if (atEnd) el.scrollTop = el.scrollHeight;
+};
+
+// "Send to…": the session tabs running here; the one picked gets the text typed in and sent.
+function sendMenu(did, k, ev) {
+  const m = $('send-menu');
+  const tabs = Object.entries(amc.tabs).filter(([id, t]) => !t.disc && t.running);
+  m.innerHTML = tabs.length ? tabs.map(([id, t]) => `<div data-tid="${esc(id)}">${esc(t.name)}</div>`).join('')
+                            : '<div class="disabled">no session tab running - open one with +</div>';
+  m.onclick = async e => {
+    const tid = e.target.dataset.tid;
+    hideMenus();
+    if (!tid) return;
+    const err = await api().discussion_send(did, k, tid);
+    if (err) { $('grid-note').textContent = err; return; }
+    amc.select(tid);
+  };
+  showAt(m, ev.clientX, ev.clientY);
+}
+
+// The form: the tools that are installed, a model each, who leads, how many rounds.
+// With a discussion (`edit`), its settings: the name, the models, the lead and the word
+// limit change; who takes part, the question, the mode and the rounds stay.
+let xcTools = [], xcEdit = null;
+async function openCrossCheck(edit) {
+  xcTools = await api().discussion_tools();
+  xcEdit = edit || null;
+  const part = t => edit && edit.participants.find(p => p.tool === t.tool);
+  $('xc-who').innerHTML = xcTools.map((t, i) => {
+    const p = part(t), on = edit ? !!p : t.ok && t.tool !== 'codex', pick = p ? p.model : t.pick;
+    // A model this list does not have any more stays selectable.
+    const models = t.models.includes(pick) ? t.models : [...t.models, pick];
+    return `<label class="opt"><input type="checkbox" data-i="${i}" ${on ? 'checked' : ''} ` +
+      `${!t.ok || edit ? 'disabled' : ''}> ${esc(t.label)} <select data-i="${i}" ${t.ok && (!edit || p) ? '' : 'disabled'}>` +
+      models.map(m => `<option value="${esc(m)}"${m === pick ? ' selected' : ''}>${esc(m || 'default')}</option>`)
+        .join('') + '</select>' + (t.ok ? '' : ` <span class="hint">not installed</span>`) + '</label>';
+  }).join('');
+  fillLead();
+  $('xc-t').textContent = edit ? 'Cross-check settings' : 'Cross-check';
+  $('xc-name-line').style.display = edit ? '' : 'none';
+  $('xc-note').style.display = edit ? 'none' : '';
+  $('xc-go').textContent = edit ? 'Save' : 'Start';
+  $('xc-q').readOnly = !!edit;
+  for (const r of document.querySelectorAll('input[name="xc-mode"]')) {
+    r.disabled = !!edit;
+    if (edit) r.checked = r.value === edit.mode;
+  }
+  $('xc-rounds').disabled = !!edit;
+  if (edit) {
+    $('xc-name').value = edit.title;
+    $('xc-q').value = edit.question;
+    $('xc-rounds').value = String(edit.rounds);
+    $('xc-words').value = edit.words || 0;
+    $('xc-lead').value = String(xcTools.findIndex(t => t.tool === edit.participants[edit.lead].tool));
+  } else if (xcClosedEdit) {
+    // The settings form left a discussion's values in the boxes.
+    $('xc-q').value = '';
+    $('xc-rounds').value = '2';
+    $('xc-words').value = 100;
+  }
+  xcClosedEdit = !!edit;
+  $('xc-err').textContent = '';
+  $('xc').style.display = 'block';
+  (edit ? $('xc-name') : $('xc-q')).focus();
+}
+let xcClosedEdit = false;
+function xcTicked() { return [...$('xc-who').querySelectorAll('input:checked')].map(c => +c.dataset.i); }
+function fillLead() {
+  const was = $('xc-lead').value;
+  $('xc-lead').innerHTML = xcTicked().map(i => `<option value="${i}">${esc(xcTools[i].label)}</option>`).join('');
+  if ([...$('xc-lead').options].some(o => o.value === was)) $('xc-lead').value = was;
+}
+$('xc-who').addEventListener('change', e => { if (e.target.type === 'checkbox') fillLead(); });
+$('xc').addEventListener('click', e => e.stopPropagation());
+$('xc-cancel').addEventListener('click', () => { $('xc').style.display = 'none'; });
+$('xc').addEventListener('keydown', e => { if (e.key === 'Escape') $('xc').style.display = 'none'; });
+$('xc-go').addEventListener('click', async () => {
+  const words = Math.max(0, Math.round(+$('xc-words').value || 0));
+  if (xcEdit) {
+    const d = xcEdit, models = d.participants.map(p =>
+      $('xc-who').querySelector(`select[data-i="${xcTools.findIndex(t => t.tool === p.tool)}"]`).value);
+    const lead = Math.max(0, d.participants.findIndex(p => p.tool === xcTools[+$('xc-lead').value].tool));
+    const err = await api().discussion_configure(d.id, $('xc-name').value, models, lead, words);
+    if (err) { $('xc-err').textContent = err; return; }
+    $('xc').style.display = 'none';
+    refresh();
+    return;
+  }
+  const ticked = xcTicked();
+  const participants = ticked.map(i => ({tool: xcTools[i].tool,
+                                         model: $('xc-who').querySelector(`select[data-i="${i}"]`).value}));
+  const lead = Math.max(0, ticked.indexOf(+$('xc-lead').value));
+  const mode = document.querySelector('input[name="xc-mode"]:checked').value;
+  const res = await api().discussion_start($('xc-q').value, mode, +$('xc-rounds').value, participants, lead, words);
+  if (res.error) { $('xc-err').textContent = res.error; return; }
+  $('xc').style.display = 'none';
+  $('xc-q').value = '';
+  amc.openDiscussion(res.id);
+});
+
 applyTheme(themeName);                     // the saved theme (Classic: :root's own values)
 
 // A tab dragged over the panes: the zone it would land in lights up. Caught on the way
@@ -726,14 +988,19 @@ $('terms').addEventListener('drop', e => {
   amc.dragging = null;
   if (at) amc.move(id, at.leaf, at.zone);
 }, true);
-$('add-tab').addEventListener('click', e => {
+$('add-tab').addEventListener('click', async e => {
   e.stopPropagation();
   const m = $('add-menu');
   m.innerHTML = ((amc.stopped || []).length
     ? amc.stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)}</div>`).join('')
     : '<div class="disabled">every session is running</div>') +
     '<hr><div data-new="claude">New session…</div><div data-new="codex">New Codex session…</div>' +
-    '<div data-new="agy">New Antigravity session…</div>';
+    '<div data-new="agy">New Antigravity session…</div>' +
+    '<hr><div data-xc="1">Cross-check…</div>';
+  // The latest discussions, to open again.
+  const past = await api().discussions();
+  if (past.length) m.innerHTML += past.slice(0, 8).map(x =>
+    `<div data-disc="${esc(x.id)}" title="${esc(x.created)}">⚖ ${esc(x.title)}</div>`).join('');
   const r = $('add-tab').getBoundingClientRect();
   showAt(m, r.left, r.bottom);
 });
@@ -753,6 +1020,8 @@ $('add-menu').addEventListener('click', e => {
   if (e.target.closest('input, .err')) { e.stopPropagation(); return; }
   hideMenus();
   if (e.target.dataset.id) amc.start(e.target.dataset.id);
+  if (e.target.dataset.xc) openCrossCheck();
+  if (e.target.dataset.disc) amc.openDiscussion(e.target.dataset.disc);
 });
 $('add-menu').addEventListener('keydown', async e => {
   if (e.target.id !== 'new-name' || e.key !== 'Enter') return;
@@ -877,8 +1146,9 @@ function drawGrid() {
   const scale = Math.max(2048, ...rows.flatMap(r => r.samples));
   $('grid').innerHTML = rows.length ? rows.map((r, i) => `
     <div class="row-s${r.sid === selected ? ' sel' : ''}" data-i="${i}">
-      <div class="who"><div class="txt">${r.tab ? '<span class="tabmark">▸</span>' : '▹'} ${esc(r.name)}
-        <div class="sub">· ${esc(r.short)}  (pid ${r.pid})</div></div>${spark(r.samples, scale)}</div>
+      <div class="who"><div class="txt">${r.disc ? `<span class="${r.tab ? 'tabmark' : ''}">⚖</span>`
+                                                : r.tab ? '<span class="tabmark">▸</span>' : '▹'} ${esc(r.name)}
+        <div class="sub">· ${esc(r.short)}${r.disc ? '' : `  (pid ${esc(r.pid)})`}</div></div>${spark(r.samples, scale)}</div>
       <div class="stat" style="color:${r.color}">${esc(r.status)}</div>
       <div>${esc(r.tokens)}</div><div>${esc(r.up)}</div><div class="upd" title="${esc(r.updated)}">${esc(r.updated.slice(11))}</div>
     </div>`).join('') : '<div class="note" style="padding:8px">No active sessions</div>';
@@ -897,7 +1167,8 @@ $('grid').addEventListener('click', e => {
   lastClick = double ? {sid: null, at: 0} : {sid: r.sid, at: e.timeStamp};
   // Double-click a session: its tab, ready to type into.
   if (double) {
-    if (r.tab) amc.select(r.sid);
+    if (r.disc) amc.openDiscussion(r.disc);
+    else if (r.tab) amc.select(r.sid);
     else $('grid-msg').textContent = r.headless ? `${r.name} is a background job (no window)`
                                                 : `${r.name} runs outside this window`;
   }
@@ -957,7 +1228,12 @@ $('grid').addEventListener('contextmenu', e => {
   menuRow = rowAt(e);
   selected = menuRow ? menuRow.sid : null;
   drawGrid();
-  fillModels(menuRow);
+  // A discussion: Settings… in place of the Model block.
+  const disc = !!(menuRow && menuRow.disc);
+  if (disc) $('row-menu').querySelectorAll('.model-item').forEach(it => it.remove());
+  else fillModels(menuRow);
+  $('model-label').style.display = disc ? 'none' : '';
+  $('row-menu').querySelector('[data-act="settings"]').style.display = disc ? '' : 'none';
   const m = $('row-menu'), items = m.querySelectorAll('[data-act]');
   items.forEach(it => it.classList.toggle('disabled', !menuRow && it.dataset.act !== 'copyall'));
   const auto = m.querySelector('[data-act="auto"]');
@@ -972,8 +1248,17 @@ $('row-menu').addEventListener('click', async e => {
   hideMenus();
   if (act === 'copy' && r) copyText(cells(r));
   if (act === 'copyall') copyText(rows.map(cells).join('\n'));
-  if (act === 'auto' && r) await api().set_auto_open(r.sid, !r.autoOpen);
-  if (act === 'term' && r) await api().terminate(r.sid, r.pid);
+  if (act === 'auto' && r) await (r.disc ? api().discussion_set_auto_open(r.disc, !r.autoOpen)
+                                         : api().set_auto_open(r.sid, !r.autoOpen));
+  // A discussion's Terminate ends the step under way and closes its tab; it stays in + to reopen.
+  if (act === 'term' && r && r.disc) {
+    await api().discussion_stop(r.disc);
+    if (amc.tabs[r.sid]) amc.closeDiscussion(r.sid);
+  } else if (act === 'term' && r) await api().terminate(r.sid, r.pid);
+  if (act === 'settings' && r && r.disc) {
+    const d = await api().discussion(r.disc);
+    if (d) openCrossCheck(d);
+  }
   if (act === 'model' && r) {
     // An idle tab restarts on the new model; its pane stays meanwhile, and the focus
     // comes back to it when it had it.
@@ -1070,7 +1355,7 @@ function showAt(el, x, y) {
   el.style.left = Math.min(x, innerWidth - el.offsetWidth - 4) + 'px';
   el.style.top = Math.min(y, innerHeight - el.offsetHeight - 4) + 'px';
 }
-function hideMenus() { for (const id of ['row-menu', 'status-menu', 'add-menu', 'set-menu', 'cal']) $(id).style.display = 'none'; }
+function hideMenus() { for (const id of ['row-menu', 'status-menu', 'add-menu', 'set-menu', 'send-menu', 'cal']) $(id).style.display = 'none'; }
 document.addEventListener('click', hideMenus);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus(); });
 
@@ -1106,6 +1391,8 @@ async function refresh() {
 async function init() {
   await api().init();
   await amc.syncTabs();
+  // The discussions ticked "Open on start", before the layout that may place them.
+  for (const x of await api().discussions()) if (x.autoOpen) await amc.openDiscussion(x.id);
   amc.restore();
   await refresh();
   await refreshTasks();

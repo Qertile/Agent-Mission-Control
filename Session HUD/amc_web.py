@@ -33,6 +33,7 @@ import webview
 from webview.dom import DOMEventHandler
 
 import amc_core as core
+import discuss
 from amc_core import (HERE, TASK_DIR, TASKS_PATH, XLSX_PATH, TASKS_SCRIPT, LAUNCHER_DIR, WORK_DIR,
                       CREATE_ON_SEND, load_json, active_sessions, transcript_path, account_usage,
                       format_tokens, format_remaining, format_uptime)
@@ -280,6 +281,7 @@ class Api:
         self._samples, self._transcripts, self._last_len = {}, {}, {}
         self._sessions = []
         self._codex_models = []
+        self._disc_tabs = set()            # the discussions with a tab open on the page
         self._agy_models, self._agy_models_at = [], None
         self._metas = {}                   # rollout path -> its session_meta, read once
         self._seen = {}                    # rollout path -> when this window first saw it
@@ -413,6 +415,7 @@ class Api:
                          'tab': s['sid'] in self._terms,
                          'headless': s['sid'] not in self._terms and headless(s['pid']),
                          'samples': list(self._samples.get(s['sid'], []))})
+        rows += self._discussion_rows()
         note = f"{len(rows)} active · sessions {datetime.now():%H:%M:%S}"
         if u['fetched']:
             note += f" · usage {u['fetched']:%H:%M:%S}"
@@ -480,6 +483,85 @@ class Api:
         except Exception as e:
             return f'model {label} saved, restart failed: {e}'
         return f'model {label}: restarted'
+
+    # --- page -> python: cross-check (discuss.py)
+
+    def discussion_tools(self):
+        """The tools that can take part, with their models ('' = the tool's default) and the
+        one the form starts on: Sonnet, agy's medium Flash, Codex's own default."""
+        flash = [m for m in self._agy_models if 'flash' in m]
+        picks = {'claude': 'sonnet', 'codex': '',
+                 'agy': next((m for m in flash if m.endswith('-medium')), flash[0] if flash else '')}
+        return [{'tool': t, 'label': discuss.LABELS[t], 'ok': bool(shutil.which(t)), 'models': [''] + models,
+                 'pick': picks[t]}
+                for t, models in (('claude', MODELS), ('codex', self._codex_models), ('agy', self._agy_models))]
+
+    def discussion_start(self, question, mode, rounds, participants, lead, words=100):
+        try:
+            return {'id': discuss.start(question, mode, rounds, participants, lead, words)}
+        except (ValueError, KeyError, TypeError) as e:
+            return {'error': str(e)}
+
+    def discussion(self, did):
+        return discuss.load(did)
+
+    def discussion_tab(self, did, is_open):
+        """The page opened or closed a discussion's tab: the session list shows it meanwhile."""
+        (self._disc_tabs.add if is_open else self._disc_tabs.discard)(did)
+
+    def discussion_send(self, did, k, tid):
+        """Types entry `k` of the discussion (a summary or a conclusion) into tab `tid`
+        and submits it, so that session can act on it. Returns None or what went wrong."""
+        d, term = discuss.load(did), self._terms.get(tid)
+        if not d or not 0 <= int(k) < len(d['entries']):
+            return 'no such answer'
+        if not term:
+            return 'that tab is not running'
+        e = d['entries'][int(k)]
+        text = (f"Conclusion of a Cross-check ({' + '.join(p['label'] for p in d['participants'])}) "
+                f"on this question:\n\n{d['question']}\n\n{e['label']}:\n\n{e['text']}")
+        # As one paste (bracketed, so its newlines do not submit), then Enter on its own.
+        term.write('\x1b[200~' + text.replace('\r\n', '\n') + '\x1b[201~')
+        time.sleep(0.5)
+        term.write('\r')
+        return None
+
+    def discussion_stop(self, did):
+        discuss.stop(did)
+
+    def discussion_set_auto_open(self, did, on):
+        discuss.set_auto_open(did, on)
+
+    def discussion_configure(self, did, title, models, lead, words):
+        try:
+            return discuss.configure(did, title, models, lead, words)
+        except (ValueError, TypeError) as e:
+            return str(e)
+
+    def _discussion_rows(self):
+        """Session-list rows for the discussions open in a tab or still running, after the sessions."""
+        rows = []
+        for did in sorted(self._disc_tabs | set(discuss._live)):
+            d = discuss.load(did)
+            if not d:
+                continue
+            status = 'busy' if d['running'] else 'idle'
+            modified = core.mtime(discuss._path(did))
+            rows.append({'sid': 'disc-' + did, 'disc': did, 'pid': '', 'name': d['title'],
+                         'short': f"{d['mode']} · " + ' + '.join(p['label'] for p in d['participants']),
+                         'status': status, 'color': STATUS_COLORS[status],
+                         'tokens': format_tokens(discuss.tokens(d)) if discuss.tokens(d) else '-',
+                         'up': format_uptime(datetime.strptime(d['created'], '%Y-%m-%d %H:%M:%S')),
+                         'updated': datetime.fromtimestamp(modified).strftime('%Y-%m-%d %H:%M:%S') if modified else '',
+                         'listed': True, 'autoOpen': bool(d.get('autoOpen')), 'model': '', 'tool': 'disc', 'models': [],
+                         'tab': did in self._disc_tabs, 'headless': False, 'samples': []})
+        return rows
+
+    def discussions(self):
+        return discuss.listing()
+
+    def discussion_followup(self, did, text):
+        return discuss.follow_up(did, text)
 
     # --- page -> python: tasks
 
