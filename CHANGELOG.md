@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-29 – paste images
+
+### Added
+- **Paste an image into a tab:** Ctrl+V / Ctrl+Shift+V with an image on the clipboard
+  saves it as `<temp>/amc-paste/paste-<time>.png` and types the path into the tab (as a
+  dropped file); Claude reads it on send. On Linux WebKitGTK gives the page no image, so
+  it is read from the GTK clipboard; on Windows the page's paste event (not tested yet).
+  This also covers Claude Code's own Ctrl+V image paste, which needs `xclip` / `wl-paste`
+  on Linux.
+
+### Changed
+- **Ctrl+V** in a tab is the browser's paste (text or image), like Ctrl+Shift+V; it is no
+  longer sent to the program as `^V`.
+- README: *Images* under *Working in the window* (both languages).
+
 ## v2.3 – 2026-10-29
 
 Tagged `v2.3`. Since `v2.2`: Cross-check (below).

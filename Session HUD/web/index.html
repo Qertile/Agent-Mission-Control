@@ -534,14 +534,29 @@ const amc = {
     el.addEventListener('mousedown', () => { if (amc.tabs[id] && id !== amc.active) amc.select(id); }, true);
     term.onData(data => api().write(id, data));
     term.onResize(({cols, rows}) => api().resize(id, cols, rows));
-    // Ctrl+Shift+C copies the selection; Ctrl+Shift+V is left to the browser's paste,
-    // which xterm.js turns into input. Plain Ctrl+C / Ctrl+V still go to the program.
+    // Ctrl+Shift+C copies the selection. Ctrl+V and Ctrl+Shift+V are left to the
+    // browser's paste: text xterm.js types in, an image is saved as a file and its path
+    // typed in (below). Plain Ctrl+C still goes to the program.
     term.attachCustomKeyEventHandler(e => {
-      if (e.type !== 'keydown' || !e.ctrlKey || !e.shiftKey) return true;
-      if (e.code === 'KeyC') { copyText(term.getSelection()); term.focus(); return false; }
+      if (e.type !== 'keydown' || !e.ctrlKey || e.altKey) return true;
       if (e.code === 'KeyV') return false;
+      if (e.shiftKey && e.code === 'KeyC') { copyText(term.getSelection()); term.focus(); return false; }
       return true;
     });
+    // WebKitGTK's paste carries no image at all (no types): then Python reads the clipboard.
+    el.addEventListener('paste', async e => {
+      const data = e.clipboardData;
+      const item = [...(data ? data.items : [])].find(i => i.type.startsWith('image/'));
+      if (!item && data && data.types.length) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const path = item ? await api().save_pasted_image(await new Promise(done => {
+        const r = new FileReader();
+        r.onload = () => done(r.result);
+        r.readAsDataURL(item.getAsFile());
+      })) : await api().paste_clipboard_image();
+      if (path) { amc.fileTarget = id; amc.typePaths([path]); }
+    }, true);
     amc.tabs[id] = {name, term, fit, el, tabEl, running: false};
     if (amc.pending[id]) { term.write(amc.pending[id]); delete amc.pending[id]; }
   },

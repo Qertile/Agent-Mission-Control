@@ -173,6 +173,10 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   wheel over the tab bar scrolls it.
 - **Files:** drag files from the file manager onto a pane to type their full paths
   into that tab.
+- **Images:** Ctrl+V (or Ctrl+Shift+V) with an image on the clipboard saves it as
+  `amc-paste/paste-<time>.png` in the temp folder (`/tmp` on Linux) and types its path
+  into the tab; Claude reads the image when the message is sent. Text pastes as before.
+  Ctrl+V is a paste now, no longer passed to the program.
 - **Tab status:** the dot in each tab is its session's status colour (busy cyan, idle
   green), and pulses while the session is busy. A tab not on screen blinks when its session finishes or waits for you.
 - **Panes (as in VS Code):** drag a tab from the tab bar onto the terminal area. Dropped
@@ -360,6 +364,9 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
 - **按鍵**：Ctrl+Tab／Ctrl+Shift+Tab 切到下一個／上一個分頁；滑鼠滾輪在分頁列上可以左右捲動。
 - **檔案**：從檔案管理員把檔案拖到某一格，會把完整路徑打進那個分頁。
+- **圖片**：剪貼簿裡是圖片時按 Ctrl+V（或 Ctrl+Shift+V），會存成暫存資料夾裡的
+  `amc-paste/paste-<時間>.png`（Linux 是 `/tmp`），並把路徑打進分頁；送出後 Claude 會讀那張圖。
+  文字照常貼上。Ctrl+V 現在是貼上，不再原樣送給程式。
 - **分頁狀態**：每個分頁前的圓點是 session 狀態的顏色（busy 藍、idle 綠），busy 時圓點會閃。不在畫面上的
   分頁，session 跑完或在等你時會閃爍。
 - **窗格（跟 VS Code 一樣）**：把分頁從分頁列拖到終端機區域。放在某個窗格的左、右、

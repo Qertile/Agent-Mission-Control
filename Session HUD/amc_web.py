@@ -16,6 +16,7 @@ Needs: pywebview (Linux: sudo apt install python3-webview; Windows: pip install
 pywebview pywinpty), and openpyxl for the task statuses.
 """
 
+import base64
 import json
 import os
 import re
@@ -23,6 +24,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -351,6 +353,44 @@ class Api:
         term = self._terms.get(tid)
         if term:
             term.write(data)
+
+    def save_pasted_image(self, data_url):
+        """An image pasted into a tab (a data: URL) saved as a file in the temp folder;
+        returns its path, which the page types into the tab. None when it is no image."""
+        m = re.fullmatch(r'data:image/(png|jpeg|gif|webp|bmp);base64,(.+)', data_url or '', re.S)
+        if not m:
+            return None
+        folder = os.path.join(tempfile.gettempdir(), 'amc-paste')
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, f"paste-{datetime.now():%Y%m%d-%H%M%S-%f}.{m[1].replace('jpeg', 'jpg')}")
+        with open(path, 'wb') as f:
+            f.write(base64.b64decode(m[2]))
+        return path
+
+    def paste_clipboard_image(self):
+        """Linux: WebKitGTK gives the page's paste event no image, so the image on the
+        clipboard is read through GTK (on its main thread) and saved like save_pasted_image.
+        Returns its path, or None when the clipboard has no image."""
+        if WINDOWS:
+            return None
+        import gi
+        gi.require_version('Gtk', '3.0')
+        gi.require_version('Gdk', '3.0')
+        from gi.repository import Gdk, GLib, Gtk
+        done, got = threading.Event(), []
+
+        def read():
+            got.append(Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_for_image())
+            done.set()
+            return False
+        GLib.idle_add(read)
+        if not done.wait(5) or not got[0]:
+            return None
+        folder = os.path.join(tempfile.gettempdir(), 'amc-paste')
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, f'paste-{datetime.now():%Y%m%d-%H%M%S-%f}.png')
+        got[0].savev(path, 'png', [], [])
+        return path
 
     def resize(self, tid, cols, rows):
         term = self._terms.get(tid)
