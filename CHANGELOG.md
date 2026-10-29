@@ -2,6 +2,29 @@
 
 All notable changes to this project are listed here, newest first.
 
+## v2.2 – 2026-10-29
+
+Tagged `v2.2`. Since `v2.1` (the sections below, down to *taskbar icon*):
+- Themes under `⚙`: Classic (the original colors, the default) and nine more.
+- Antigravity (`agy`) tabs: *New Antigravity session…* in the `+` menu, resumed by
+  conversation, model per session, busy / idle.
+- The usage panel split per tool (CLAUDE, CODEX, ANTIGRAVITY), each with its pies and its
+  weekly reset; agy's limits read from its `/usage`.
+- A busy tab's status dot pulses; a session with no terminal is called a background job.
+- The window's taskbar icon is the desktop shortcut's (Linux and Windows).
+- `+`, `⇔` and `⚙` pinned at the right of the tab bar.
+- README: `v2.2` in the Versions table (both languages).
+
+## 2026-10-29 – tab bar buttons, limit lines, menu order
+
+### Changed
+- **`+`** moved from after the tabs to the right end of the tab bar, left of `⇔`, pinned
+  there with `⇔` and `⚙` (24px like them).
+- **Codex and Antigravity limits** look like Claude's: the label line shows `5% used`,
+  the reset (`resets Thu 11-05 11:24 · 6d23h left`) is the small italic line under it.
+- **Session list right-click menu:** Open on start and Terminate come before the Model
+  list, which is now last.
+
 ## 2026-10-29 – Antigravity tabs, usage per tool
 
 ### Added

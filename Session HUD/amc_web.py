@@ -73,6 +73,15 @@ def window_caption(minutes):
     return f'{minutes // 1440}D' if minutes % 1440 == 0 else f'{minutes // 60}H'
 
 
+def limit_row(caption, used, reset):
+    """A Codex or agy limit as the usage panel shows it: the percentage used on the
+    label's line, its reset under it (as Claude's are)."""
+    note = ''
+    if reset:
+        note = f"resets {reset:%a %m-%d %H:%M} · {format_remaining((reset - datetime.now()).total_seconds())} left"
+    return {'caption': caption, 'used': f'{used:.0f}% used', 'note': note, 'frac': used / 100}
+
+
 def first_prompt(name):
     """Agents Launcher/prompts/<name>.md, or None."""
     try:
@@ -812,13 +821,7 @@ class Api:
 
     def _agy_view(self):
         """agy's weekly limit per model group ({'groups': []} until the first read)."""
-        groups = []
-        for g in self._usage['agy'] or []:
-            text = f"{g['used']:.0f}%"
-            if g['reset']:
-                left = format_remaining((g['reset'] - datetime.now()).total_seconds())
-                text += f" · resets {g['reset']:%a %m-%d %H:%M} · {left} left"
-            groups.append({'caption': g['group'].replace(' AND ', '/'), 'text': text, 'frac': g['used'] / 100})
+        groups = [limit_row(g['group'].replace(' AND ', '/'), g['used'], g['reset']) for g in self._usage['agy'] or []]
         at = self._usage['agy_at']
         return {'groups': groups, 'at': f'{at:%H:%M}' if at else ''}
 
@@ -827,13 +830,7 @@ class Api:
         cx = self._usage['codex']
         if not cx or not cx['windows']:
             return None
-        windows = []
-        for w in cx['windows']:
-            text = f"{w['used']:.0f}%"
-            if w['reset']:
-                left = format_remaining((w['reset'] - datetime.now()).total_seconds())
-                text += f" · resets {w['reset']:%a %m-%d %H:%M} · {left} left"
-            windows.append({'caption': window_caption(w['minutes']), 'text': text, 'frac': w['used'] / 100})
+        windows = [limit_row(window_caption(w['minutes']), w['used'], w['reset']) for w in cx['windows']]
         return {'plan': cx['plan'], 'windows': windows}
 
     def _on_drop(self, event):

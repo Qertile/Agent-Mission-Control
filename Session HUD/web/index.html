@@ -84,8 +84,6 @@
   .tab.off { display: none; }
   .tab .x { margin-left: 10px; color: var(--note); }
   .tab .x:hover { color: var(--red); }
-  #add-tab { padding: 6px 12px; cursor: pointer; color: var(--desc); font-weight: bold; }
-  #add-tab:hover { color: var(--accent); }
   /* The tab typed into: bright, lit and underlined (not bold: the tabs would shift); one
      shown in another pane: underlined dim. */
   .tab.active { color: var(--accent); background: var(--tabon); box-shadow: inset 0 -3px 0 var(--accent); }
@@ -161,8 +159,9 @@
 </div>
 <div class="split" data-col="2"></div>
 <div class="col" id="term-col">
-  <div id="tabs"><div id="add-tab" title="start a session, or a new one">+</div>
+  <div id="tabs">
     <div id="tab-tools">
+      <div id="add-tab" title="start a session, or a new one">+</div>
       <div id="wide-btn" title="full width: hide the task and session columns; drag a tab onto a pane's edge to split it">⇔</div>
       <div id="set-btn" title="settings">⚙</div></div></div>
   <div id="terms"><div id="no-tabs">No session running: start one with +.</div><div id="drop"></div></div>
@@ -172,10 +171,10 @@
   <div data-act="copy">Copy</div>
   <div data-act="copyall">Copy all rows</div>
   <hr>
-  <div class="disabled">Model</div>
-  <hr id="model-end">
   <div data-act="auto">Open on start</div>
   <div data-act="term">Terminate</div>
+  <hr>
+  <div class="disabled">Model</div>
 </div>
 <div class="menu" id="status-menu">
   <div>Pending</div><div>Ongoing</div><div>Checking</div><div>Finished</div>
@@ -309,7 +308,7 @@ const amc = {
       t.running = running;
       t.tabEl.classList.toggle('off', !running);
       if (!running) t.el.classList.remove('active');
-      $('tabs').insertBefore(t.tabEl, $('add-tab'));
+      $('tabs').insertBefore(t.tabEl, $('tab-tools'));
     }
     $('no-tabs').style.display = list.some(t => t.running) ? 'none' : '';
     amc.prune();
@@ -446,7 +445,7 @@ const amc = {
       e.dataTransfer.setData('text/plain', name);
     });
     tabEl.addEventListener('dragend', () => { amc.dragging = null; $('drop').style.display = 'none'; tabMark(null); });
-    $('tabs').insertBefore(tabEl, $('add-tab'));
+    $('tabs').insertBefore(tabEl, $('tab-tools'));
     const el = document.createElement('div');
     el.className = 'term';
     $('terms').appendChild(el);
@@ -840,6 +839,7 @@ function drawUsage(u) {
   const sec = (title, body, list) =>
     `<div class="sec${list.length ? ' with-pies' : ''}"><div class="tool">${esc(title)}</div>${body}${pies(list)}</div>`;
   const row = (k, v, cls = 'v') => `<div class="row"><span class="k">${k}</span><span class="${cls}">${esc(v)}</span></div>`;
+  const limit = l => row(l.caption, l.used) + (l.note ? `<div class="row d">${esc(l.note)}</div>` : '');
   const c = u.claude;
   let html = sec('CLAUDE',
     `<div class="row"><span class="k">5H BLOCK</span><span class="big">${esc(c.total)}</span></div>` +
@@ -850,12 +850,12 @@ function drawUsage(u) {
     (c.models ? row('MODELS', c.models, 's') : ''), c.pies);
   if (u.codex)
     html += sec('CODEX' + (u.codex.plan ? ' · ' + u.codex.plan.toUpperCase() : ''),
-      u.codex.windows.map(w => row(w.caption, w.text, 's')).join(''),
+      u.codex.windows.map(limit).join(''),
       u.codex.windows.map(w => ({caption: w.caption, frac: w.frac})));
   // agy's weekly limit per model group, read from its /usage every 10 minutes.
   if (u.agy)
     html += sec('ANTIGRAVITY' + (u.agy.at ? ' · read ' + u.agy.at : ''),
-      u.agy.groups.length ? u.agy.groups.map(g => row(g.caption, g.text, 's')).join('')
+      u.agy.groups.length ? u.agy.groups.map(limit).join('')
                           : '<div class="row s">reading agy\'s /usage...</div>',
       u.agy.groups.map(g => ({caption: g.caption, frac: g.frac})));
   $('usage').innerHTML = html;
@@ -949,7 +949,7 @@ function fillModels(r) {
     // No --model / -m: the tool picks, by plan and version.
     const fallback = {codex: 'Codex default', agy: 'Antigravity default'}[r && r.tool] || 'Claude default';
     it.textContent = (r && r.model === name ? '◉ ' : '○ ') + (name || fallback);
-    m.insertBefore(it, $('model-end'));
+    m.appendChild(it);                      // the Model block is last
   }
 }
 $('grid').addEventListener('contextmenu', e => {
