@@ -1,8 +1,8 @@
-# AI-Infra
+# Agent Mission Control
 
 Tools for running several Claude Code sessions side by side on Windows and Linux.
 
-[繁體中文說明在下方](#ai-infra繁體中文)
+[繁體中文說明在下方](#agent-mission-control繁體中文)
 
 | Folder | What it does |
 |---|---|
@@ -45,7 +45,7 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 
 ## Setup
 
-1. Copy the `AI-Infra` folder into the folder your Claude sessions should work in.
+1. Copy the `Agent-Mission-Control` folder into the folder your Claude sessions should work in.
    That parent folder becomes every tab's working directory.
 2. Double-click `install.bat`. It checks what the tools need (Claude Code, Python 3
    and its modules, the ImportExcel module, the DejaVu Sans Mono font), makes your
@@ -223,7 +223,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 
 Register all three:
 ```
-powershell -ExecutionPolicy Bypass -File "AI-Infra\Daily Summary\setup-schedule.ps1"
+powershell -ExecutionPolicy Bypass -File "Agent-Mission-Control\Daily Summary\setup-schedule.ps1"
 ```
 
 The jobs run unattended. To give them their own Claude login, put an OAuth token in
@@ -236,7 +236,7 @@ when that file exists and contains the tag `#work`.
 
 ---
 
-# AI-Infra（繁體中文）
+# Agent Mission Control（繁體中文）
 
 在 Windows 和 Linux 上同時執行多個 Claude Code session 的工具組。
 
@@ -281,7 +281,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 ## 安裝步驟
 
-1. 把 `AI-Infra` 資料夾複製到你希望 Claude session 工作的資料夾裡。
+1. 把 `Agent-Mission-Control` 資料夾複製到你希望 Claude session 工作的資料夾裡。
    它的上一層資料夾就是每個分頁的工作目錄。
 2. 雙擊 `install.bat`。它會檢查工具需要的程式（Claude Code、Python 3 與它的模組、
    ImportExcel 模組、DejaVu Sans Mono 字型），若還沒有 `agents.json`、
@@ -417,7 +417,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 一次註冊三個排程：
 ```
-powershell -ExecutionPolicy Bypass -File "AI-Infra\Daily Summary\setup-schedule.ps1"
+powershell -ExecutionPolicy Bypass -File "Agent-Mission-Control\Daily Summary\setup-schedule.ps1"
 ```
 
 這些排程都在無人值守下執行。若要讓它們用自己的 Claude 登入，把 OAuth token 放在
