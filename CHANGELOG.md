@@ -2,6 +2,19 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – remote desktop
+
+### Added
+- **The whole window in another computer's browser** (`"desktopPort"` in the `"remote"`
+  block, e.g. 8771; Tailscale address and token as the phone page). `remote.py` serves
+  `web/index.html` with `web/remote-desktop.js` in front, which turns the page's
+  `window.pywebview.api` calls into requests and runs what the window here is told
+  (`amc.syncTabs()` ...), plus each terminal's output. Private methods and pasting from
+  this computer's clipboard cannot be called; files outside `web/` are not served.
+- The terminals keep this computer's size there; dropping files is not available.
+- `init()` runs once: a remote page opening does not start the sessions again.
+- README: *Remote desktop* (both languages).
+
 ## 2026-10-30 – two word limits in Cross-check
 
 ### Changed

@@ -280,6 +280,9 @@ class Api:
         self._out = {}                     # id -> output not yet handed to the page
         self._out_lock = threading.Lock()
         self._hist = {}                    # id -> {'buf': the latest output, 'end': chars ever written}
+        self._mirror = deque(maxlen=300)   # (n, code): what _js ran, for the remote desktop page
+        self._mirror_n = 0
+        self._started = False
         self._start_lock = threading.Lock()
         self._config = load_json(os.path.join(HERE, 'hud-config.json')) or {}
         self._usage = {'snap': None, 'fetched': None, 'failed': False, 'week': None, 'week_at': None,
@@ -296,7 +299,11 @@ class Api:
     # --- page -> python: tabs and terminals
 
     def init(self):
-        """Starts the background work and the ticked tabs; returns the tab list."""
+        """Starts the background work and the ticked tabs; returns the tab list. Only the
+        first call does: the remote desktop page (remote.py) calls it too."""
+        if self._started:
+            return self.tabs()
+        self._started = True
         threading.Thread(target=self._flush_loop, daemon=True).start()
         threading.Thread(target=self._usage_loop, daemon=True).start()
         threading.Thread(target=self._activity_loop, daemon=True).start()
@@ -814,6 +821,22 @@ class Api:
             self._window.evaluate_js(code)
         except Exception:
             pass
+        # The remote desktop page runs the same, except the terminals' output (it reads that
+        # with _remote_out) and dropped files (paths on this computer).
+        if not code.startswith(('amc.output(', 'amc.dropFiles(')):
+            with self._out_lock:
+                self._mirror_n += 1
+                self._mirror.append((self._mirror_n, code))
+
+    def _remote_poll(self, since, offsets):
+        """For the remote desktop page: what _js ran after number `since` (gap=True when
+        some of it is gone, so the page reloads), and each terminal's output after its offset."""
+        with self._out_lock:
+            codes = [c for n, c in self._mirror if n > since]
+            first = self._mirror[0][0] if self._mirror else self._mirror_n + 1
+            n = self._mirror_n
+        return {'n': n, 'codes': codes, 'gap': 0 <= since < first - 1,
+                'out': {tid: self._remote_out(tid, int(off)) for tid, off in offsets.items()}}
 
     def _output(self, tid, data):
         with self._out_lock:

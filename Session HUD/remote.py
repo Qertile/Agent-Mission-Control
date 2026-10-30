@@ -1,12 +1,17 @@
-"""Phone access: a small web server showing each tab's terminal, with a box to type into.
+"""Remote access: two small web servers on this computer's Tailscale address.
 
-Off unless hud-config.json has a "remote" block with a "token". It listens on this
-computer's Tailscale address (or the block's "host"), and every API call must carry the
-token, as the header X-AMC-Token. The page and xterm.js are served without it; they
-hold nothing private.
+- The phone page (port 8770): each tab's terminal or conversation, with a box to type into.
+- The remote desktop page ("desktopPort", e.g. 8771): the whole Agent Mission Control
+  window in another computer's browser, working as it does here.
+
+Off unless hud-config.json has a "remote" block with a "token"; the desktop page also
+needs "desktopPort". They listen on this computer's Tailscale address (or the block's
+"host"), and every API call must carry the token, as the header X-AMC-Token. The pages
+and scripts are served without it; they hold nothing private.
 """
 import hmac
 import json
+import mimetypes
 import os
 import subprocess
 import sys
@@ -91,26 +96,76 @@ def tailscale_ip():
 
 
 def start(api, conf, web_dir):
-    """Serves the phone page in the background when `conf` (hud-config.json's "remote") has a token.
-    Without a "host" it waits for Tailscale, checking every 30 seconds."""
+    """Serves the phone page in the background when `conf` (hud-config.json's "remote") has a
+    token, and the remote desktop page too when it has a "desktopPort". Without a "host" it
+    waits for Tailscale, checking every 30 seconds."""
     if not conf or not conf.get('token'):
         return
 
-    def serve():
+    def serve(port, make):
         while True:
             host = conf.get('host') or tailscale_ip()
             if host:
                 try:
-                    server = ThreadingHTTPServer((host, int(conf.get('port') or PORT)),
-                                                 handler(api, conf['token'], web_dir))
+                    server = ThreadingHTTPServer((host, port), make(api, conf['token'], web_dir))
                 except OSError as e:       # the address is gone or the port taken
-                    print(f'remote: {host}: {e}', file=sys.stderr)
+                    print(f'remote: {host}:{port}: {e}', file=sys.stderr)
                 else:
                     server.daemon_threads = True
                     server.serve_forever()
             time.sleep(30)
 
-    threading.Thread(target=serve, daemon=True).start()
+    threading.Thread(target=serve, args=(int(conf.get('port') or PORT), handler), daemon=True).start()
+    if conf.get('desktopPort'):
+        threading.Thread(target=serve, args=(int(conf['desktopPort']), desktop_handler), daemon=True).start()
+
+
+# What the remote desktop page may not call: the ones that use this computer's screen.
+NOT_REMOTE = {'paste_clipboard_image'}
+
+
+def desktop_handler(api, token, web_dir):
+    """The remote desktop page: web/index.html with remote-desktop.js in front of its scripts,
+    which turns its window.pywebview.api calls into POST /api/call/<name> and runs what the
+    window here is told (POST /api/poll)."""
+    base = handler(api, token, web_dir)
+    root = os.path.realpath(web_dir)
+
+    class Desktop(base):
+        def do_GET(self):
+            path = urlparse(self.path).path
+            if path == '/':
+                with open(os.path.join(web_dir, 'index.html'), encoding='utf-8') as f:
+                    page = f.read().replace('<meta charset="utf-8">',
+                                            '<meta charset="utf-8">\n<script src="remote-desktop.js"></script>', 1)
+                return self.reply(200, page.encode(), 'text/html; charset=utf-8')
+            # Any other file of web/, never outside it.
+            name = os.path.realpath(os.path.join(root, path.lstrip('/')))
+            if not name.startswith(root + os.sep) or not os.path.isfile(name):
+                return self.reply(404, {'error': 'not found'})
+            with open(name, 'rb') as f:
+                self.reply(200, f.read(), mimetypes.guess_type(name)[0] or 'application/octet-stream')
+
+        def do_POST(self):
+            if not self.allowed():
+                return
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get('Content-Length') or 0)) or b'{}')
+            except ValueError:
+                return self.reply(400, {'error': 'bad json'})
+            path = urlparse(self.path).path
+            if path == '/api/poll':
+                return self.reply(200, api._remote_poll(int(body.get('since', -1)), body.get('out') or {}))
+            name = path[len('/api/call/'):] if path.startswith('/api/call/') else ''
+            fn = getattr(api, name, None) if name and not name.startswith('_') and name not in NOT_REMOTE else None
+            if not callable(fn):
+                return self.reply(404, {'error': f'no {name or path}'})
+            try:
+                self.reply(200, {'result': fn(*(body.get('args') or []))})
+            except Exception as e:
+                self.reply(200, {'error': f'{type(e).__name__}: {e}'})
+
+    return Desktop
 
 
 def handler(api, token, web_dir):

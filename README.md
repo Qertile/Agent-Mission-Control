@@ -136,6 +136,22 @@ running sessions, each one's conversation or terminal, and a box to type into it
 - **Message box:** *Send* types the text into the session and submits it, as if typed
   at the desktop.
 
+## Remote desktop
+
+The whole Agent Mission Control window in another computer's browser, over the same
+Tailscale network and token as the phone page.
+
+- **Turn it on:** add `"desktopPort": 8771` to the `"remote"` block of
+  `Session HUD/hud-config.json` and restart Agent Mission Control.
+- **Open it:** `http://<Tailscale address>:8771/#t=<token>` once, then
+  `http://<Tailscale address>:8771/`. The other computer needs Tailscale on the same login.
+- **What works:** everything the window here does: the tasks, the session list, usage,
+  the tabs and typing into them, the menus. Both pages work on the same sessions at once.
+- **Terminal size:** the terminals keep this computer's size; resizing the browser does
+  not change them (in a smaller browser window their right and bottom edges are cut off).
+- **Not available there:** pasting an image from this computer's clipboard (the button
+  path; Ctrl+V of an image in that browser saves it here) and dropping files on a terminal.
+
 ## Task list
 
 `Task Manager\CLAUDE.md` tells a Claude session how to keep the task list:
@@ -376,6 +392,22 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **按鍵：** `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` 直接打進 session，足夠回答權限詢問。
   權限詢問在桌面版的分頁上也照常顯示。
 - **輸入框：** *Send* 把文字打進 session 並送出，和在桌面版打字一樣。
+
+## 遠端桌面
+
+在另一台電腦的瀏覽器裡打開整個 Agent Mission Control 視窗，和手機頁用同一個 Tailscale
+網路和 token。
+
+- **開啟：** 在 `Session HUD/hud-config.json` 的 `"remote"` 裡加上 `"desktopPort": 8771`，
+  重開 Agent Mission Control。
+- **打開：** 第一次用 `http://<Tailscale 位址>:8771/#t=<token>`，之後開
+  `http://<Tailscale 位址>:8771/`。另一台電腦要裝 Tailscale，登入同一個帳號。
+- **能做什麼：** 這裡的視窗能做的都可以：任務、session 清單、用量、分頁和在裡面打字、
+  各個選單。兩邊可以同時操作同一批 session。
+- **終端機大小：** 以這台電腦為準，調整瀏覽器大小不會改變終端機（瀏覽器視窗比較小時，
+  終端機右邊和下面會被切掉）。
+- **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦），
+  以及把檔案拖進終端機。
 
 ## 任務清單
 
