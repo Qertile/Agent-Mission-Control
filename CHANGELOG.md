@@ -2,13 +2,13 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-10-30 – v2.5: Codex in Cross-check by default
+## 2026-10-30 – v2.4.1: Codex in Cross-check by default
 
 ### Changed
 - **Cross-check ticks Codex by default** when it is installed, like Claude and
   Antigravity (it was left unticked). Its model stays Codex's own default.
-- README: *Cross-check* (both languages); Versions: `v2.5`.
-- Tagged `v2.5`.
+- README: *Cross-check* (both languages); Versions: `v2.4.1`.
+- Tagged `v2.4.1`.
 
 ## 2026-10-30 – right-click a tab
 
