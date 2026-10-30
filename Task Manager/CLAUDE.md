@@ -1,6 +1,6 @@
 # Task HUD
 
-> 本檔指令中的路徑都是相對路徑，起點是 Claude session 的工作資料夾，也就是放 AI-Infra 的那一層。
+> 本檔指令中的路徑都是相對路徑，起點是 Claude session 的工作資料夾，也就是放 Agent-Mission-Control 的那一層。
 
 任務清單存放在 `Task Manager\tasks.md`，顯示在 Agent Mission Control（`Session HUD\amc_web.py`）的左側任務欄，它每 30 秒自動重讀 `tasks.md`。獨立的「Todo List」彈窗（`Task Manager\show-hud.ps1`）預設不使用，只有執行 `Task Manager\setup-schedule.ps1` 註冊排程後，才會在平日 09:30 跳出。
 
@@ -41,7 +41,7 @@
 用 PowerShell 工具直接執行這行（不要再包一層 `powershell -Command "..."`，那層外殼本身會先彈出一個看得到的主控台視窗，使用者會看到多一個 PowerShell 視窗）：
 
 ```
-Start-Process conhost.exe -ArgumentList 'powershell','-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File','"AI-Infra\Task Manager\show-hud.ps1"'
+Start-Process conhost.exe -ArgumentList 'powershell','-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File','"Agent-Mission-Control\Task Manager\show-hud.ps1"'
 ```
 
 **為什麼一定要經過 `conhost.exe`**：Windows 11 的「預設終端機應用程式」若是 Windows Terminal， `Start-Process powershell` 配到的新主控台會由 WT 承載，畫面上會多一個標題叫 `powershell` 的空白終端機視窗。那個視窗屬於 `WindowsTerminal.exe`，`-WindowStyle Hidden` 跟腳本裡的 `Hide-ConsoleWindow` 都蓋不掉它。`conhost.exe` 會強制走舊版主控台，主控台留在本機行程裡並且是隱藏的，畫面上就只剩 HUD 本身。
@@ -63,7 +63,7 @@ P 欄公式（依到期日與狀態算優先度，數字越小越急；已完成
 每次新增/完成/刪除/修改/重新排序 `tasks.md` 之後，都要執行同步腳本更新這份 Excel：
 
 ```
-powershell -ExecutionPolicy Bypass -File "AI-Infra\Task Manager\sync-sheet.ps1"
+powershell -ExecutionPolicy Bypass -File "Agent-Mission-Control\Task Manager\sync-sheet.ps1"
 ```
 
 **Linux** 上改跑這行（`<套件資料夾>` 是工作資料夾裡放這套工具的那一層，例如 `Agent-Mission-Control`）：

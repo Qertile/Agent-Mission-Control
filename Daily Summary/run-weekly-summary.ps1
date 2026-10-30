@@ -96,7 +96,7 @@ $dayListText = $dayList -join "、"
 
 $base = $PSScriptRoot
 # Everything is worked out from where this folder sits, so the package keeps
-# working after it is copied. The work folder is the one that holds AI-Infra.
+# working after it is copied. The work folder is the one that holds Agent-Mission-Control.
 $workDir      = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $projectKey   = $workDir -replace '[^A-Za-z0-9]', '-'
 $notesDir     = Join-Path $workDir 'Obsidian Vault\MyNotes'

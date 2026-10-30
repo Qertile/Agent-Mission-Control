@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – name: Agent Mission Control
+
+### Changed
+- **The project is called Agent Mission Control** everywhere instead of AI-Infra: README
+  titles (and the link to the Chinese part), the setup comments, and the folder paths in
+  `Task Manager/CLAUDE.md` and the README's schedule command, which now say
+  `Agent-Mission-Control\...` because that is the folder a clone makes.
+
 ## 2026-10-30 – reorder sessions in the session list
 
 ### Added

@@ -1,5 +1,5 @@
 ﻿# Puts an "Agent Mission Control" shortcut on the desktop that points at the
-# launcher in this folder, wherever AI-Infra was copied to.
+# launcher in this folder, wherever Agent-Mission-Control was copied to.
 $target  = Join-Path $PSScriptRoot 'Agents Launcher.bat'
 $desktop = [Environment]::GetFolderPath('Desktop')
 $lnkPath = Join-Path $desktop 'Agent Mission Control.lnk'

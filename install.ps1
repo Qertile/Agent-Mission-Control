@@ -1,5 +1,5 @@
 <#
-    One-step setup for AI-Infra on this PC. Nothing is copied anywhere - the tools
+    One-step setup for Agent Mission Control on this PC. Nothing is copied anywhere - the tools
     run from this folder. Setting up means four things:
       1. checking the programs the tools call (Claude Code, Python 3 with
          pywebview, pywinpty and openpyxl, the ImportExcel PowerShell module, the
