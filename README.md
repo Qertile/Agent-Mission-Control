@@ -151,7 +151,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   already running in another terminal is left there and gets no tab.
 - **Session list:** double-click a session to show its tab (a session with no terminal,
   such as a scheduled `claude -p` job, says it is a background job). Right-click for Copy,
-  Copy all rows, Open on start, Terminate and Model. Drag a session up or down to reorder
+  Copy all rows, Open on start, Terminate and Model; right-clicking a tab in the tab bar
+  opens the same menu for its session. Drag a session up or down to reorder
   it; the order is saved in `agents.json`, so the tab bar follows.
 - **Model:** the right-click menu's *Model* picks what the session runs on: *Claude
   default* (no `--model`, so Claude Code picks by plan and version), `fable`, `opus`,
@@ -387,7 +388,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   繼續。已經在別的終端機執行的 session 會留在原處，不會有分頁。
 - **Session 清單**：雙擊 session 會切到它的分頁（沒有終端機的 session，例如排程跑的
   `claude -p`，會顯示它是背景工作）。右鍵有 Copy、Copy all rows、
-  Open on start、Terminate、Model。上下拖曳 session 可以調整順序，順序存進 `agents.json`，
+  Open on start、Terminate、Model；在分頁列的分頁上按右鍵，也會跳出同一個選單。上下拖曳 session 可以調整順序，順序存進 `agents.json`，
   分頁列也會跟著變。
 - **Model**：右鍵選單的 *Model* 選 session 要用的模型：*Claude default*（不加
   `--model`，由 Claude Code 依方案和版本決定）、`fable`、`opus`、`sonnet`、`haiku`。

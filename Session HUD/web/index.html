@@ -525,6 +525,11 @@ const amc = {
       e.dataTransfer.setData('text/plain', name);
     });
     tabEl.addEventListener('dragend', () => { amc.dragging = null; $('drop').style.display = 'none'; tabMark(null); });
+    tabEl.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      rowMenu(rows.find(r => r.sid === id) || null, e);
+    });
     $('tabs').insertBefore(tabEl, $('tab-tools'));
     return tabEl;
   },
@@ -1298,9 +1303,11 @@ function fillModels(r) {
     m.appendChild(it);                      // the Model block is last
   }
 }
-$('grid').addEventListener('contextmenu', e => {
-  e.preventDefault();
-  menuRow = rowAt(e);
+$('grid').addEventListener('contextmenu', e => { e.preventDefault(); rowMenu(rowAt(e), e); });
+// The session list's menu for row `r` (null: only Copy all), at the mouse; a tab's
+// right-click opens the same one for its session.
+function rowMenu(r, e) {
+  menuRow = r;
   selected = menuRow ? menuRow.sid : null;
   drawGrid();
   // A discussion: Settings… in place of the Model block.
@@ -1317,7 +1324,7 @@ $('grid').addEventListener('contextmenu', e => {
   for (const it of m.querySelectorAll('[data-act="auto"], [data-act="model"]'))
     it.classList.toggle('disabled', !menuRow || !menuRow.listed);
   showAt(m, e.clientX, e.clientY);
-});
+}
 $('row-menu').addEventListener('click', async e => {
   const act = e.target.dataset.act, r = menuRow;
   hideMenus();

@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – right-click a tab
+
+### Added
+- **Right-clicking a tab** in the tab bar opens the session list's menu for that session
+  (Copy, Copy all rows, Open on start, Terminate, Model; Settings… for a Cross-check).
+  A closed tab has no row in the list, so only Copy all rows is enabled.
+- README: *Session list* (both languages).
+
 ## 2026-10-30 – usage on the phone; no agy window on Windows
 
 ### Added
