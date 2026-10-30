@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.4` (current) | `v2.3` plus the phone page over Tailscale (sessions, chat or terminal view, keys, a message box), images pasted from the clipboard, task results with a history and Discard, sessions reordered by dragging in the session list, and the name Agent Mission Control throughout. See `CHANGELOG.md`. |
+| `v2.5` (current) | `v2.4` plus each tool's usage on the phone page, the session menu on a tab's right-click, Codex ticked by default in Cross-check when installed, and no console window flashing for `agy models` on Windows. See `CHANGELOG.md`. |
+| `v2.4` | `v2.3` plus the phone page over Tailscale (sessions, chat or terminal view, keys, a message box), images pasted from the clipboard, task results with a history and Discard, sessions reordered by dragging in the session list, and the name Agent Mission Control throughout. See `CHANGELOG.md`. |
 | `v2.3` | `v2.2` plus Cross-check: Claude, Codex and Antigravity discuss or review one question in a `⚖` tab, with a summary, follow-ups with a conclusion, the total tokens in the session list, and *Send to…* a session's tab. See `CHANGELOG.md`. |
 | `v2.2` | `v2.1` plus themes (`⚙`), Antigravity (`agy`) tabs, the usage panel split per tool (Claude, Codex, Antigravity) with each weekly reset, a pulsing dot on busy tabs, the taskbar icon, and `+` `⇔` `⚙` pinned at the right of the tab bar. See `CHANGELOG.md`. |
 | `v2.1` | `v2.0` plus a model per session, Codex tabs, panes as in VS Code (split by dragging a tab onto a pane's edge, tab order by dragging), files dropped on a pane typed in as paths, and Ctrl+Tab between tabs. See `CHANGELOG.md`. |
@@ -184,7 +185,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   idle comes from the conversation's last step; a turn stopped with Esc shows idle about a
   minute later.
 - **Cross-check:** `+` → *Cross-check…* asks Claude, Codex and Antigravity (each with
-  its model; Sonnet and agy's medium Flash by default) one question. *discuss*: all answer,
+  its model; every installed tool is ticked by default, on Sonnet, Codex's own default
+  and agy's medium Flash) one question. *discuss*: all answer,
   then each round sees the others' answers and revises; the lead sums up. *review*: the
   lead answers, the others review, the lead replies; the first reviewer sums up. Rounds 1–3
   (default 2) and a word limit per reply (default 100, 0 = none). It opens as a `⚖` tab:
@@ -287,7 +289,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.4`（目前） | `v2.3` 再加上透過 Tailscale 的手機頁（session 清單、對話或終端機畫面、按鍵、輸入框）；從剪貼簿貼上圖片；任務的結果、歷史和丟棄；在 session 清單拖曳調整順序；名稱全面改成 Agent Mission Control。詳見 `CHANGELOG.md`。 |
+| `v2.5`（目前） | `v2.4` 再加上手機頁顯示各工具的用量；在分頁上按右鍵也有 session 選單；Cross-check 預設勾選有安裝的 Codex；Windows 上讀 `agy models` 時不再閃出主控台視窗。詳見 `CHANGELOG.md`。 |
+| `v2.4` | `v2.3` 再加上透過 Tailscale 的手機頁（session 清單、對話或終端機畫面、按鍵、輸入框）；從剪貼簿貼上圖片；任務的結果、歷史和丟棄；在 session 清單拖曳調整順序；名稱全面改成 Agent Mission Control。詳見 `CHANGELOG.md`。 |
 | `v2.3` | `v2.2` 再加上 Cross-check：Claude、Codex、Antigravity 在 `⚖` 分頁裡討論或審查同一個問題，最後整理；追問會附結論；session 清單顯示所有模型的 token 總數；結論可用 *Send to…* 送進 session 分頁。詳見 `CHANGELOG.md`。 |
 | `v2.2` | `v2.1` 再加上：主題（`⚙`）、Antigravity（`agy`）分頁、用量面板依工具分段（Claude、Codex、Antigravity）並顯示各自的週重置時間、busy 分頁的圓點會閃、工作列圖示，以及 `+` `⇔` `⚙` 固定在分頁列右邊。詳見 `CHANGELOG.md`。 |
 | `v2.1` | `v2.0` 再加上：每個 session 可選模型、Codex 分頁、像 VS Code 的窗格（把分頁拖到窗格邊緣來分割、拖曳分頁排順序）、檔案拖到窗格會打出路徑、Ctrl+Tab 切換分頁。詳見 `CHANGELOG.md`。 |
@@ -417,7 +420,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   這個資料夾，在分頁裡回答即可。busy／idle 看對話的最後一步；按 Esc 中斷的那一輪，大約
   一分鐘後才會變回 idle。
 - **Cross-check**：`+` → *Cross-check…* 讓 Claude、Codex、Antigravity 一起回答同一個問題
-  （各自選模型，預設 Sonnet 和 agy 的 medium Flash）。*discuss*：大家先各自回答，之後每一輪
+  （各自選模型；有安裝的工具都預設勾選，模型預設 Sonnet、Codex 自己的預設、agy 的 medium Flash）。*discuss*：大家先各自回答，之後每一輪
   看到別人的答案再修正，最後由 lead 整理。*review*：lead 回答，其他人審查，lead 回覆修正，
   最後由第一位審查者整理。輪數 1–3（預設 2），每則回覆有字數上限（預設 100，0 = 不限）。
   會開成一個 `⚖` 分頁：每一輪並排顯示，最下面可以追問（每個參加者回答後，再由一位寫結論）。

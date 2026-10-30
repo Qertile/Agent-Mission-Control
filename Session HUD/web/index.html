@@ -852,7 +852,7 @@ async function openCrossCheck(edit) {
   xcEdit = edit || null;
   const part = t => edit && edit.participants.find(p => p.tool === t.tool);
   $('xc-who').innerHTML = xcTools.map((t, i) => {
-    const p = part(t), on = edit ? !!p : t.ok && t.tool !== 'codex', pick = p ? p.model : t.pick;
+    const p = part(t), on = edit ? !!p : t.ok, pick = p ? p.model : t.pick;
     // A model this list does not have any more stays selectable.
     const models = t.models.includes(pick) ? t.models : [...t.models, pick];
     return `<label class="opt"><input type="checkbox" data-i="${i}" ${on ? 'checked' : ''} ` +
