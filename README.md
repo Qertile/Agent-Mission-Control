@@ -128,7 +128,8 @@ running sessions, each one's conversation or terminal, and a box to type into it
   *History*, and picking one opens it, as the desktop's `+` → *History* does.
 - **Chat / Term:** *Chat* (the default) shows only the messages typed and the replies,
   without tool calls or thinking (Claude and Codex), and a pulsing *thinking…* line at
-  the bottom while the session is busy. *Term* shows the tab's terminal at
+  the bottom while the session is busy. Markdown tables show as tables, each one
+  scrolling sideways on its own when wider than the screen. *Term* shows the tab's terminal at
   the desktop's size; switch to it to see a permission prompt. Antigravity sessions show
   *Term* only (their conversations are stored in a binary format). A− / A+ change the
   text size.
@@ -389,7 +390,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **上方清單：** 列出執行中的 session 和狀態；已關閉的放在 *History*，選了就會打開它，
   和桌面版的 `+` → *History* 一樣。
 - **Chat / Term：** *Chat*（預設）只顯示你打的訊息和回答，不顯示工具呼叫和思考過程
-  （Claude 和 Codex）；session 忙的時候，最下面有一行閃爍的 *thinking…*。*Term* 顯示那個分頁的終端機畫面，大小和桌面版相同；要看權限詢問
+  （Claude 和 Codex）；session 忙的時候，最下面有一行閃爍的 *thinking…*；Markdown 表格畫成表格，比螢幕寬時只有那張表格能左右滑。*Term* 顯示那個分頁的終端機畫面，大小和桌面版相同；要看權限詢問
   時切到這裡。Antigravity 的對話以二進位格式儲存，所以只有 *Term*。A− / A+ 調整字的大小。
 - **按鍵：** `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` 直接打進 session，足夠回答權限詢問。
   權限詢問在桌面版的分頁上也照常顯示。

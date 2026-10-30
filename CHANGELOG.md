@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – tables on the phone
+
+### Fixed
+- **Phone chat view: Markdown tables** were shown as their `|` lines, which wrapped into
+  a mess on a narrow screen. They are tables now; a cell's text wraps inside it, and a
+  table wider than the screen scrolls sideways on its own, not the page.
+- README: *Phone* (both languages).
+
 ## 2026-10-30 – v2.5: remote desktop
 
 ### Added
