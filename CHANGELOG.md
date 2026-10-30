@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – a reason on Discard
+
+### Added
+- **Discard asks for the reason**, in the same box as Finished's result (Enter; empty =
+  `discarded`; Esc cancels). It goes in as the result `discarded: <reason>` (where
+  Finished's would), so the Excel file's Discarded rows carry it; restoring the task
+  drops it and keeps the results from before.
+- README: Status and Task history (both languages).
+
 ## 2026-10-30 – task results, task history, Discard, `+` History
 
 ### Added

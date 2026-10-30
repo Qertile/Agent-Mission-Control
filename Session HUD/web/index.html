@@ -233,8 +233,7 @@
 <div class="menu" id="status-menu">
   <div>Pending</div><div>Ongoing</div><div>Checking</div><div>Finished</div><hr><div>Discard</div>
 </div>
-<div class="menu" id="result-box"><input id="result-in" spellcheck="false"
-  placeholder="result, then Enter (empty = finished) · Esc cancels"></div>
+<div class="menu" id="result-box"><input id="result-in" spellcheck="false"></div>
 <div class="menu" id="restore-menu"><div>Restore → Pending</div></div>
 <div class="menu" id="add-menu"></div>
 <div class="menu" id="set-menu"></div>
@@ -1373,10 +1372,14 @@ $('task-list').addEventListener('click', e => {
 $('status-menu').addEventListener('click', async e => {
   hideMenus();
   if (!taskEdit || e.target.parentElement !== $('status-menu')) return;
-  // Finished asks for the task's result first (TaskDatabase.xlsx's Result); Esc or a
-  // click elsewhere leaves the task as it was.
-  if (e.target.textContent === 'Finished') {
+  // Finished asks for the task's result first, Discard for the reason (both go to
+  // TaskDatabase.xlsx's Result); Esc or a click elsewhere leaves the task as it was.
+  if (e.target.textContent === 'Finished' || e.target.textContent === 'Discard') {
     e.stopPropagation();
+    resultFor = e.target.textContent;
+    $('result-in').placeholder = resultFor === 'Finished'
+      ? 'result, then Enter (empty = finished) · Esc cancels'
+      : 'why discard it, then Enter (empty = discarded) · Esc cancels';
     $('result-in').value = '';
     showAt($('result-box'), e.clientX, e.clientY);
     $('result-in').focus();
@@ -1385,6 +1388,7 @@ $('status-menu').addEventListener('click', async e => {
   $('task-note').textContent = await api().set_task_status(taskEdit.text, e.target.textContent);
   await refreshTasks();
 });
+let resultFor = 'Finished';
 $('result-box').addEventListener('click', e => e.stopPropagation());
 $('restore-menu').addEventListener('click', async () => {
   hideMenus();
@@ -1397,7 +1401,7 @@ $('result-in').addEventListener('keydown', async e => {
   e.preventDefault();
   const result = $('result-in').value;
   hideMenus();
-  $('task-note').textContent = await api().set_task_status(taskEdit.text, 'Finished', result);
+  $('task-note').textContent = await api().set_task_status(taskEdit.text, resultFor, result);
   await refreshTasks();
 });
 

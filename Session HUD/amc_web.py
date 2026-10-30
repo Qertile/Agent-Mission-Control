@@ -640,7 +640,7 @@ class Api:
         try:
             if status == 'Discard':
                 # Out of tasks.md, Discarded in the sheet: in the task History, restorable.
-                tasks.discard_task(TASKS_PATH, XLSX_PATH, title)
+                tasks.discard_task(TASKS_PATH, XLSX_PATH, title, result or '')
                 self._start_sync()
                 return 'task discarded'
             if status == 'Finished':

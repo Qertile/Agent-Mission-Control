@@ -201,12 +201,13 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 - **Status:** click a task's status (or `-`) for Pending / Ongoing / Checking / Finished /
   Discard. Finished asks for the result (Enter; empty = `finished`; Esc cancels), writes
   `→ 結果 (date)：…` under the task (under each sub-item without a result), ticks it off and
-  it leaves the list at once. Discard takes it out of `tasks.md` and marks its rows
-  Discarded in the Excel file.
+  it leaves the list at once. Discard asks for the reason the same way (empty =
+  `discarded`), writes it as `discarded: <reason>`, takes the task out of `tasks.md` and
+  marks its rows Discarded in the Excel file.
 - **Task history:** the clock at the top right of the task list shows the finished tasks
   (latest first, with their results) and the Discarded ones; click a task's Finished /
   Discarded for *Restore → Pending*. Restoring a finished task drops the result lines its
-  finishing added (dated its finish day).
+  finishing added (dated its finish day); restoring a Discarded one drops the reason.
 - **Chat box:** the box under the task list types what you enter into the `Task Reminder`
   tab and submits it (Shift+Enter for a new line). With no `Task Reminder` yet, the first
   send adds one to `agents.json` and opens its tab.
@@ -395,10 +396,11 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **狀態**：點任務的狀態（或 `-`）選 Pending／Ongoing／Checking／Finished／Discard。
   選 Finished 會先問結果（按 Enter；空白 = `finished`；Esc 取消），在任務底下寫
   `→ 結果 (日期)：…`（有子項目時，寫在每個還沒有結果的子項目底下），再把任務打勾，立刻從
-  清單消失。Discard 會把任務從 `tasks.md` 拿掉，Excel 裡那幾列改成 Discarded。
+  清單消失。Discard 也會用同樣的方式問原因（空白 = `discarded`），寫成 `discarded: <原因>`，
+  再把任務從 `tasks.md` 拿掉，Excel 裡那幾列改成 Discarded。
 - **任務歷史**：任務清單右上角的時鐘會列出已完成的任務（最新的在上面，附結果）和
   Discarded 的任務；點任務的 Finished／Discarded 選 *Restore → Pending* 可以還原。還原已完成
-  的任務時，會刪掉完成當天加上的結果行。
+  的任務時，會刪掉完成當天加上的結果行；還原 Discarded 的任務時，會拿掉丟棄的原因。
 - **聊天框**：任務清單下方的輸入框會把你打的內容送進 `Task Reminder` 分頁並送出
   （Shift+Enter 換行）。還沒有 `Task Reminder` 時，第一次送出會把它加進 `agents.json`
   並開出分頁。

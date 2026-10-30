@@ -153,7 +153,7 @@ def restore_task(path, title):
 
 def restore_discarded(path, xlsx, title):
     """A Discarded task back to open: written at the end of tasks.md with its begin and
-    due dates, sub-items and results, and its Discarded rows taken out of the sheet (the
+    due dates, sub-items and results (not the discard reason), and its Discarded rows taken out of the sheet (the
     sync would keep them as well). The sync then makes it Pending."""
     t = next((t for t in discarded_tasks(xlsx) if t['text'] == title), None)
     if not t:
@@ -163,7 +163,8 @@ def restore_discarded(path, xlsx, title):
     for r in t['results']:
         if r['subitem']:
             new.append(f"      {r['subitem']}\n")
-        if r['result']:
+        # The reason it was discarded goes; a result from before stays.
+        if r['result'] and not DISCARDED.match(r['result']):
             new.append(f"      → 結果：{r['result']}\n")
     with open(path, 'rb') as f:
         raw = f.read()
@@ -322,10 +323,17 @@ def add_result(path, title, text):
         f.write((b'\xef\xbb\xbf' if bom else b'') + ''.join(lines).encode('utf-8'))
 
 
-def discard_task(path, xlsx, title):
-    """Discards the open task `title`: its rows in the sheet become Discarded (the sync
-    keeps those), then its line and the indented lines under it leave tasks.md. The
-    task History lists it, and can restore it."""
+DISCARDED = re.compile(r'^discarded(?::|$)')
+
+
+def discard_task(path, xlsx, title, reason=''):
+    """Discards the open task `title`: the reason as its result (`discarded: <reason>`,
+    or `discarded`, where add_result would put one), synced; its rows in the sheet become
+    Discarded (the sync keeps those); then its line and the indented lines under it
+    leave tasks.md. The task History lists it, and can restore it."""
+    reason = ' '.join(reason.split())
+    add_result(path, title, f'discarded: {reason}' if reason else 'discarded')
+    sync(path, xlsx)
     set_status(xlsx, title, 'Discarded')
     with open(path, 'rb') as f:
         raw = f.read()
