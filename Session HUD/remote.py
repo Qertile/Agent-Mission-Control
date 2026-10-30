@@ -294,6 +294,11 @@ def handler(api, token, web_dir):
                 err = api._remote_send(tid, text) if text else 'empty'
             elif self.path == '/api/open':
                 err = api._remote_open(tid)
+            elif self.path == '/api/pin':
+                text = str(body.get('text', '')).strip()
+                err = api.pin(tid, text) if text else 'empty'
+            elif self.path == '/api/unpin':
+                err = api.unpin(tid, str(body.get('pin', '')))
             elif self.path == '/api/key':
                 key = KEYS.get(body.get('key'))
                 err = api._remote_key(tid, key) if key else 'unknown key'

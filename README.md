@@ -153,6 +153,9 @@ running sessions, each one's conversation or terminal, and a box to type into it
 - **📎 Files:** pick photos or files (up to 20 MB each); each one is saved on this
   computer as `<temp>/amc-paste/phone-<time>-<name>` and its path added to the message
   box, so Claude or Codex can read it.
+- **📌 Pins:** tap a message in *Chat*, then *📌 Pin*. The session's pins show in a line
+  above the chat (`📌 2 · <the latest>`); tap it for the list, `×` unpins. They are the
+  same pins as the desktop's.
 
 ## Remote desktop
 
@@ -163,6 +166,7 @@ Tailscale network and token as the phone page.
   `Session HUD/hud-config.json` and restart Agent Mission Control.
 - **Open it:** `http://<Tailscale address>:8771/#t=<token>` once, then
   `http://<Tailscale address>:8771/`. The other computer needs Tailscale on the same login.
+  A browser that keeps nothing (private mode) asks for the token again on reload.
 - **What works:** everything the window here does: the tasks, the session list, usage,
   the tabs and typing into them, the menus. Both pages work on the same sessions at once.
 - **Terminal size:** the terminals keep this computer's size; resizing the browser does
@@ -189,6 +193,12 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   Copy all rows, Open on start, Terminate and Model; right-clicking a tab in the tab bar
   opens the same menu for its session. Drag a session up or down to reorder
   it; the order is saved in `agents.json`, so the tab bar follows.
+- **Selecting and pinning text:** drag in a tab to select (double-click: a word), also in
+  Claude and Codex, which take the mouse: there the left button selects instead of
+  reaching them; the wheel still scrolls them. Right-click the selection for *📌 Pin* or
+  *Copy*. A pane with pins has a line on top (`📌 2 · <the latest>`); click it for the
+  list, `×` unpins. Each session has its own; they are kept in `pins.json` next to
+  `agents.json` and shared with the remote desktop and the phone page.
 - **Model:** the right-click menu's *Model* picks what the session runs on: *Claude
   default* (no `--model`, so Claude Code picks by plan and version), `fable`, `opus`,
   `sonnet` or `haiku`. The choice is saved as `"model"` in `agents.json` and passed as
@@ -425,6 +435,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **輸入框：** *Send* 把文字打進 session 並送出，和在桌面版打字一樣。
 - **📎 檔案：** 選照片或檔案（每個最多 20 MB），存到這台電腦的
   `<temp>/amc-paste/phone-<時間>-<檔名>`，路徑會加進輸入框，讓 Claude 或 Codex 讀取。
+- **📌 釘選：** 在 *Chat* 點一則訊息，再按 *📌 Pin*。這個 session 的釘選顯示在對話上方
+  一行（`📌 2 · <最新一則>`），點它展開清單，`×` 取消釘選。和桌面版是同一份。
 
 ## 遠端桌面
 
@@ -435,6 +447,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   重開 Agent Mission Control。
 - **打開：** 第一次用 `http://<Tailscale 位址>:8771/#t=<token>`，之後開
   `http://<Tailscale 位址>:8771/`。另一台電腦要裝 Tailscale，登入同一個帳號。
+  不保存資料的瀏覽器（無痕模式）重新整理後會再問一次 token。
 - **能做什麼：** 這裡的視窗能做的都可以：任務、session 清單、用量、分頁和在裡面打字、
   各個選單。兩邊可以同時操作同一批 session。
 - **終端機大小：** 以這台電腦為準，調整瀏覽器大小不會改變終端機（瀏覽器視窗比較小時，
@@ -459,6 +472,11 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   `claude -p`，會顯示它是背景工作）。右鍵有 Copy、Copy all rows、
   Open on start、Terminate、Model；在分頁列的分頁上按右鍵，也會跳出同一個選單。上下拖曳 session 可以調整順序，順序存進 `agents.json`，
   分頁列也會跟著變。
+- **選取和釘選文字**：在分頁裡拖曳選取（雙擊選一個字）。Claude 和 Codex 會接管滑鼠，
+  在它們的分頁裡左鍵改成選取，不會傳給它們；滾輪照常讓它們捲動。在選取的文字上按右鍵
+  有 *📌 Pin* 和 *Copy*。有釘選的窗格上方多一行（`📌 2 · <最新一則>`），點它展開清單，
+  `×` 取消釘選。每個 session 各自一份，存在 `agents.json` 旁邊的 `pins.json`，和遠端桌面、
+  手機頁共用。
 - **Model**：右鍵選單的 *Model* 選 session 要用的模型：*Claude default*（不加
   `--model`，由 Claude Code 依方案和版本決定）、`fable`、`opus`、`sonnet`、`haiku`。
   選擇會存成 `agents.json` 裡的 `"model"`，啟動時以 `--model` 傳入。idle 的分頁會立刻

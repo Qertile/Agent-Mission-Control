@@ -118,6 +118,18 @@
   .pane-x { position: absolute; z-index: 2; padding: 3px 8px; font-size: 20px; line-height: 1; cursor: pointer;
             color: var(--desc); background: var(--bar); border: 1px solid var(--line); }
   .pane-x:hover { color: var(--accent); border-color: var(--desc); }
+  /* Pinned messages: a line at the top of the pane (📌 count, the latest), opened into the list. */
+  .pin-bar { position: absolute; z-index: 2; height: 20px; line-height: 20px; padding: 0 6px; box-sizing: border-box;
+             overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; font-size: 12px;
+             color: var(--desc); background: var(--bar); border: 1px solid var(--line); }
+  .pin-bar:hover { color: var(--accent); }
+  .pin-list { position: absolute; z-index: 4; max-height: 50%; overflow-y: auto; box-sizing: border-box; font-size: 12px;
+              color: var(--title); background: var(--bar); border: 1px solid var(--desc); }
+  .pin-list .pin { display: flex; gap: 6px; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  .pin-list .pin-text { flex: 1; white-space: pre-wrap; word-break: break-word; user-select: text; }
+  .pin-list .pin-at { color: var(--note); font-size: 11px; }
+  .pin-list .pin-x { cursor: pointer; color: var(--desc); }
+  .pin-list .pin-x:hover { color: var(--accent); }
   #drop { position: absolute; z-index: 3; display: none; pointer-events: none;
           background: var(--tabon); opacity: 0.6; border: 1px solid var(--accent); }
   /* Wide: the task and session columns are hidden, the panes get the whole window. */
@@ -231,6 +243,10 @@
   <hr>
   <div data-act="settings">Settings…</div>
   <div class="disabled" id="model-label">Model</div>
+</div>
+<div class="menu" id="term-menu">
+  <div data-act="pin">📌 Pin</div>
+  <div data-act="copy">Copy</div>
 </div>
 <div class="menu" id="status-menu">
   <div>Pending</div><div>Ongoing</div><div>Checking</div><hr><div>Finished</div><div>Discard</div>
@@ -354,7 +370,7 @@ function applyTheme(name) {
 // a split {dir: 'row' | 'col', sizes, children} lays its children out side by side
 // ('row') or one above the other ('col'), sizes being their shares (summing to 1).
 // A tab is in at most one pane; the focused pane's tab is the one typed into.
-const SASH = 5, MIN_PANE = 120, LAYOUT_KEY = 'amc-layout';
+const SASH = 5, PIN_BAR = 22, MIN_PANE = 120, LAYOUT_KEY = 'amc-layout';
 // Read before anything saves: the first tab shown at start would overwrite it.
 const SAVED_LAYOUT = (() => { try { return localStorage.getItem(LAYOUT_KEY); } catch (e) { return null; } })();
 const amc = {
@@ -369,6 +385,14 @@ const amc = {
   dragging: null,      // the tab being dragged onto the panes
   sashOn: null,        // [split, i] of the bar being dragged, kept lit across renders
   status: {},          // id -> last session status, to spot busy -> idle
+  pins: {},            // id -> its pinned messages [{id, text, at}] (pins.json)
+  pinsOpen: null,      // the tab whose pin list is open
+
+  setPins(id, list) {
+    if (list.length) amc.pins[id] = list; else delete amc.pins[id];
+    if (!list.length && amc.pinsOpen === id) amc.pinsOpen = null;
+    amc.render();
+  },
 
   output(id, data) {
     const t = amc.tabs[id];
@@ -574,6 +598,32 @@ const amc = {
       })) : await api().paste_clipboard_image();
       if (path) { amc.fileTarget = id; amc.typePaths([path]); }
     }, true);
+    // Right-click on selected text: Pin (to this session's pin list) or Copy. A program
+    // that takes the mouse (Codex: select with Shift+drag there) gets neither that click
+    // (it pastes) nor the pointer moving to it (sent to it as input, which clears the
+    // selection) while there is a selection.
+    for (const type of ['mousedown', 'mouseup', 'mousemove'])
+      el.addEventListener(type, e => {
+        if (term.hasSelection() && (e.button === 2 || (type === 'mousemove' && !e.buttons))) e.stopPropagation();
+      }, true);
+    // Plain dragging selects text in those programs too (Claude and Codex take the mouse):
+    // the left button goes to the terminal as Shift+button, which xterm.js keeps for
+    // selecting, and the program does not get it. The wheel still goes to the program.
+    el.addEventListener('mousedown', e => {
+      if (e.button !== 0 || e.shiftKey || !e.isTrusted || term.modes.mouseTrackingMode === 'none') return;
+      e.stopPropagation();
+      term.clearSelection();                // or Shift+press would extend the old selection
+      e.target.dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true, cancelable: true, view: window, detail: e.detail, button: 0, buttons: e.buttons,
+        screenX: e.screenX, screenY: e.screenY, clientX: e.clientX, clientY: e.clientY,
+        ctrlKey: e.ctrlKey, altKey: e.altKey, metaKey: e.metaKey, shiftKey: true}));
+    }, true);
+    el.addEventListener('contextmenu', e => {
+      if (!term.hasSelection()) return;
+      e.preventDefault();
+      termMenu = {id, text: term.getSelection()};
+      showAt($('term-menu'), e.clientX, e.clientY);
+    });
     amc.tabs[id] = {name, term, fit, el, tabEl, running: false};
     if (amc.pending[id]) { term.write(amc.pending[id]); delete amc.pending[id]; }
   },
@@ -597,7 +647,7 @@ const amc = {
   render() {
     document.body.classList.toggle('wide', amc.wide);
     const box = $('terms');
-    box.querySelectorAll('.sash, .pane-x').forEach(el => el.remove());
+    box.querySelectorAll('.sash, .pane-x, .pin-bar, .pin-list').forEach(el => el.remove());
     amc.rects = new Map();
     const several = amc.leaves().length > 1;
     const place = (node, x, y, w, h) => {
@@ -631,8 +681,10 @@ const amc = {
       x.tabEl.classList.toggle('shown', !!r && k !== amc.active);
       if (!r) continue;
       x.tabEl.classList.remove('attn');
-      Object.assign(x.el.style, {left: r.x + 8 + 'px', top: r.y + 4 + 'px',
-                                 width: Math.max(0, r.w - 12) + 'px', height: Math.max(0, r.h - 8) + 'px'});
+      const bar = amc.pins[k] ? PIN_BAR : 0;
+      Object.assign(x.el.style, {left: r.x + 8 + 'px', top: r.y + 4 + bar + 'px',
+                                 width: Math.max(0, r.w - 12) + 'px', height: Math.max(0, r.h - 8 - bar) + 'px'});
+      if (bar) amc.pinBar(k, r, several);
       shown.push(k);
     }
     if (several) {
@@ -652,6 +704,28 @@ const amc = {
       x.fit.fit();
       api().resize(k, x.term.cols, x.term.rows);
     }
+  },
+
+  // The pane's pin line (several panes: short of the pane's close button) and, when
+  // opened, the list under it, each pin with × to unpin.
+  pinBar(id, r, several) {
+    const pins = amc.pins[id], last = pins[pins.length - 1];
+    const bar = document.createElement('div');
+    bar.className = 'pin-bar';
+    bar.textContent = `📌 ${pins.length} · ${last.text.split('\n')[0]}`;
+    bar.title = 'pinned messages: click to open';
+    const w = Math.max(0, r.w - 12 - (several ? 36 : 0));
+    Object.assign(bar.style, {left: r.x + 8 + 'px', top: r.y + 2 + 'px', width: w + 'px'});
+    bar.addEventListener('click', () => { amc.pinsOpen = amc.pinsOpen === id ? null : id; amc.render(); });
+    $('terms').appendChild(bar);
+    if (amc.pinsOpen !== id) return;
+    const list = document.createElement('div');
+    list.className = 'pin-list';
+    list.innerHTML = pins.map(p => `<div class="pin"><div class="pin-text">${esc(p.text)}<div class="pin-at">${esc(p.at)}</div></div>` +
+      `<span class="pin-x" data-pin="${esc(p.id)}" title="unpin">×</span></div>`).join('');
+    Object.assign(list.style, {left: r.x + 8 + 'px', top: r.y + 2 + PIN_BAR + 'px', width: w + 'px'});
+    list.addEventListener('click', e => { if (e.target.dataset.pin) api().unpin(id, e.target.dataset.pin); });
+    $('terms').appendChild(list);
   },
 
   // Dragging a bar moves the border between pane i and i+1 of `node`; neither gets
@@ -1502,7 +1576,15 @@ function showAt(el, x, y) {
   el.style.left = Math.min(x, innerWidth - el.offsetWidth - 4) + 'px';
   el.style.top = Math.min(y, innerHeight - el.offsetHeight - 4) + 'px';
 }
-function hideMenus() { for (const id of ['row-menu', 'status-menu', 'result-box', 'restore-menu', 'add-menu', 'set-menu', 'send-menu', 'cal']) $(id).style.display = 'none'; }
+let termMenu = null;                        // {id, text}: the terminal and selection right-clicked
+$('term-menu').addEventListener('click', e => {
+  const act = e.target.dataset.act, m = termMenu;
+  hideMenus();
+  if (!m) return;
+  if (act === 'pin') api().pin(m.id, m.text);
+  if (act === 'copy') copyText(m.text);
+});
+function hideMenus() { for (const id of ['term-menu', 'row-menu', 'status-menu', 'result-box', 'restore-menu', 'add-menu', 'set-menu', 'send-menu', 'cal']) $(id).style.display = 'none'; }
 document.addEventListener('click', hideMenus);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus(); });
 
@@ -1537,6 +1619,7 @@ async function refresh() {
 }
 async function init() {
   await api().init();
+  amc.pins = await api().pins();
   await amc.syncTabs();
   // The discussions ticked "Open on start", before the layout that may place them.
   for (const x of await api().discussions()) if (x.autoOpen) await amc.openDiscussion(x.id);

@@ -58,10 +58,15 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
+PIN_MAX = 20_000                           # characters kept of one pinned message
 # Codex makes a tab's thread as the tab starts (session_meta's time) but writes the
 # rollout only at the first message, so a new tab's thread is the new rollout in
 # WORK_DIR whose thread started this close after the tab.
 THREAD_MATCH = (timedelta(seconds=-2), timedelta(seconds=30))
+
+
+def pins_path():
+    return os.path.join(os.path.dirname(core.AGENTS_PATH), 'pins.json')
 
 
 def arg_value(flag):
@@ -295,6 +300,37 @@ class Api:
         self._agy_models, self._agy_models_at = [], None
         self._metas = {}                   # rollout path -> its session_meta, read once
         self._seen = {}                    # rollout path -> when this window first saw it
+        self._pins_lock = threading.Lock()
+
+    # --- pinned messages: each session's, in pins.json next to agents.json, the same on
+    # the desktop, the remote desktop and the phone page
+
+    def pins(self):
+        """{session id: [{'id', 'text', 'at'}]}, oldest first."""
+        return load_json(pins_path()) or {}
+
+    def pin(self, sid, text):
+        text = str(text).strip()[:PIN_MAX]
+        if text:
+            self._edit_pins(sid, lambda ps: ps + [{'id': uuid.uuid4().hex[:8], 'text': text,
+                                                   'at': datetime.now().strftime('%Y-%m-%d %H:%M')}])
+
+    def unpin(self, sid, pin_id):
+        self._edit_pins(sid, lambda ps: [p for p in ps if p['id'] != pin_id])
+
+    def _edit_pins(self, sid, change):
+        with self._pins_lock:
+            all_pins = self.pins()
+            ps = change(all_pins.get(sid) or [])
+            if ps:
+                all_pins[sid] = ps
+            else:
+                all_pins.pop(sid, None)
+            path = pins_path()
+            with open(path + '.tmp', 'w', encoding='utf-8') as f:
+                json.dump(all_pins, f, ensure_ascii=False, indent=1)
+            os.replace(path + '.tmp', path)
+        self._js(f'amc.setPins({json.dumps(sid)}, {json.dumps(ps)})')
 
     # --- page -> python: tabs and terminals
 
@@ -874,7 +910,7 @@ class Api:
         binary, so the page shows its terminal."""
         entry = next((e for e in core.agents() if e['id'] == tid), None) or {}
         if is_agy(entry):
-            return {'chat': False}
+            return {'chat': False, 'pins': self.pins().get(tid) or []}
         if is_codex(entry):
             thread = codex_thread(entry)
             path, parse = core.codex_rollout(thread) if thread else '', remote.codex_message
@@ -884,6 +920,7 @@ class Api:
         status = next((s['status'] for s in self._sessions if s['sid'] == tid), '')
         return {'chat': True, 'total': len(msgs), 'status': status,
                 'asking': '' if is_codex(entry) else remote.asking(tid, path),
+                'pins': self.pins().get(tid) or [],
                 'messages': msgs[-remote.CHAT_MAX:] if len(msgs) != since else []}
 
     def _remote_usage(self):

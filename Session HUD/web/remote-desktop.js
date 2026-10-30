@@ -10,7 +10,7 @@
   function store(k, v) { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch (e) {} return v; }
   const fromLink = new URLSearchParams(location.hash.slice(1)).get('t');
   if (fromLink) { store('amc-token', fromLink); history.replaceState(null, '', location.pathname); }
-  let token = store('amc-token');
+  let token = fromLink || store('amc-token');   // the link's, also where nothing can be stored
   if (!token) token = prompt('Agent Mission Control token (hud-config.json, "remote")') || '';
   store('amc-token', token);
 

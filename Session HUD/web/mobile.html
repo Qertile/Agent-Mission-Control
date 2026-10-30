@@ -22,6 +22,17 @@
            border-bottom: 1px solid var(--line); }
   #usage:empty { display: none; }
   #usage b { color: var(--title); font-weight: normal; }
+  /* Pinned messages (the same as the desktop's): 📌 count and the latest; tapped, the list. */
+  #pins { color: var(--note); font-size: 12px; padding: 3px 10px; background: var(--bar);
+          border-bottom: 1px solid var(--line); max-height: 45vh; overflow-y: auto; }
+  #pins:empty, body:not(.chat) #pins { display: none; }
+  #pins .line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #pins .pin { display: flex; gap: 8px; padding: 5px 0; border-top: 1px solid var(--line); color: var(--title); }
+  #pins .pin div { flex: 1; white-space: pre-wrap; word-break: break-word; }
+  #pins .pin small { color: var(--note); display: block; }
+  #pins .pin button { align-self: flex-start; padding: 2px 8px; }
+  .m.picked { outline: 1px solid var(--note); }
+  .m .pin-it { display: block; margin-top: 6px; }
   #dot { width: 10px; height: 10px; border-radius: 50%; background: var(--grey); flex: none; }
   select, button, textarea { font: inherit; color: var(--title); background: var(--bg);
                              border: 1px solid var(--line); border-radius: 4px; }
@@ -68,6 +79,7 @@
   <button id="smaller">A−</button><button id="bigger">A+</button>
 </div>
 <div id="usage"></div>
+<div id="pins"></div>
 <div id="screen"><div id="term"></div><div id="chat"></div><div id="thinking">thinking…</div><div id="asking" class="m assistant"></div></div>
 <div id="msg"></div>
 <div id="keys">
@@ -177,16 +189,49 @@ async function loadTabs() {
 function reset(id) {
   if (id === current) return;
   current = id; store('amc-tab', id); since = 0; size = ''; said = -1; term.reset(); $('chat').innerHTML = '';
-  asked = ''; $('asking').innerHTML = '';
+  asked = ''; $('asking').innerHTML = ''; pinsJson = ''; pinsOpen = false; $('pins').innerHTML = '';
 }
 function pick(id) { reset(id); drawTabs(); }
 
 let asked = '';                            // the question shown in #asking
+let shownMsgs = [], pinsJson = '', pinsOpen = false;
+
+// Pinning: tap a message, then its 📌 Pin. The pins are the session's on the desktop too.
+$('chat').addEventListener('click', async e => {
+  const m = e.target.closest('.m[data-i]');
+  if (!m || getSelection().toString()) return;
+  if (e.target.classList.contains('pin-it')) {
+    e.target.remove(); m.classList.remove('picked');
+    try { await call('/api/pin', {id: current, text: shownMsgs[m.dataset.i].text}); say(''); } catch (err) { say(err.message); }
+    return;
+  }
+  const was = m.classList.contains('picked');
+  $('chat').querySelectorAll('.picked').forEach(x => { x.classList.remove('picked'); x.querySelector('.pin-it')?.remove(); });
+  if (!was) { m.classList.add('picked'); m.insertAdjacentHTML('beforeend', '<button class="pin-it">📌 Pin</button>'); }
+});
+function drawPins(pins, force) {
+  const j = JSON.stringify(pins);
+  if (j === pinsJson && !force) return;
+  pinsJson = j;
+  if (!pins.length) { $('pins').innerHTML = ''; pinsOpen = false; return; }
+  const last = pins[pins.length - 1].text.split('\n')[0];
+  $('pins').innerHTML = `<div class="line">📌 ${pins.length} · ${esc(last)}</div>` + (pinsOpen ? pins.map(p =>
+    `<div class="pin"><div>${esc(p.text)}<small>${esc(p.at)}</small></div><button data-pin="${esc(p.id)}">×</button></div>`).join('') : '');
+}
+$('pins').addEventListener('click', async e => {
+  const id = e.target.dataset.pin;
+  if (id) {
+    try { await call('/api/unpin', {id: current, pin: id}); say(''); } catch (err) { say(err.message); }
+    return;
+  }
+  if (e.target.closest('.line')) { pinsOpen = !pinsOpen; drawPins(JSON.parse(pinsJson), true); }
+});
 async function pollChat() {
   const id = current, o = await call(`/api/chat?id=${encodeURIComponent(id)}&since=${said}`);
   if (id !== current || !o.chat) return;
   const was = document.body.classList.contains('busy');
   showStatus(o.status);
+  drawPins(o.pins || []);
   if (asked !== (o.asking || '')) {
     asked = o.asking || '';
     $('asking').innerHTML = asked ? render(asked) : '';
@@ -197,7 +242,8 @@ async function pollChat() {
     return;
   }
   const screen = $('screen'), atEnd = said < 0 || screen.scrollTop + screen.clientHeight >= screen.scrollHeight - 40;
-  $('chat').innerHTML = o.messages.map(m => `<div class="m ${m.who === 'user' ? 'user' : 'assistant'}">${render(m.text)}</div>`).join('')
+  shownMsgs = o.messages;
+  $('chat').innerHTML = o.messages.map((m, i) => `<div class="m ${m.who === 'user' ? 'user' : 'assistant'}" data-i="${i}">${render(m.text)}</div>`).join('')
     || '<div class="m assistant">(no messages yet)</div>';
   said = o.total;
   if (atEnd) screen.scrollTop = screen.scrollHeight;

@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – pinned messages
+
+### Added
+- **Pins, each session its own, the same on the desktop, the remote desktop and the
+  phone** (`pins.json` next to `agents.json`, not committed). Desktop: right-click
+  selected text → *📌 Pin* or *Copy*; a pane with pins has a `📌 n · <latest>` line on
+  top, opening into the list with `×` to unpin. Phone: tap a message in *Chat* →
+  *📌 Pin*; the same line above the chat.
+
+### Changed
+- **Dragging selects text in Claude and Codex tabs** too. Both take the mouse, so a drag
+  went to them and right-click made Codex paste; now the left button is handed to the
+  terminal as Shift+button (which xterm.js keeps for selecting), and while text is
+  selected neither a right-click nor the pointer moving reaches them. The wheel still does.
+
+### Fixed
+- **Remote desktop in a browser that keeps nothing** (private mode) asked for the token
+  even when the link carried it.
+- README: *Working in the window*, *Phone*, *Remote desktop* (both languages).
+
 ## 2026-10-30 – files and questions on the phone
 
 ### Added
