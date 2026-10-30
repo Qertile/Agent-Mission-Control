@@ -2,6 +2,12 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – status menu order
+
+### Changed
+- **Task status menu:** Pending / Ongoing / Checking, then a line, then Finished and
+  Discard together (the two that ask for a result and take the task off the list).
+
 ## 2026-10-30 – a reason on Discard
 
 ### Added
