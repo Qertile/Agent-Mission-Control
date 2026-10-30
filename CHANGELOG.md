@@ -2,6 +2,16 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – two word limits in Cross-check
+
+### Changed
+- **Cross-check has two word limits:** *reply* for the answers, revisions, reviews and
+  follow-up answers (default 200, was 100 for everything), and *conclusion* for the
+  summary and each follow-up's conclusion (default 500). Both are in the form and in
+  *Settings…*, and on the tab's subtitle. A discussion from before keeps its one limit
+  for both.
+- README: *Cross-check* (both languages).
+
 ## 2026-10-30 – v2.4.1: Codex in Cross-check by default
 
 ### Changed

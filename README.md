@@ -189,7 +189,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   and agy's medium Flash) one question. *discuss*: all answer,
   then each round sees the others' answers and revises; the lead sums up. *review*: the
   lead answers, the others review, the lead replies; the first reviewer sums up. Rounds 1–3
-  (default 2) and a word limit per reply (default 100, 0 = none). It opens as a `⚖` tab:
+  (default 2) and two word limits: each reply (default 200) and the summary and each
+  conclusion (default 500); 0 = none. It opens as a `⚖` tab:
   the rounds side by side, a follow-up box at the bottom (every participant answers, then
   one writes the conclusion). Each participant runs in print mode (`claude -p`, `codex
   exec`, `agy -p`) on a conversation of its own, resumed every turn; it can read the
@@ -422,7 +423,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **Cross-check**：`+` → *Cross-check…* 讓 Claude、Codex、Antigravity 一起回答同一個問題
   （各自選模型；有安裝的工具都預設勾選，模型預設 Sonnet、Codex 自己的預設、agy 的 medium Flash）。*discuss*：大家先各自回答，之後每一輪
   看到別人的答案再修正，最後由 lead 整理。*review*：lead 回答，其他人審查，lead 回覆修正，
-  最後由第一位審查者整理。輪數 1–3（預設 2），每則回覆有字數上限（預設 100，0 = 不限）。
+  最後由第一位審查者整理。輪數 1–3（預設 2），字數上限有兩個：每則回覆（預設 200），以及整理和每次的結論（預設 500）；0 = 不限。
   會開成一個 `⚖` 分頁：每一輪並排顯示，最下面可以追問（每個參加者回答後，再由一位寫結論）。
   參加者以 print 模式執行（`claude -p`、`codex exec`、`agy -p`），各有自己的對話，每一輪接續；
   能讀工作資料夾裡的檔案但不會修改，每一輪都會用到該工具的額度。整理或結論卡片上的

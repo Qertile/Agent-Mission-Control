@@ -252,8 +252,9 @@
       <span class="hint">- the lead answers, the others review it, the lead replies; the first reviewer sums up</span></label></div>
   <div class="line"><b>Lead</b><select id="xc-lead"></select>
     <b style="width:auto;margin-left:20px">Rounds</b> <select id="xc-rounds"><option>1</option><option selected>2</option><option>3</option></select>
-    <b style="width:auto;margin-left:20px">Words</b> <input id="xc-words" type="number" min="0" step="50" value="100">
-    <span class="hint">per reply, 0 = no limit</span></div>
+    <b style="width:auto;margin-left:20px">Words</b> reply <input id="xc-words" type="number" min="0" step="50" value="200">
+    conclusion <input id="xc-fwords" type="number" min="0" step="50" value="500">
+    <span class="hint">0 = no limit</span></div>
   <div class="line hint" id="xc-note">Each runs on a new conversation of its own in the working folder: it can read files there but
     changes nothing. Every turn uses that tool's quota.</div>
   <div class="line err" id="xc-err"></div>
@@ -802,7 +803,8 @@ amc.drawDiscussion = async (id, d) => {
   }
   if (stage !== null) html += '</div>';
   const sub = `${d.mode} · ${d.rounds} round${d.rounds > 1 ? 's' : ''} · ${who.join(', ')} · lead ${lead}` +
-              (d.words ? ` · ${d.words} words` : '') + ` · ${d.created}` +
+              (d.words ? ` · reply ${d.words} words` : '') +
+              ((d.finalWords ?? d.words) ? ` · conclusion ${d.finalWords ?? d.words} words` : '') + ` · ${d.created}` +
               (d.running ? ' · running' : '');
   el.innerHTML = `<div class="d-head">⚖ ${esc(d.title)}</div><div class="d-sub">${esc(sub)}</div>` +
     `<div class="d-q">${esc(d.question)}</div>${html}` +
@@ -876,12 +878,14 @@ async function openCrossCheck(edit) {
     $('xc-q').value = edit.question;
     $('xc-rounds').value = String(edit.rounds);
     $('xc-words').value = edit.words || 0;
+    $('xc-fwords').value = edit.finalWords ?? edit.words ?? 0;
     $('xc-lead').value = String(xcTools.findIndex(t => t.tool === edit.participants[edit.lead].tool));
   } else if (xcClosedEdit) {
     // The settings form left a discussion's values in the boxes.
     $('xc-q').value = '';
     $('xc-rounds').value = '2';
-    $('xc-words').value = 100;
+    $('xc-words').value = 200;
+    $('xc-fwords').value = 500;
   }
   xcClosedEdit = !!edit;
   $('xc-err').textContent = '';
@@ -901,11 +905,12 @@ $('xc-cancel').addEventListener('click', () => { $('xc').style.display = 'none';
 $('xc').addEventListener('keydown', e => { if (e.key === 'Escape') $('xc').style.display = 'none'; });
 $('xc-go').addEventListener('click', async () => {
   const words = Math.max(0, Math.round(+$('xc-words').value || 0));
+  const finalWords = Math.max(0, Math.round(+$('xc-fwords').value || 0));
   if (xcEdit) {
     const d = xcEdit, models = d.participants.map(p =>
       $('xc-who').querySelector(`select[data-i="${xcTools.findIndex(t => t.tool === p.tool)}"]`).value);
     const lead = Math.max(0, d.participants.findIndex(p => p.tool === xcTools[+$('xc-lead').value].tool));
-    const err = await api().discussion_configure(d.id, $('xc-name').value, models, lead, words);
+    const err = await api().discussion_configure(d.id, $('xc-name').value, models, lead, words, finalWords);
     if (err) { $('xc-err').textContent = err; return; }
     $('xc').style.display = 'none';
     refresh();
@@ -916,7 +921,7 @@ $('xc-go').addEventListener('click', async () => {
                                          model: $('xc-who').querySelector(`select[data-i="${i}"]`).value}));
   const lead = Math.max(0, ticked.indexOf(+$('xc-lead').value));
   const mode = document.querySelector('input[name="xc-mode"]:checked').value;
-  const res = await api().discussion_start($('xc-q').value, mode, +$('xc-rounds').value, participants, lead, words);
+  const res = await api().discussion_start($('xc-q').value, mode, +$('xc-rounds').value, participants, lead, words, finalWords);
   if (res.error) { $('xc-err').textContent = res.error; return; }
   $('xc').style.display = 'none';
   $('xc-q').value = '';

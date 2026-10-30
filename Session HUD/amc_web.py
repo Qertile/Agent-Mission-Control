@@ -542,9 +542,9 @@ class Api:
                  'pick': picks[t]}
                 for t, models in (('claude', MODELS), ('codex', self._codex_models), ('agy', self._agy_models))]
 
-    def discussion_start(self, question, mode, rounds, participants, lead, words=100):
+    def discussion_start(self, question, mode, rounds, participants, lead, words=200, final_words=500):
         try:
-            return {'id': discuss.start(question, mode, rounds, participants, lead, words)}
+            return {'id': discuss.start(question, mode, rounds, participants, lead, words, final_words)}
         except (ValueError, KeyError, TypeError) as e:
             return {'error': str(e)}
 
@@ -578,9 +578,9 @@ class Api:
     def discussion_set_auto_open(self, did, on):
         discuss.set_auto_open(did, on)
 
-    def discussion_configure(self, did, title, models, lead, words):
+    def discussion_configure(self, did, title, models, lead, words, final_words=None):
         try:
-            return discuss.configure(did, title, models, lead, words)
+            return discuss.configure(did, title, models, lead, words, final_words)
         except (ValueError, TypeError) as e:
             return str(e)
 

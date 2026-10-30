@@ -136,9 +136,13 @@ def _quote(d, items):
 LANG = 'Reply in the language the question is written in.'
 
 
-def _rules(d):
-    """What every prompt ends with: the language, and the word limit (0 = none)."""
+def _rules(d, final=False):
+    """What every prompt ends with: the language, and the word limit (0 = none): the
+    replies' or, `final`, the summary's and conclusions' (a discussion from before there
+    were two keeps the one it had for both)."""
     words = d.get('words', 0)
+    if final:
+        words = d.get('finalWords', words)
     return LANG + (f' Keep your reply under {words} words.' if words else '')
 
 
@@ -179,13 +183,13 @@ def _prompt_summary(d, latest):
             f"positions:\n\n{_quote(d, latest)}\n\nWrite the summary for the user, in three parts:\n"
             f"1. Agreed: what everyone agrees on.\n2. Disagreements: each open point and who holds "
             f"which view.\n3. Recommendation: the answer you would give the user now.\n"
-            f"Be concise. {_rules(d)}")
+            f"Be concise. {_rules(d, True)}")
 
 
 def _prompt_conclusion(d, question, answers):
     return (f"The user's follow-up question:\n\n{question}\n\nThe participants' answers:\n\n"
             f"{_quote(d, answers)}\n\nWrite the conclusion for the user: the answer to the follow-up, "
-            f"and any point still in dispute with who holds which view. {_rules(d)}")
+            f"and any point still in dispute with who holds which view. {_rules(d, True)}")
 
 
 # --- a discussion
@@ -328,10 +332,11 @@ def _in_thread(d, work):
     threading.Thread(target=run, daemon=True).start()
 
 
-def start(question, mode, rounds, participants, lead, words=100):
+def start(question, mode, rounds, participants, lead, words=200, final_words=500):
     """Starts a discussion in the background and returns its id. participants:
     [{tool, model}]; lead: the index of the one who answers (review) or sums up (discuss);
-    words: the word limit each reply is asked to keep to (0 = none)."""
+    words: the word limit each reply is asked to keep to, final_words the summary's and
+    each conclusion's (0 = none)."""
     question = question.strip()
     if not question:
         raise ValueError('type a question')
@@ -343,6 +348,7 @@ def start(question, mode, rounds, participants, lead, words=100):
     d = {'id': uuid.uuid4().hex, 'title': title[:40] + ('…' if len(title) > 40 else ''),
          'question': question, 'mode': mode, 'rounds': max(1, min(3, int(rounds))),
          'lead': max(0, min(len(participants) - 1, int(lead))), 'words': max(0, int(words)),
+         'finalWords': max(0, int(final_words)),
          'participants': [{'tool': p['tool'], 'model': p.get('model') or '',
                            'label': LABELS[p['tool']] + (f" ({p['model']})" if p.get('model') else ''),
                            'conv': ''} for p in participants],
@@ -373,9 +379,9 @@ def follow_up(did, text):
     return None
 
 
-def configure(did, title, models, lead, words):
+def configure(did, title, models, lead, words, final_words=None):
     """Changes a discussion's name, each participant's model (from its next turn on),
-    the lead and the word limit; a running one in place, so its next save keeps them.
+    the lead and the word limits; a running one in place, so its next save keeps them.
     Who takes part, the mode and the rounds stay. Returns None or what went wrong."""
     with _lock:
         d = _live.get(did) or load(did)
@@ -389,6 +395,8 @@ def configure(did, title, models, lead, words):
             p['label'] = LABELS[p['tool']] + (f' ({m})' if m else '')
         d['lead'] = max(0, min(len(d['participants']) - 1, int(lead)))
         d['words'] = max(0, int(words))
+        if final_words is not None:
+            d['finalWords'] = max(0, int(final_words))
         _save(d)
     return None
 
