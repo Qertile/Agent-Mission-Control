@@ -13,6 +13,17 @@
                font-family: 'DejaVu Sans Mono', Consolas, monospace; font-size: 14px; overflow: hidden; }
   body { display: grid; grid-template-columns: var(--c1, 16%) 5px var(--c2, 42%) 5px 1fr; }
   body.dragging { cursor: col-resize; user-select: none; }
+  /* Relax mode (relax.js): one canvas in place of the Tasks and Sessions columns. */
+  #relax { display: none; grid-column: 1 / 4; grid-row: 1; position: relative; min-width: 0; min-height: 0;
+           overflow-y: auto; overflow-x: hidden; background: #4b7a46; }
+  #relax-canvas { display: block; }
+  #relax-msg { position: absolute; left: 8px; bottom: 8px; color: #fff; background: rgba(0, 0, 0, 0.6);
+               padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+  #relax-msg:empty { display: none; }
+  body.relax #relax { display: block; }
+  body.relax > .col:not(#term-col), body.relax > .split[data-col="1"] { display: none; }
+  body.relax > .split[data-col="2"] { grid-column: 4; grid-row: 1; }
+  body.relax > #term-col { grid-column: 5; grid-row: 1; }
   .col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .split { background: var(--line); cursor: col-resize; }
   .split:hover, body.dragging .split { background: var(--desc); }
@@ -238,6 +249,7 @@
 <div class="menu" id="result-box"><input id="result-in" spellcheck="false"></div>
 <div class="menu" id="restore-menu"><div>Restore → Pending</div></div>
 <div class="menu" id="add-menu"></div>
+<div id="relax"><canvas id="relax-canvas"></canvas><div id="relax-msg"></div></div>
 <div class="menu" id="set-menu"></div>
 <div class="menu" id="send-menu"></div>
 <div id="xc">
@@ -264,6 +276,7 @@
 
 <script src="vendor/xterm.js"></script>
 <script src="vendor/addon-fit.js"></script>
+<script src="relax.js"></script>
 <script>
 const api = () => window.pywebview.api;
 const $ = id => document.getElementById(id);
@@ -380,6 +393,7 @@ const amc = {
   async syncTabs() {
     const list = await api().tabs();
     amc.stopped = list.filter(t => !t.running);
+    amc.order = list.map(t => t.id);    // agents.json order: where Relax mode places what first
     for (const {id, name, running} of list) {
       if (!running && !amc.tabs[id]) continue;
       if (!amc.tabs[id]) amc.addTab(id, name);
@@ -1082,13 +1096,17 @@ $('wide-btn').addEventListener('click', () => amc.toggleWide());
 $('set-btn').addEventListener('click', e => {
   e.stopPropagation();
   const m = $('set-menu');
-  m.innerHTML = '<div class="disabled">Theme</div>' + Object.keys(THEMES).map(n =>
+  m.innerHTML = '<div class="disabled">Layout</div>' +
+    [['office', 'Office'], ['relax', 'Relax']].map(([k, label]) =>
+      `<div data-mode="${k}">${(k === 'relax') === relax.on ? '✓' : '\u00a0'} ${label}</div>`).join('') +
+    '<hr><div class="disabled">Theme</div>' + Object.keys(THEMES).map(n =>
     `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('');
   const r = $('set-btn').getBoundingClientRect();
   showAt(m, r.right - m.offsetWidth, r.bottom);
 });
 $('set-menu').addEventListener('click', e => {
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
+  if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
 });
 let resizeFrame = 0;
 new ResizeObserver(() => {
@@ -1534,10 +1552,12 @@ async function refresh() {
   drawGrid();
   drawUsage(s.usage);
   $('grid-note').textContent = s.note;
+  relax.update();
 }
 async function init() {
   await api().init();
   await amc.syncTabs();
+  relax.wire();
   // The discussions ticked "Open on start", before the layout that may place them.
   for (const x of await api().discussions()) if (x.autoOpen) await amc.openDiscussion(x.id);
   amc.restore();

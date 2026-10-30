@@ -314,7 +314,8 @@ class Api:
         return self.tabs()
 
     def tabs(self):
-        return [{'id': e['id'], 'name': e['name'], 'running': e['id'] in self._terms} for e in core.agents()]
+        return [{'id': e['id'], 'name': e['name'], 'tool': e.get('tool') or 'claude', 'running': e['id'] in self._terms}
+                for e in core.agents()]
 
     def open_tab(self, tid):
         """Starts the tab's process when it is not running. Returns None or what went wrong."""
