@@ -73,6 +73,115 @@ def unchecked_tasks(path=TASKS_PATH):
     return tasks
 
 
+def finished_tasks(path=TASKS_PATH):
+    """The ticked tasks, latest finished first: {text, added, done, results: [{subitem,
+    result}]}. done is the newest date on its result lines ('' when it has none; those last)."""
+    out, current = [], None
+    for line in read_lines(path):
+        m = re.match(r'^- \[( |x)\] (.+)$', line, re.I)
+        if m:
+            current = None
+            if m.group(1).lower() == 'x':
+                added = re.search(r'\(added:(\S+)\)', m.group(2))
+                current = {'text': strip_tags(m.group(2)), 'added': added.group(1) if added else '',
+                           'done': '', 'results': []}
+                out.append(current)
+        elif current and re.match(r'^\s+\S', line):
+            result = RESULT_VALUE.match(line)
+            if result:
+                day = re.search(r'\((\d{4}-\d{2}-\d{2})\)', line)
+                current['done'] = max(current['done'], day.group(1) if day else '')
+                if current['results'] and not current['results'][-1]['result']:
+                    current['results'][-1]['result'] = result.group(1).strip()
+                else:
+                    current['results'].append({'subitem': '', 'result': result.group(1).strip()})
+            else:
+                current['results'].append({'subitem': line.strip(), 'result': ''})
+        else:
+            current = None
+    return sorted(out, key=lambda t: t['done'], reverse=True)
+
+
+def discarded_tasks(xlsx=XLSX_PATH):
+    """The sheet's Discarded tasks (set in Excel; tasks.md no longer has them), shaped
+    like finished_tasks' with "discarded": True."""
+    out = {}
+    for r in read_sheet(xlsx):
+        if r.get('Status') != 'Discarded' or not r.get('Items'):
+            continue
+        t = out.setdefault(r['Items'], {'text': r['Items'], 'added': _day(r.get('Begin')), 'due': _day(r.get('Due')),
+                                        'done': '', 'results': [], 'discarded': True})
+        if r.get('Subitem') or r.get('Result'):
+            t['results'].append({'subitem': str(r.get('Subitem') or ''), 'result': str(r.get('Result') or '')})
+    return list(out.values())
+
+
+def _day(value):
+    value = as_date(value)
+    return value.strftime('%Y-%m-%d') if isinstance(value, datetime) else ''
+
+
+def _write_lines(path, lines, bom):
+    with open(path, 'wb') as f:
+        f.write((b'\xef\xbb\xbf' if bom else b'') + ''.join(lines).encode('utf-8'))
+
+
+def restore_task(path, title):
+    """A finished task back to open: `- [x]` to `- [ ]`, without the result lines its
+    finishing added (those dated its finish day, the newest date among them); results
+    from before stay. The sync then makes it Pending."""
+    with open(path, 'rb') as f:
+        raw = f.read()
+    bom = raw.startswith(b'\xef\xbb\xbf')
+    lines = raw.decode('utf-8-sig').splitlines(keepends=True)
+    start = next((i for i, line in enumerate(lines)
+                  if (m := re.match(r'^- \[x\] (.+)$', line.rstrip('\r\n'), re.I)) and strip_tags(m.group(1)) == title), None)
+    if start is None:
+        raise ValueError('finished task not found in tasks.md')
+    end = start + 1
+    while end < len(lines) and re.match(r'^\s+\S', lines[end]):
+        end += 1
+    day = lambda line: (re.search(r'\((\d{4}-\d{2}-\d{2})\)', line) or [None, ''])[1]
+    results = [i for i in range(start + 1, end) if RESULT_VALUE.match(lines[i])]
+    done = max((day(lines[i]) for i in results), default='')
+    for i in reversed(results):
+        if done and day(lines[i]) == done:
+            del lines[i]
+    lines[start] = re.sub(r'^- \[x\]', '- [ ]', lines[start], flags=re.I)
+    _write_lines(path, lines, bom)
+
+
+def restore_discarded(path, xlsx, title):
+    """A Discarded task back to open: written at the end of tasks.md with its begin and
+    due dates, sub-items and results, and its Discarded rows taken out of the sheet (the
+    sync would keep them as well). The sync then makes it Pending."""
+    t = next((t for t in discarded_tasks(xlsx) if t['text'] == title), None)
+    if not t:
+        raise ValueError('discarded task not found in TaskDatabase.xlsx')
+    new = [f"- [ ] {title}" + (f" (added:{t['added']})" if t['added'] else '') +
+           (f" [due:{t['due']}]" if t['due'] else '') + '\n']
+    for r in t['results']:
+        if r['subitem']:
+            new.append(f"      {r['subitem']}\n")
+        if r['result']:
+            new.append(f"      → 結果：{r['result']}\n")
+    with open(path, 'rb') as f:
+        raw = f.read()
+    bom = raw.startswith(b'\xef\xbb\xbf')
+    lines = raw.decode('utf-8-sig').splitlines(keepends=True)
+    if lines and not lines[-1].endswith('\n'):
+        lines[-1] += '\n'
+    _write_lines(path, lines + new, bom)
+    import openpyxl
+    wb = openpyxl.load_workbook(xlsx)
+    ws = wb.worksheets[0]
+    cols = {str(c.value): c.column for c in ws[1]}
+    for r in reversed(range(2, ws.max_row + 1)):
+        if ws.cell(r, cols['Items']).value == title and ws.cell(r, cols['Status']).value == 'Discarded':
+            ws.delete_rows(r)
+    wb.save(xlsx)
+
+
 def read_sheet(path=XLSX_PATH):
     """Rows of the first worksheet as dicts keyed by the header row, or [] when unreadable."""
     if not os.path.exists(path):
@@ -181,6 +290,56 @@ def set_due(path, title, due):
             return re.sub(r'\[due:\S+\]', f'[due:{due}]', b)
         return f'{b} [due:{due}]'
     edit_task_line(path, title, change)
+
+
+def add_result(path, title, text):
+    """Before a task is ticked Finished: a `→ 結果 (YYYY-MM-DD)：<text>` line under each of
+    its description lines that has no result yet, or, with no description lines, under
+    the title (unless it has a result there already). A result already written stays."""
+    with open(path, 'rb') as f:
+        raw = f.read()
+    bom = raw.startswith(b'\xef\xbb\xbf')
+    lines = raw.decode('utf-8-sig').splitlines(keepends=True)
+    start = next((i for i, line in enumerate(lines)
+                  if (m := re.match(r'^- \[ \] (.+)$', line.rstrip('\r\n'))) and strip_tags(m.group(1)) == title), None)
+    if start is None:
+        raise ValueError('task not found in tasks.md')
+    end = start + 1
+    while end < len(lines) and re.match(r'^\s+\S', lines[end]):
+        end += 1
+    eol = lines[start][len(lines[start].rstrip('\r\n')):] or '\n'
+    text = ' '.join(text.split()) or 'finished'
+    result = lambda indent: f"{indent}→ 結果 ({date.today():%Y-%m-%d})：{text}{eol}"
+    items = [i for i in range(start + 1, end) if not RESULT_LINE.match(lines[i])]
+    if items:
+        # From the last up, so the indexes before stay right.
+        for i in reversed(items):
+            if not (i + 1 < end and RESULT_LINE.match(lines[i + 1])):
+                lines.insert(i + 1, result(re.match(r'^\s*', lines[i]).group(0)))
+    elif end == start + 1:
+        lines.insert(start + 1, result('      '))
+    with open(path, 'wb') as f:
+        f.write((b'\xef\xbb\xbf' if bom else b'') + ''.join(lines).encode('utf-8'))
+
+
+def discard_task(path, xlsx, title):
+    """Discards the open task `title`: its rows in the sheet become Discarded (the sync
+    keeps those), then its line and the indented lines under it leave tasks.md. The
+    task History lists it, and can restore it."""
+    set_status(xlsx, title, 'Discarded')
+    with open(path, 'rb') as f:
+        raw = f.read()
+    bom = raw.startswith(b'\xef\xbb\xbf')
+    lines = raw.decode('utf-8-sig').splitlines(keepends=True)
+    start = next((i for i, line in enumerate(lines)
+                  if (m := re.match(r'^- \[ \] (.+)$', line.rstrip('\r\n'))) and strip_tags(m.group(1)) == title), None)
+    if start is None:
+        raise ValueError('task not found in tasks.md')
+    end = start + 1
+    while end < len(lines) and re.match(r'^\s+\S', lines[end]):
+        end += 1
+    del lines[start:end]
+    _write_lines(path, lines, bom)
 
 
 def set_checked(path, title):

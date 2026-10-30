@@ -620,10 +620,33 @@ class Api:
         except Exception as e:
             return f'due not saved: {e}'
 
-    def set_task_status(self, title, status):
+    def task_history(self):
+        """The finished tasks in tasks.md, latest first, then the sheet's Discarded ones."""
+        return tasks.finished_tasks(TASKS_PATH) + tasks.discarded_tasks(XLSX_PATH)
+
+    def restore_task(self, title, discarded):
+        """A finished or Discarded task back on the list as Pending."""
         try:
+            if discarded:
+                tasks.restore_discarded(TASKS_PATH, XLSX_PATH, title)
+            else:
+                tasks.restore_task(TASKS_PATH, title)
+            self._start_sync()
+            return 'restored as Pending'
+        except Exception as e:
+            return f'not restored: {e}'
+
+    def set_task_status(self, title, status, result=''):
+        try:
+            if status == 'Discard':
+                # Out of tasks.md, Discarded in the sheet: in the task History, restorable.
+                tasks.discard_task(TASKS_PATH, XLSX_PATH, title)
+                self._start_sync()
+                return 'task discarded'
             if status == 'Finished':
-                # Ticked in tasks.md: gone from the list at once, Finished in the sheet after sync.
+                # The result under it, then ticked in tasks.md: gone from the list at once,
+                # Finished with its Result in the sheet after sync.
+                tasks.add_result(TASKS_PATH, title, result or '')
                 tasks.set_checked(TASKS_PATH, title)
                 self._start_sync()
             else:

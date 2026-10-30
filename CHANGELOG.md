@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – task results, task history, Discard, `+` History
+
+### Added
+- **Result on Finished:** picking Finished asks for the task's result (Enter; empty =
+  `finished`; Esc or a click elsewhere cancels). It is written to `tasks.md` as
+  `→ 結果 (YYYY-MM-DD)：…` under the task, or under each sub-item that has no result yet
+  (results already there stay), so the sync puts it in the Excel Result column.
+- **Task history:** a clock at the top right of the task list switches it to the finished
+  tasks in `tasks.md` (latest first, with sub-items and results) and the Excel file's
+  Discarded tasks. *Restore → Pending* on a task's status: a finished one is unticked and
+  loses the result lines dated its finish day; a Discarded one is written back to
+  `tasks.md` (dates, sub-items, results) and its Discarded rows leave the sheet.
+- **Discard** in the task status menu: the task's rows become Discarded in the Excel file
+  and it leaves `tasks.md`; the task history can restore it.
+
+### Changed
+- **`+` menu:** new sessions and Cross-check… only; the sessions not running and the past
+  discussions (all of them now) moved into *History (n) ▸*, with *◂ Back*.
+- README: Status, Task history, `+` → History (both languages).
+
 ## 2026-10-29 – paste images
 
 ### Added

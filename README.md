@@ -112,8 +112,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 ## Working in the window
 
 - **Tabs:** the right column has a tab per running `agents.json` session. The ones ticked
-  *Open on start* (the session list's right-click menu) start with the window; `+` starts
-  any other listed one, `×` ends one. Type into a tab as into any terminal. Closing the
+  *Open on start* (the session list's right-click menu) start with the window; `+` →
+  *History* starts any other listed one, `×` ends one. Type into a tab as into any terminal. Closing the
   window ends every tab; the conversations are kept and resume next time. A session
   already running in another terminal is left there and gets no tab.
 - **Session list:** double-click a session to show its tab (a session with no terminal,
@@ -161,7 +161,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   session list a discussion shows with `⚖` and the tokens of all its models; right-click:
   Open on start, Terminate (ends the step under way and closes the tab), Settings… (name,
   models, lead, word limit). Saved in `Session HUD/discussions/` (not in git); the latest
-  ones reopen from `+`. Codex in a discussion is not tried yet.
+  ones reopen from `+` → *History*. Codex in a discussion is not tried yet.
 - **Usage:** one section per tool. CLAUDE: the 5-hour block, today and this week, when
   the week resets (the account's time, otherwise `weekResetWeekday` / `weekResetHour`),
   and the models used. CODEX: each limit window with its reset. ANTIGRAVITY (when
@@ -198,8 +198,15 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 
 - **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
   written to `tasks.md` and synced to the Excel file.
-- **Status:** click a task's status (or `-`) for Pending / Ongoing / Checking / Finished.
-  Finished ticks the task off and it leaves the list at once.
+- **Status:** click a task's status (or `-`) for Pending / Ongoing / Checking / Finished /
+  Discard. Finished asks for the result (Enter; empty = `finished`; Esc cancels), writes
+  `→ 結果 (date)：…` under the task (under each sub-item without a result), ticks it off and
+  it leaves the list at once. Discard takes it out of `tasks.md` and marks its rows
+  Discarded in the Excel file.
+- **Task history:** the clock at the top right of the task list shows the finished tasks
+  (latest first, with their results) and the Discarded ones; click a task's Finished /
+  Discarded for *Restore → Pending*. Restoring a finished task drops the result lines its
+  finishing added (dated its finish day).
 - **Chat box:** the box under the task list types what you enter into the `Task Reminder`
   tab and submits it (Shift+Enter for a new line). With no `Task Reminder` yet, the first
   send adds one to `agents.json` and opens its tab.
@@ -313,7 +320,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 ## 在視窗裡操作
 
 - **分頁**：右欄每個執行中的 `agents.json` session 一個分頁。勾了 *Open on start*
-  （session 清單的右鍵選單）的會隨視窗啟動；`+` 可啟動清單裡其他的 session，`×` 結束
+  （session 清單的右鍵選單）的會隨視窗啟動；`+` → *History* 可啟動清單裡其他的 session，`×` 結束
   一個。在分頁裡打字就跟一般終端機一樣。關掉視窗會結束所有分頁；對話會保留，下次接著
   繼續。已經在別的終端機執行的 session 會留在原處，不會有分頁。
 - **Session 清單**：雙擊 session 會切到它的分頁（沒有終端機的 session，例如排程跑的
@@ -355,7 +362,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   *Send to…* 會把它打進某個 session 分頁，讓那個 session 去執行。session 清單裡討論以 `⚖`
   顯示，tokens 是所有模型的總和；右鍵有 Open on start、Terminate（停掉正在跑的步驟並關閉
   分頁）、Settings…（名稱、模型、lead、字數上限）。存在 `Session HUD/discussions/`（不進
-  git），最近的可以從 `+` 再打開。Codex 參加討論還沒實測過。
+  git），可以從 `+` → *History* 再打開。Codex 參加討論還沒實測過。
 - **用量**：每個工具一段。CLAUDE：5 小時區段、今天和本週用量、本週何時重置（用帳號的
   時間，讀不到時用 `weekResetWeekday`／`weekResetHour`）、用了哪些模型。CODEX：每個額度
   視窗和重置時間。ANTIGRAVITY（`agents.json` 有 agy session 時）：每組模型的週額度，每
@@ -385,8 +392,13 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
   並同步到 Excel。
-- **狀態**：點任務的狀態（或 `-`）選 Pending／Ongoing／Checking／Finished。
-  選 Finished 會把任務打勾，立刻從清單消失。
+- **狀態**：點任務的狀態（或 `-`）選 Pending／Ongoing／Checking／Finished／Discard。
+  選 Finished 會先問結果（按 Enter；空白 = `finished`；Esc 取消），在任務底下寫
+  `→ 結果 (日期)：…`（有子項目時，寫在每個還沒有結果的子項目底下），再把任務打勾，立刻從
+  清單消失。Discard 會把任務從 `tasks.md` 拿掉，Excel 裡那幾列改成 Discarded。
+- **任務歷史**：任務清單右上角的時鐘會列出已完成的任務（最新的在上面，附結果）和
+  Discarded 的任務；點任務的 Finished／Discarded 選 *Restore → Pending* 可以還原。還原已完成
+  的任務時，會刪掉完成當天加上的結果行。
 - **聊天框**：任務清單下方的輸入框會把你打的內容送進 `Task Reminder` 分頁並送出
   （Shift+Enter 換行）。還沒有 `Task Reminder` 時，第一次送出會把它加進 `agents.json`
   並開出分頁。

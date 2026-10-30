@@ -28,6 +28,9 @@
   .task .t { color: var(--title); }
   .task .d { color: var(--desc); padding-left: 2.2em; text-indent: -1.2em; }
   .task .m { color: var(--note); }
+  #task-hist { float: right; color: var(--desc); line-height: 0; padding-top: 2px; }
+  #task-hist:hover, #task-hist.on { color: var(--accent); }
+  .task .r { color: var(--accent); padding-left: 2.2em; text-indent: -1.2em; }
   .st { font-weight: bold; }
 
   /* usage */
@@ -172,6 +175,8 @@
   .menu div { padding: 4px 14px; cursor: pointer; }
   .menu div:hover { background: var(--bg); color: var(--accent); }
   .menu div.disabled { color: var(--note); pointer-events: none; }
+  #result-box input { width: 340px; }
+  #add-menu { max-height: 70vh; overflow-y: auto; }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
   .menu input { margin: 3px 8px; width: 180px; background: var(--bg); color: var(--title);
                 border: 1px solid var(--desc); font: inherit; padding: 2px 4px; outline: none; }
@@ -189,7 +194,9 @@
 </head>
 <body>
 <div class="col">
-  <div class="head">Tasks</div>
+  <div class="head" id="task-head">Tasks<span id="task-hist" class="click" title="history: the finished tasks, with their results"><svg
+  width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+  stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.2V8l2.6 1.8"/></svg></span></div>
   <div id="task-list"></div>
   <div class="note" id="task-note"></div>
   <div class="chat" id="task-chat"></div>
@@ -224,8 +231,11 @@
   <div class="disabled" id="model-label">Model</div>
 </div>
 <div class="menu" id="status-menu">
-  <div>Pending</div><div>Ongoing</div><div>Checking</div><div>Finished</div>
+  <div>Pending</div><div>Ongoing</div><div>Checking</div><div>Finished</div><hr><div>Discard</div>
 </div>
+<div class="menu" id="result-box"><input id="result-in" spellcheck="false"
+  placeholder="result, then Enter (empty = finished) · Esc cancels"></div>
+<div class="menu" id="restore-menu"><div>Restore → Pending</div></div>
 <div class="menu" id="add-menu"></div>
 <div class="menu" id="set-menu"></div>
 <div class="menu" id="send-menu"></div>
@@ -1003,22 +1013,30 @@ $('terms').addEventListener('drop', e => {
   amc.dragging = null;
   if (at) amc.move(id, at.leaf, at.zone);
 }, true);
+// +: what can be started new, and History ▸ - the sessions not running and the past
+// discussions, to start or open again.
+function addMenuAt(html) {
+  const m = $('add-menu'), r = $('add-tab').getBoundingClientRect();
+  m.innerHTML = html;
+  showAt(m, r.left, r.bottom);
+}
 $('add-tab').addEventListener('click', async e => {
   e.stopPropagation();
-  const m = $('add-menu');
-  m.innerHTML = ((amc.stopped || []).length
-    ? amc.stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)}</div>`).join('')
-    : '<div class="disabled">every session is running</div>') +
-    '<hr><div data-new="claude">New session…</div><div data-new="codex">New Codex session…</div>' +
+  const n = (amc.stopped || []).length + (await api().discussions()).length;
+  addMenuAt('<div data-new="claude">New session…</div><div data-new="codex">New Codex session…</div>' +
     '<div data-new="agy">New Antigravity session…</div>' +
-    '<hr><div data-xc="1">Cross-check…</div>';
-  // The latest discussions, to open again.
-  const past = await api().discussions();
-  if (past.length) m.innerHTML += past.slice(0, 8).map(x =>
-    `<div data-disc="${esc(x.id)}" title="${esc(x.created)}">⚖ ${esc(x.title)}</div>`).join('');
-  const r = $('add-tab').getBoundingClientRect();
-  showAt(m, r.left, r.bottom);
+    '<hr><div data-xc="1">Cross-check…</div>' +
+    `<hr><div data-history="1">History (${n}) ▸</div>`);
 });
+async function showHistory() {
+  const stopped = amc.stopped || [], past = await api().discussions();
+  addMenuAt('<div data-back="1">◂ Back</div><hr><div class="disabled">Sessions</div>' +
+    (stopped.length ? stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)}</div>`).join('')
+                    : '<div class="disabled">every session is running</div>') +
+    '<hr><div class="disabled">Cross-checks</div>' +
+    (past.length ? past.map(x => `<div data-disc="${esc(x.id)}" title="${esc(x.created)}">⚖ ${esc(x.title)}</div>`).join('')
+                 : '<div class="disabled">none yet</div>'));
+}
 let newTool = 'claude';
 $('add-menu').addEventListener('click', e => {
   // New session: the menu turns into a name box; Enter adds it to agents.json and starts it.
@@ -1032,6 +1050,8 @@ $('add-menu').addEventListener('click', e => {
     $('new-name').focus();
     return;
   }
+  if (e.target.dataset.history) { e.stopPropagation(); showHistory(); return; }
+  if (e.target.dataset.back) { e.stopPropagation(); $('add-tab').click(); return; }
   if (e.target.closest('input, .err')) { e.stopPropagation(); return; }
   hideMenus();
   if (e.target.dataset.id) amc.start(e.target.dataset.id);
@@ -1290,9 +1310,11 @@ $('row-menu').addEventListener('click', async e => {
 });
 
 // ---------------------------------------------------------------- tasks
-let taskEdit = null;
+let taskEdit = null, taskHistory = false;
 async function refreshTasks() {
+  if (taskHistory) return drawTaskHistory();
   const {tasks, remaining} = await api().task_list();
+  if (taskHistory) return;                  // switched to History while it was read
   $('task-list').innerHTML = tasks.length ? tasks.map((t, i) => {
     const title = t.text.charAt(0).toUpperCase() + t.text.slice(1);
     const color = TASK_STATUS_COLORS[t.status] || (t.status ? 'var(--grey)' : 'var(--note)');
@@ -1305,10 +1327,39 @@ async function refreshTasks() {
   $('task-list').tasks = tasks;
   $('task-note').textContent = remaining > 0 ? `+${remaining} more in tasks.md` : '';
 }
+// The clock: the finished tasks in place of the open ones, latest first, each with
+// its results; the clock again goes back.
+async function drawTaskHistory() {
+  const done = await api().task_history();
+  if (!taskHistory) return;
+  $('task-list').innerHTML = done.length ? done.map((t, i) => {
+    const title = t.text.charAt(0).toUpperCase() + t.text.slice(1);
+    const status = t.discarded ? 'Discarded' : 'Finished';
+    return `<div class="task"><div class="t">${t.discarded ? '✗' : '✓'} ${esc(title)}</div>` +
+      t.results.map(r => (r.subitem ? `<div class="d">▸ ${esc(r.subitem)}</div>` : '') +
+                         (r.result ? `<div class="r">→ ${esc(r.result)}</div>` : '')).join('') +
+      `<div class="m">&gt;&gt; ${esc(t.added || '?')} → ${esc(t.done || '?')}   ` +
+      `<span class="st click" data-restore="${i}" style="color:var(--grey)" title="restore it as Pending">${status}</span></div></div>`;
+  }).join('') : '<div class="m">No finished or discarded tasks</div>';
+  $('task-list').tasks = [];
+  $('task-list').history = done;
+  $('task-note').textContent = done.length ? `${done.length} finished` : '';
+}
+$('task-hist').addEventListener('click', () => {
+  taskHistory = !taskHistory;
+  $('task-hist').classList.toggle('on', taskHistory);
+  $('task-hist').title = taskHistory ? 'back to the open tasks' : 'history: the finished tasks, with their results';
+  $('task-head').firstChild.textContent = taskHistory ? 'Tasks · history' : 'Tasks';
+  $('task-list').scrollTop = 0;
+  refreshTasks();
+});
 $('task-list').addEventListener('click', e => {
   if (String(window.getSelection())) return;     // a drag is copying, not a click on a field
   const list = $('task-list').tasks || [];
-  if (e.target.dataset.due !== undefined) {
+  if (e.target.dataset.restore !== undefined) {
+    taskEdit = ($('task-list').history || [])[+e.target.dataset.restore];
+    showAt($('restore-menu'), e.clientX, e.clientY);
+  } else if (e.target.dataset.due !== undefined) {
     taskEdit = list[+e.target.dataset.due];
     openCalendar(taskEdit.due, e.clientX, e.clientY);
   } else if (e.target.dataset.status !== undefined) {
@@ -1322,7 +1373,31 @@ $('task-list').addEventListener('click', e => {
 $('status-menu').addEventListener('click', async e => {
   hideMenus();
   if (!taskEdit || e.target.parentElement !== $('status-menu')) return;
+  // Finished asks for the task's result first (TaskDatabase.xlsx's Result); Esc or a
+  // click elsewhere leaves the task as it was.
+  if (e.target.textContent === 'Finished') {
+    e.stopPropagation();
+    $('result-in').value = '';
+    showAt($('result-box'), e.clientX, e.clientY);
+    $('result-in').focus();
+    return;
+  }
   $('task-note').textContent = await api().set_task_status(taskEdit.text, e.target.textContent);
+  await refreshTasks();
+});
+$('result-box').addEventListener('click', e => e.stopPropagation());
+$('restore-menu').addEventListener('click', async () => {
+  hideMenus();
+  if (!taskEdit) return;
+  $('task-note').textContent = await api().restore_task(taskEdit.text, !!taskEdit.discarded);
+  await refreshTasks();
+});
+$('result-in').addEventListener('keydown', async e => {
+  if (e.key !== 'Enter' || !taskEdit) return;
+  e.preventDefault();
+  const result = $('result-in').value;
+  hideMenus();
+  $('task-note').textContent = await api().set_task_status(taskEdit.text, 'Finished', result);
   await refreshTasks();
 });
 
@@ -1370,7 +1445,7 @@ function showAt(el, x, y) {
   el.style.left = Math.min(x, innerWidth - el.offsetWidth - 4) + 'px';
   el.style.top = Math.min(y, innerHeight - el.offsetHeight - 4) + 'px';
 }
-function hideMenus() { for (const id of ['row-menu', 'status-menu', 'add-menu', 'set-menu', 'send-menu', 'cal']) $(id).style.display = 'none'; }
+function hideMenus() { for (const id of ['row-menu', 'status-menu', 'result-box', 'restore-menu', 'add-menu', 'set-menu', 'send-menu', 'cal']) $(id).style.display = 'none'; }
 document.addEventListener('click', hideMenus);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus(); });
 
