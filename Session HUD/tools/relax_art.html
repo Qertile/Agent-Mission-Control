@@ -39,6 +39,10 @@ const PICTURES = {
   'level4': [...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall', 'wall-window-stone'),
              ...sides(2, 'wall', 'wall-window-stone'), ['ftk', 'roof-high-point', 0, 3, 0, 0],
              ['ftk', 'banner-green', 0.62, 0, 0.62, 0]],
+  // A Cross-check discussion: a fire with a log to sit on for each participant (where
+  // relax.js seats them: SEATS there, in world units).
+  'meeting': [['sk', 'campfire-pit', 0, 0, 0, 0, SK * 1.6], ['sk', 'tree-log', -1.1, 0, 0.15, 0, 1],
+              ['sk', 'tree-log', 0.15, 0, -1.1, 90, 1], ['sk', 'tree-log', -0.85, 0, -0.85, -45, 1]],
   'tree': [['sk', 'tree', 0, 0, 0, 0, SK]],
   'tree-autumn': [['sk', 'tree-autumn', 0, 0, 0, 0, SK]],
   'rock': [['sk', 'rock-a', 0, 0, 0, 0, SK]],
@@ -102,39 +106,47 @@ async function picture(name, parts) {
   return api().save(name, small.toDataURL('image/png'));
 }
 
-// The people: one row per tool, 10 frames of 128 px each. Frames 0-4 walk towards the
-// lower right (0 standing, 1-4 the walk), 5-9 the same towards the lower left. Half the
-// buildings' frame at half the size, so a person has the buildings' scale when Relax mode
-// draws a frame at half a building's size, its feet at the same 88% line.
+// The people: one row per tool, 28 frames of 128 px each: 14 facing the lower right, then
+// the same 14 facing the lower left. Of each 14: 0 standing, 1-4 walking, 5-8 working
+// (interact), 9-12 waving (emote-yes), 13 sitting. Half the buildings' frame at half the
+// size, so a person has the buildings' scale when Relax mode draws a frame at half a
+// building's size, its feet at the same 88% line.
 const PEOPLE = [['claude', 'character-female-c'], ['codex', 'character-female-e'], ['agy', 'character-male-c']];
 const CELL = 128;
+// [clip, frames]: each clip's frames are spread over one cycle of it.
+const ACTS = [['idle', 1], ['walk', 4], ['interact-right', 4], ['emote-yes', 4], ['sit', 1]];
+const PER_DIR = ACTS.reduce((n, [, k]) => n + k, 0);
 async function people() {
   const cam = new THREE.OrthographicCamera(-FRAME / 4, FRAME / 4, FRAME / 2 * 0.88, -FRAME / 2 * 0.12, 0.1, 100);
   cam.position.copy(camera.position);
   cam.lookAt(0, 0, 0);
   const sheet = document.createElement('canvas');
-  sheet.width = CELL * 10; sheet.height = CELL * PEOPLE.length;
+  sheet.width = CELL * PER_DIR * 2; sheet.height = CELL * PEOPLE.length;
   const g = sheet.getContext('2d');
   g.imageSmoothingQuality = 'high';
   for (const [row, [, name]] of PEOPLE.entries()) {
     const src = await gltf('mc', name);
     const clip = n => src.animations.find(a => a.name === n);
     for (const [d, turn] of [[0, 90], [1, 0]]) {           // facing +x shows lower right, +z lower left
-      for (let f = 0; f < 5; f++) {
-        const scene = new THREE.Scene();
-        scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 2.4));
-        const sun = new THREE.DirectionalLight(0xffffff, 2.2);
-        sun.position.set(4, 8, 3);
-        scene.add(sun);
-        const o = SkeletonUtils.clone(src.scene);
-        o.rotation.y = turn * Math.PI / 180;
-        scene.add(o);
-        const mixer = new THREE.AnimationMixer(o);
-        const c = f === 0 ? clip('idle') : clip('walk');
-        mixer.clipAction(c).play();
-        mixer.setTime(f === 0 ? 0 : (f - 1) / 4 * c.duration);
-        renderer.render(scene, cam);
-        g.drawImage(renderer.domElement, (d * 5 + f) * CELL, row * CELL, CELL, CELL);
+      let f = 0;
+      for (const [name, n] of ACTS) {
+        const c = clip(name);
+        for (let k = 0; k < n; k++, f++) {
+          const scene = new THREE.Scene();
+          scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 2.4));
+          const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+          sun.position.set(4, 8, 3);
+          scene.add(sun);
+          const o = SkeletonUtils.clone(src.scene);
+          o.rotation.y = turn * Math.PI / 180;
+          scene.add(o);
+          const mixer = new THREE.AnimationMixer(o);
+          mixer.clipAction(c).play();
+          // One frame: the clip's start (sitting: its end, seated); several: through it.
+          mixer.setTime(n === 1 ? (name === 'sit' ? c.duration * 0.99 : 0) : k / n * c.duration);
+          renderer.render(scene, cam);
+          g.drawImage(renderer.domElement, (d * PER_DIR + f) * CELL, row * CELL, CELL, CELL);
+        }
       }
     }
   }

@@ -9,13 +9,17 @@
 // The pictures are PNGs made once by tools/relax_art.py from Kenney's kits (CC0).
 const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
-  const PICS = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'tree', 'tree-autumn', 'rock', 'people'];
-  // people.png: a row per tool, 10 frames of 128 px: 0-4 facing lower right (0 standing,
-  // 1-4 walking), 5-9 the same facing lower left.
+  const PICS = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people'];
+  // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
+  // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
+  const PER_DIR = 14, F = {stand: 0, walk: 1, work: 5, wave: 9, sit: 13};
+  // The logs around a discussion's fire (relax_art.html's 'meeting'): [x, z] in world
+  // units, and the way the one sitting there faces.
+  const SEATS = [[-1.1, 0.15, 0], [0.15, -1.1, 1], [-0.85, -0.85, 0]];
   const ANCHOR = 0.88;                     // where the ground point is in each picture (y)
-  const TOP = {level0: 0.80, level1: 0.66, level2: 0.56, level3: 0.29, level4: 0.10, ruin: 0.72};  // its top
-  const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff'};
+  const TOP = {level0: 0.80, level1: 0.66, level2: 0.56, level3: 0.29, level4: 0.10, ruin: 0.72, meeting: 0.70};  // its top
+  const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff', disc: '#ffc400'};
   const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0'};
   // The building grows with the messages typed into the session (agy: its hours open):
   // a campfire at 0, then a tent, a cabin, a house, a tower.
@@ -25,7 +29,8 @@ const relax = (() => {
   const img = {};
   let on = false, sig = '', spots = [], hover = null, msgTimer = 0;
   let bg = null, dpr = 1, plot = 150, timer = 0;
-  const people = new Map();                // session id -> {x, y, tx, ty, home, dir, frame, wait, tool}
+  const people = new Map();                // session id (a participant: discussion id#i) -> its person
+  let fires = [];                          // the discussions under way: {x, y} of their fire
 
   function saved() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function save(mode) { try { localStorage.setItem(KEY, mode); } catch (e) {} }
@@ -42,11 +47,13 @@ const relax = (() => {
     return loading;
   }
 
-  // One building per session: the running ones (the session list's rows, discussions
-  // left out), then the agents.json sessions that are not running (ended).
+  // One building per session: the running ones (the session list's rows), then the
+  // agents.json sessions that are not running (ended). A discussion is a fire instead.
   function buildings() {
-    const list = rows.filter(r => !r.disc).map(r => ({id: r.sid, name: r.name, tool: r.tool || 'claude',
-                                                      status: r.status, row: r, level: level(r.turns || 0)}));
+    const list = rows.map(r => r.disc
+      ? {id: r.sid, name: r.name, tool: 'disc', status: r.status, row: r, level: 'meeting', kind: 'meeting',
+         people: r.people || []}
+      : {id: r.sid, name: r.name, tool: r.tool || 'claude', status: r.status, row: r, level: level(r.turns || 0)});
     const seen = new Set(list.map(b => b.id));
     for (const t of amc.stopped || [])
       if (!seen.has(t.id)) list.push({id: t.id, name: t.name, tool: t.tool || 'claude', status: 'ended', row: null});
@@ -130,7 +137,7 @@ const relax = (() => {
       if (pic) g.drawImage(pic, cx - s / 2, ground - s * ANCHOR, s, s);
       const top = ground - s * (ANCHOR - TOP[level]);
       // Status: busy a tool sign, waiting a "!" flag; ended is the wreck.
-      if (b.status === 'busy' || b.status === 'running') badge(g, cx + plot * 0.18, top - 4, '⚒', STATUS_COLORS.busy);
+      if ((b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting') badge(g, cx + plot * 0.18, top - 4, '⚒', STATUS_COLORS.busy);
       if (b.status === 'waiting') badge(g, cx + plot * 0.18, top - 4, '!', STATUS_COLORS.waiting);
       // The name, with the tool's colour as a dot, and the status under it; an ended
       // session's name is dark grey on a pale label, with no status.
@@ -141,7 +148,9 @@ const relax = (() => {
       const ly = ground + plot * 0.2;
       g.fillRect(cx - nw / 2 - 14, ly, nw + 22, ended ? 18 : 30);
       g.fillStyle = TOOL_COLORS[b.tool] || TOOL_COLORS.claude;
-      g.beginPath(); g.arc(cx - nw / 2 - 5, ly + 9, 4, 0, Math.PI * 2); g.fill();
+      if (b.kind === 'meeting') { g.font = "12px 'DejaVu Sans Mono', Consolas, monospace"; g.fillText('⚖', cx - nw / 2 - 5, ly + 13);
+                                  g.font = "bold 12px 'DejaVu Sans Mono', Consolas, monospace"; }
+      else { g.beginPath(); g.arc(cx - nw / 2 - 5, ly + 9, 4, 0, Math.PI * 2); g.fill(); }
       g.fillStyle = ended ? '#3a3a3a' : '#ffffff';
       g.fillText(name, cx + 4, ly + 13);
       if (!ended) {
@@ -156,27 +165,56 @@ const relax = (() => {
     out.setTransform(1, 0, 0, 1, 0, 0);
     out.drawImage(bg, 0, 0);
     out.setTransform(dpr, 0, 0, dpr, 0, 0);
-    for (const p of people.values()) person(out, p);
+    for (const f of fires) flames(out, f);
+    for (const p of [...people.values()].sort((a, c) => a.y - c.y)) person(out, p);
   }
 
-  // --- the people: one per building that is not ended, walking about in front of it.
+  // --- the people: one per building that is not ended, and one per participant around
+  // each discussion's fire.
+  //
+  // A session's person works by the building while it is busy, waves in front of it while
+  // it waits for you, and otherwise sits in front of it, getting up now and then for a
+  // walk of two or three stops. Where they go is kept relative to the building (home), so
+  // a resize that moves the building takes them along.
 
-  // Gives each building its person (keeping where one already is, relative to its
-  // building), and drops the people of buildings gone or ended.
+  // Each spot: [dx, dy] in building widths from the ground point, and the way it faces.
+  const SPOTS = {work: [0.34, 0.02, 1], wave: [0.05, 0.16, 0], seat: [-0.3, 0.12, 0]};
+  function want(status) { return status === 'busy' || status === 'running' ? 'work' : status === 'waiting' ? 'wave' : 'rest'; }
+  function spot(name) { const [dx, dy, dir] = SPOTS[name]; return {dx: dx * plot, dy: dy * plot, dir}; }
+  function stroll() { const t = target({x: 0, y: 0}); return {dx: t.x, dy: t.y, dir: null}; }
+
+  // A participant's place by the fire: SEATS in relax_art.html's world units, moved a
+  // little towards the fire, then onto the screen as that camera sees the ground.
+  function seat(cx, ground, i) {
+    const [x, z, dir] = SEATS[i % SEATS.length], k = plot * 1.5 / 256 * 256 / 4.6 * 0.85;
+    return {x: cx + (x - z) / Math.SQRT2 * k, y: ground + 0.364 * (x + z) * k, dir};
+  }
+
   function settle(placed) {
     const keep = new Set();
+    fires = [];
     for (const {x, y, b} of placed) {
+      if (b.kind === 'meeting') {
+        if (b.status === 'busy') fires.push({x, y});
+        (b.people || []).forEach((m, i) => {
+          const id = b.id + '#' + i, at = seat(x, y, i);
+          keep.add(id);
+          const p = people.get(id) || {frame: -1, tick: 0};
+          people.set(id, Object.assign(p, {fixed: true, x: at.x, y: at.y, dir: at.dir, tool: m.tool, talking: m.talking}));
+        });
+        continue;
+      }
       if (b.status === 'ended') continue;
       keep.add(b.id);
       const home = {x, y}, p = people.get(b.id);
       if (p) {
-        const dx = p.x - p.home.x, dy = p.y - p.home.y;
-        Object.assign(p, {home, x: x + dx, y: y + dy, tool: b.tool});
-        p.tx = x + (p.tx - p.home.x); p.ty = y + (p.ty - p.home.y);
+        p.x += x - p.home.x; p.y += y - p.home.y;
+        Object.assign(p, {home, tool: b.tool, status: b.status});
       } else {
-        const t = target(home);
-        people.set(b.id, {home, x: t.x, y: t.y, tx: t.x, ty: t.y, dir: 0, frame: 0,
-                          wait: Math.random() * 3, tool: b.tool});
+        // A new person starts where its status puts it, already at it.
+        const w = want(b.status), g = spot(w === 'rest' ? 'seat' : w);
+        people.set(b.id, {home, x: x + g.dx, y: y + g.dy, dir: g.dir, frame: -1, tick: 0, tool: b.tool, status: b.status,
+                          want: w, mode: 'at', goal: g, wait: 5 + Math.random() * 30, laps: 0, pause: 0});
       }
     }
     for (const id of [...people.keys()]) if (!keep.has(id)) people.delete(id);
@@ -193,39 +231,77 @@ const relax = (() => {
   }
   function person(g, p) {
     const pic = img.people, s = size();
-    if (!pic) return;
-    const row = PEOPLE_ROW[p.tool] ?? 0, col = p.dir * 5 + p.frame;
+    if (!pic || p.frame < 0) return;
+    const row = PEOPLE_ROW[p.tool] ?? 0, col = p.dir * PER_DIR + p.frame;
     g.drawImage(pic, col * CELL, row * CELL, CELL, CELL, p.x - s / 2, p.y - s * ANCHOR, s, s);
   }
 
-  // One step for everyone: stand a while, then walk to a new spot, about a fifth of a
-  // building's width a second. Only the squares the people were in and are in now are
-  // drawn again, from the background, then the people on top.
+  // One step of a session's person. Returns whether it looks different now.
+  function step(p, dt) {
+    const before = [p.x, p.y, p.dir, p.frame].join();
+    const w = want(p.status);
+    if (w !== p.want) {                    // the status changed: off to that spot
+      p.want = w; p.mode = 'go'; p.goal = spot(w === 'rest' ? 'seat' : w); p.pause = 0;
+    }
+    if (p.pause > 0) {                     // a stop on a walk: standing
+      p.pause -= dt; p.frame = F.stand;
+    } else if (p.mode === 'at') {
+      p.tick++;
+      if (w === 'work') p.frame = F.work + p.tick % 4;
+      else if (w === 'wave') p.frame = F.wave + p.tick % 4;
+      else {
+        p.frame = F.sit;
+        p.wait -= dt;
+        if (p.wait <= 0) { p.mode = 'stroll'; p.laps = 2 + Math.floor(Math.random() * 2); p.goal = stroll(); }
+      }
+    } else {                               // walking to p.goal
+      const speed = plot * 0.2 * dt;
+      const tx = p.home.x + p.goal.dx, ty = p.home.y + p.goal.dy, dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
+      if (d <= speed) {
+        p.x = tx; p.y = ty; p.frame = F.stand;
+        if (p.mode === 'stroll' && --p.laps > 0) { p.goal = stroll(); p.pause = 1 + Math.random() * 2; }
+        else if (p.mode === 'stroll') { p.mode = 'go'; p.goal = spot('seat'); p.pause = 1 + Math.random() * 2; }
+        else { p.mode = 'at'; p.dir = p.goal.dir; p.wait = 20 + Math.random() * 20; }
+      } else {
+        p.x += dx / d * speed; p.y += dy / d * speed;
+        p.dir = dx >= 0 ? 0 : 1;
+        p.tick++;
+        p.frame = F.walk + p.tick % 4;
+      }
+    }
+    return [p.x, p.y, p.dir, p.frame].join() !== before;
+  }
+
+  // A burning fire's flames: three tongues, their heights changing each tick.
+  function flameBox(f) { const w = plot * 0.22, h = plot * 0.3; return [Math.floor(f.x - w / 2), Math.floor(f.y - h), Math.ceil(w), Math.ceil(h)]; }
+  function flames(g, f) {
+    const base = f.y - plot * 0.035, w = plot * 0.05;
+    for (const [dx, color, tall] of [[-0.7, '#e8542a', 0.13], [0.7, '#e8542a', 0.12], [0, '#f6a623', 0.17], [0, '#ffe066', 0.09]]) {
+      const h = plot * tall * (0.75 + Math.random() * 0.4), x = f.x + dx * w;
+      g.fillStyle = color;
+      g.beginPath();
+      g.moveTo(x - w, base);
+      g.quadraticCurveTo(x - w * 0.9, base - h * 0.5, x, base - h);
+      g.quadraticCurveTo(x + w * 0.9, base - h * 0.5, x + w, base);
+      g.closePath(); g.fill();
+    }
+  }
+
+  // One step for everyone. Only the squares that changed are drawn again, from the
+  // background, then the flames and people on top.
   function tick() {
     if (!bg) return;
-    const cv = $('relax-canvas'), g = cv.getContext('2d'), dirty = [];
-    const speed = plot * 0.2 * TICK / 1000;
+    const cv = $('relax-canvas'), g = cv.getContext('2d'), dirty = [], dt = TICK / 1000;
     for (const p of people.values()) {
       const before = box(p);
-      if (p.wait > 0) {
-        p.wait -= TICK / 1000;
-        if (p.frame === 0) continue;       // standing still: nothing to draw again
-        p.frame = 0;
-      } else {
-        const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
-        if (d <= speed) {
-          p.x = p.tx; p.y = p.ty; p.frame = 0;
-          p.wait = 1 + Math.random() * 4;
-          const t = target(p.home);
-          p.tx = t.x; p.ty = t.y;
-        } else {
-          p.x += dx / d * speed; p.y += dy / d * speed;
-          p.dir = dx >= 0 ? 0 : 1;
-          p.frame = p.frame % 4 + 1;
-        }
-      }
+      if (p.fixed) {                       // around a fire: sitting, or up and talking
+        const frame = p.talking ? F.work + p.tick++ % 4 : F.sit;
+        if (frame === p.frame) continue;
+        p.frame = frame;
+      } else if (!step(p, dt)) continue;
       dirty.push(before, box(p));
     }
+    for (const f of fires) dirty.push(flameBox(f));
     if (!dirty.length) return;
     g.setTransform(1, 0, 0, 1, 0, 0);
     for (const [x, y, w, h] of dirty) {
@@ -234,14 +310,13 @@ const relax = (() => {
       if (sw > 0 && sh > 0) g.drawImage(bg, sx, sy, sw, sh, sx, sy, sw, sh);
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // Everyone overlapping a redrawn square, back to front.
-    const hit = p => { const [x, y, w, h] = box(p);
-      return dirty.some(([a, b, c, d]) => x < a + c && a < x + w && y < b + d && b < y + h); };
-    for (const p of [...people.values()].filter(hit).sort((a, c) => a.y - c.y)) person(g, p);
+    const hit = ([x, y, w, h]) => dirty.some(([a, b, c, d]) => x < a + c && a < x + w && y < b + d && b < y + h);
+    for (const f of fires) if (hit(flameBox(f))) flames(g, f);
+    for (const p of [...people.values()].filter(p => hit(box(p))).sort((a, c) => a.y - c.y)) person(g, p);
   }
   // The timer runs only while it has something to move and someone to see it.
   function clock() {
-    const want = on && !document.hidden && people.size > 0;
+    const want = on && !document.hidden && (people.size > 0 || fires.length > 0);
     if (want && !timer) timer = setInterval(tick, TICK);
     if (!want && timer) { clearInterval(timer); timer = 0; }
   }
@@ -271,7 +346,7 @@ const relax = (() => {
     if (!on || document.hidden) return;
     const list = buildings(), box = $('relax');
     const now = JSON.stringify([box.clientWidth, box.clientHeight, $('relax-top').offsetHeight,
-                                list.map(b => [b.id, b.name, b.tool, b.status, b.level])]);
+                                list.map(b => [b.id, b.name, b.tool, b.status, b.level, b.people])]);
     if (now === sig && !force) return;
     sig = now;
     draw(list);
@@ -325,7 +400,8 @@ const relax = (() => {
     cv.addEventListener('dblclick', e => {
       const b = at(e);
       if (!b) return;
-      if (b.status === 'ended') amc.start(b.id);
+      if (b.kind === 'meeting') amc.openDiscussion(b.row.disc);
+      else if (b.status === 'ended') amc.start(b.id);
       else if (b.row && b.row.tab) amc.select(b.id);
       else say(b.row && b.row.headless ? `${b.name} is a background job (no window)` : `${b.name} runs outside this window`);
     });
@@ -339,7 +415,8 @@ const relax = (() => {
       if (b === hover) return;
       hover = b;
       cv.style.cursor = b ? 'pointer' : '';
-      cv.title = !b ? '' : b.status === 'ended' ? `${b.name} · ended (double-click to start)`
+      cv.title = !b ? '' : b.kind === 'meeting' ? `⚖ ${b.name} · ${b.status === 'busy' ? 'under way' : 'done'} (double-click to open)`
+        : b.status === 'ended' ? `${b.name} · ended (double-click to start)`
         : `${b.name} · ${b.status} · ${b.tool === 'agy' ? (b.row.up || '') + ' open' : (b.row.turns || 0) + ' messages'}`;
     });
     // A task's status on the board opens the same menu as in the Tasks column.
@@ -355,5 +432,6 @@ const relax = (() => {
     set(saved() === 'relax' ? 'relax' : 'office');
   }
 
-  return {wire, set, update, stamina, loadTasks, get on() { return on; }};
+  return {wire, set, update, stamina, loadTasks, get on() { return on; },
+          _people: () => people, _fires: () => fires.length};   // for tests
 })();

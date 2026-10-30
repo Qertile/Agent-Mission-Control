@@ -638,7 +638,12 @@ class Api:
                          'up': format_uptime(datetime.strptime(d['created'], '%Y-%m-%d %H:%M:%S')),
                          'updated': datetime.fromtimestamp(modified).strftime('%Y-%m-%d %H:%M:%S') if modified else '',
                          'listed': True, 'autoOpen': bool(d.get('autoOpen')), 'model': '', 'tool': 'disc', 'models': [],
-                         'tab': did in self._disc_tabs, 'headless': False, 'samples': []})
+                         'tab': did in self._disc_tabs, 'headless': False, 'samples': [],
+                         # Relax mode's campfire: each participant's tool, and whether its
+                         # answer is under way.
+                         'people': [{'tool': p['tool'], 'talking': any(e['who'] == i and e['status'] == 'thinking'
+                                                                        for e in d['entries'])}
+                                    for i, p in enumerate(d['participants'])]})
         return rows
 
     def discussions(self):
