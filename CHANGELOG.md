@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – v2.6.1: fork a session
+
+### Added
+- **Fork** a Claude session: right-click it → *Fork…*, or `+` → *Fork session…* with any
+  Claude session id, then a name. The new `agents.json` entry has `"fork_of"` and its
+  first start runs `claude --resume <source> --fork-session --session-id <new id>`, so it
+  goes on from the source's conversation under its own id; the source is untouched.
+
+### Fixed
+- **Clicking in a Claude or Codex tab puts the typing there again.** v2.6's drag-select
+  took the left button from xterm.js, which then did not focus the terminal: typing only
+  went in after clicking right at the cursor.
+- README: *Working in the window*, *Fork* (both languages); Versions: `v2.6.1`.
+- Tagged `v2.6.1`.
+
 ## 2026-10-30 – v2.6: pinned messages
 
 ### Added

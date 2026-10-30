@@ -194,6 +194,7 @@
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
   .menu input { margin: 3px 8px; width: 180px; background: var(--bg); color: var(--title);
                 border: 1px solid var(--desc); font: inherit; padding: 2px 4px; outline: none; }
+  #fork-id, #fork-id + input { display: block; width: 300px; }   /* one under the other; an id fits */
   .menu .err { color: var(--red); cursor: default; padding: 0 10px 3px; font-size: 11px; }
   #cal { position: fixed; z-index: 10; background: var(--bar); border: 1px solid var(--desc); padding: 6px;
          display: none; font-size: 12px; }
@@ -240,6 +241,7 @@
   <hr>
   <div data-act="auto">Open on start</div>
   <div data-act="term">Terminate</div>
+  <div data-act="fork">Fork…</div>
   <hr>
   <div data-act="settings">Settings…</div>
   <div class="disabled" id="model-label">Model</div>
@@ -612,11 +614,13 @@ const amc = {
     el.addEventListener('mousedown', e => {
       if (e.button !== 0 || e.shiftKey || !e.isTrusted || term.modes.mouseTrackingMode === 'none') return;
       e.stopPropagation();
+      e.preventDefault();                   // or the browser takes the focus away after it
       term.clearSelection();                // or Shift+press would extend the old selection
       e.target.dispatchEvent(new MouseEvent('mousedown', {
         bubbles: true, cancelable: true, view: window, detail: e.detail, button: 0, buttons: e.buttons,
         screenX: e.screenX, screenY: e.screenY, clientX: e.clientX, clientY: e.clientY,
         ctrlKey: e.ctrlKey, altKey: e.altKey, metaKey: e.metaKey, shiftKey: true}));
+      term.focus();                         // the click still puts the typing there
     }, true);
     el.addEventListener('contextmenu', e => {
       if (!term.hasSelection()) return;
@@ -1109,7 +1113,7 @@ $('add-tab').addEventListener('click', async e => {
   e.stopPropagation();
   const n = (amc.stopped || []).length + (await api().discussions()).length;
   addMenuAt('<div data-new="claude">New session…</div><div data-new="codex">New Codex session…</div>' +
-    '<div data-new="agy">New Antigravity session…</div>' +
+    '<div data-new="agy">New Antigravity session…</div><div data-fork="1">Fork session…</div>' +
     '<hr><div data-xc="1">Cross-check…</div>' +
     `<hr><div data-history="1">History (${n}) ▸</div>`);
 });
@@ -1135,6 +1139,7 @@ $('add-menu').addEventListener('click', e => {
     $('new-name').focus();
     return;
   }
+  if (e.target.dataset.fork) { e.stopPropagation(); forkBox(''); return; }
   if (e.target.dataset.history) { e.stopPropagation(); showHistory(); return; }
   if (e.target.dataset.back) { e.stopPropagation(); $('add-tab').click(); return; }
   if (e.target.closest('input, .err')) { e.stopPropagation(); return; }
@@ -1143,9 +1148,19 @@ $('add-menu').addEventListener('click', e => {
   if (e.target.dataset.xc) openCrossCheck();
   if (e.target.dataset.disc) amc.openDiscussion(e.target.dataset.disc);
 });
+// Fork: a new session that starts from another Claude session's conversation so far;
+// the id is filled in when it comes from a session's right-click.
+function forkBox(sid) {
+  addMenuAt(`<input id="fork-id" placeholder="Claude session id to fork" spellcheck="false" value="${esc(sid)}">` +
+            '<input id="new-name" placeholder="name of the fork, then Enter" spellcheck="false">' +
+            '<div class="err" id="new-err"></div>');
+  $(sid ? 'new-name' : 'fork-id').focus();
+}
 $('add-menu').addEventListener('keydown', async e => {
+  if (e.key === 'Enter' && e.target.id === 'fork-id') { $('new-name').focus(); return; }
   if (e.target.id !== 'new-name' || e.key !== 'Enter') return;
-  const res = await api().new_session(e.target.value, newTool);
+  const res = await ($('fork-id') ? api().fork_session($('fork-id').value.trim(), e.target.value)
+                                  : api().new_session(e.target.value, newTool));
   if (res.error) { $('new-err').textContent = res.error; return; }
   hideMenus();
   await amc.syncTabs();
@@ -1402,10 +1417,13 @@ function rowMenu(r, e) {
   // Open on start and the model live in agents.json: a session outside it has neither.
   for (const it of m.querySelectorAll('[data-act="auto"], [data-act="model"]'))
     it.classList.toggle('disabled', !menuRow || !menuRow.listed);
+  // Only Claude Code can fork a conversation.
+  m.querySelector('[data-act="fork"]').classList.toggle('disabled', !menuRow || menuRow.tool !== 'claude');
   showAt(m, e.clientX, e.clientY);
 }
 $('row-menu').addEventListener('click', async e => {
   const act = e.target.dataset.act, r = menuRow;
+  if (act === 'fork' && r) { e.stopPropagation(); forkBox(r.sid); return; }   // its box stays open
   hideMenus();
   if (act === 'copy' && r) copyText(cells(r));
   if (act === 'copyall') copyText(rows.map(cells).join('\n'));

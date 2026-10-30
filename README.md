@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.6` (current) | `v2.5` plus pinned messages (desktop, remote desktop and phone), selecting text by dragging in Claude and Codex tabs, files uploaded from the phone, questions with options in the phone's chat view (the one waiting too, with a hook), and Markdown tables drawn as tables on the phone. See `CHANGELOG.md`. |
+| `v2.6.1` (current) | `v2.6` plus forking a Claude session (right-click → *Fork…*, or `+` → *Fork session…*) and clicking in a Claude or Codex tab focusing it again. See `CHANGELOG.md`. |
+| `v2.6` | `v2.5` plus pinned messages (desktop, remote desktop and phone), selecting text by dragging in Claude and Codex tabs, files uploaded from the phone, questions with options in the phone's chat view (the one waiting too, with a hook), and Markdown tables drawn as tables on the phone. See `CHANGELOG.md`. |
 | `v2.5` | `v2.4.1` plus the remote desktop (the whole window in another computer's browser over Tailscale) and Cross-check's two word limits (reply 200, conclusion 500). See `CHANGELOG.md`. |
 | `v2.4.1` | `v2.4` plus each tool's usage on the phone page, the session menu on a tab's right-click, Codex ticked by default in Cross-check when installed, and no console window flashing for `agy models` on Windows. See `CHANGELOG.md`. |
 | `v2.4` | `v2.3` plus the phone page over Tailscale (sessions, chat or terminal view, keys, a message box), images pasted from the clipboard, task results with a history and Discard, sessions reordered by dragging in the session list, and the name Agent Mission Control throughout. See `CHANGELOG.md`. |
@@ -191,7 +192,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   already running in another terminal is left there and gets no tab.
 - **Session list:** double-click a session to show its tab (a session with no terminal,
   such as a scheduled `claude -p` job, says it is a background job). Right-click for Copy,
-  Copy all rows, Open on start, Terminate and Model; right-clicking a tab in the tab bar
+  Copy all rows, Open on start, Terminate, Fork and Model; right-clicking a tab in the tab bar
   opens the same menu for its session. Drag a session up or down to reorder
   it; the order is saved in `agents.json`, so the tab bar follows.
 - **Selecting and pinning text:** drag in a tab to select (double-click: a word), also in
@@ -209,6 +210,13 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   models Codex's own picker shows (from `~/.codex/models_cache.json`), passed as `-m`.
   An Antigravity session lists *Antigravity default* and what `agy models` lists, passed
   as `--model`.
+- **Fork:** right-click a Claude session → *Fork…*, or `+` → *Fork session…* and paste
+  any Claude session id (one not in `agents.json` or from another folder too), then type
+  a name. It adds a session with that name, a new id, the source's model and
+  `"fork_of": "<source id>"` to `agents.json` and starts its tab with
+  `claude --resume <source id> --fork-session --session-id <new id>`: the conversation so
+  far, going on under its own id, while the source stays as it was. Later starts resume
+  the fork as any other session. Codex and Antigravity sessions cannot be forked.
 - **Codex tabs:** `+` → *New Codex session…* adds a session with `"tool": "codex"` and
   starts `codex` in its tab (with `prompts/<name>.md` as its first message when that file
   exists). Codex chooses the session id itself and writes its transcript
@@ -335,7 +343,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.6`（目前） | `v2.5` 再加上釘選訊息（桌面版、遠端桌面、手機）；在 Claude 和 Codex 分頁拖曳選取文字；從手機上傳檔案；手機 Chat 顯示有選項的提問（加 hook 後連等待中的也會顯示）；手機上的 Markdown 表格畫成表格。詳見 `CHANGELOG.md`。 |
+| `v2.6.1`（目前） | `v2.6` 再加上 fork Claude session（右鍵 → *Fork…*，或 `+` → *Fork session…*）；在 Claude 或 Codex 分頁點一下又能直接打字。詳見 `CHANGELOG.md`。 |
+| `v2.6` | `v2.5` 再加上釘選訊息（桌面版、遠端桌面、手機）；在 Claude 和 Codex 分頁拖曳選取文字；從手機上傳檔案；手機 Chat 顯示有選項的提問（加 hook 後連等待中的也會顯示）；手機上的 Markdown 表格畫成表格。詳見 `CHANGELOG.md`。 |
 | `v2.5` | `v2.4.1` 再加上遠端桌面（透過 Tailscale 在另一台電腦的瀏覽器打開整個視窗），以及 Cross-check 的兩個字數上限（回覆 200、結論 500）。詳見 `CHANGELOG.md`。 |
 | `v2.4.1` | `v2.4` 再加上手機頁顯示各工具的用量；在分頁上按右鍵也有 session 選單；Cross-check 預設勾選有安裝的 Codex；Windows 上讀 `agy models` 時不再閃出主控台視窗。詳見 `CHANGELOG.md`。 |
 | `v2.4` | `v2.3` 再加上透過 Tailscale 的手機頁（session 清單、對話或終端機畫面、按鍵、輸入框）；從剪貼簿貼上圖片；任務的結果、歷史和丟棄；在 session 清單拖曳調整順序；名稱全面改成 Agent Mission Control。詳見 `CHANGELOG.md`。 |
@@ -472,7 +481,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   繼續。已經在別的終端機執行的 session 會留在原處，不會有分頁。
 - **Session 清單**：雙擊 session 會切到它的分頁（沒有終端機的 session，例如排程跑的
   `claude -p`，會顯示它是背景工作）。右鍵有 Copy、Copy all rows、
-  Open on start、Terminate、Model；在分頁列的分頁上按右鍵，也會跳出同一個選單。上下拖曳 session 可以調整順序，順序存進 `agents.json`，
+  Open on start、Terminate、Fork、Model；在分頁列的分頁上按右鍵，也會跳出同一個選單。上下拖曳 session 可以調整順序，順序存進 `agents.json`，
   分頁列也會跟著變。
 - **選取和釘選文字**：在分頁裡拖曳選取（雙擊選一個字）。Claude 和 Codex 會接管滑鼠，
   在它們的分頁裡左鍵改成選取，不會傳給它們；滾輪照常讓它們捲動。在選取的文字上按右鍵
@@ -487,6 +496,12 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   和 Codex 自己選單裡的模型（來自 `~/.codex/models_cache.json`），以 `-m` 傳入。
   Antigravity session 列出的是 *Antigravity default* 和 `agy models` 列出的模型，以
   `--model` 傳入。
+- **Fork**：在 Claude session 上按右鍵 → *Fork…*，或 `+` → *Fork session…* 貼上任一個
+  Claude session id（不在 `agents.json` 裡、或在別的資料夾開的也可以），再輸入名稱。會在
+  `agents.json` 新增一筆：這個名稱、新的 id、來源的 model、`"fork_of": "<來源 id>"`，並在分頁
+  啟動 `claude --resume <來源 id> --fork-session --session-id <新 id>`：帶著到目前為止的對話，
+  用自己的 id 繼續，來源 session 保持不變。之後再啟動就和其他 session 一樣接續 fork 這段對話。
+  Codex 和 Antigravity session 不能 fork。
 - **Codex 分頁**：`+` → *New Codex session…* 會新增一筆 `"tool": "codex"` 的 session，
   並在分頁裡啟動 `codex`（有 `prompts/<name>.md` 時會當成第一則訊息送出）。Codex 的
   session id 由它自己決定，而且要送出第一則訊息才會寫出對話紀錄

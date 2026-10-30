@@ -188,7 +188,8 @@ def agent_argv(entry):
     """The command a tab runs for the agents.json entry. First run creates the
     session with its fixed id and, when
     Agents Launcher/prompts/<name>.md exists, sends that file as its first message;
-    later runs resume the same conversation. --name pins the name in the registry, and
+    later runs resume the same conversation. An entry with "fork_of" (Fork…) starts
+    instead as a copy of that session's conversation (--fork-session). --name pins the name in the registry, and
     the entry's "model", when set, is passed as --model.
 
     A Codex entry cannot choose its id: a new one starts plain `codex` (with the prompt
@@ -219,6 +220,9 @@ def agent_argv(entry):
     model = ['--model', entry['model']] if entry.get('model') else []
     if transcript_path(sid):
         return argv + ['--resume', sid, '--name', name] + model
+    if entry.get('fork_of'):
+        # A fork's first run: the "fork_of" session's conversation so far, under this id.
+        return argv + ['--resume', entry['fork_of'], '--fork-session', '--session-id', sid, '--name', name] + model
     argv += ['--session-id', sid, '--name', name] + model
     if prompt is not None:
         argv.append(prompt)
@@ -391,6 +395,30 @@ class Api:
             if not shutil.which('agy') and '--shell' not in sys.argv:
                 return {'error': 'agy is not on PATH'}
             entry['tool'] = 'agy'
+        core.save_agents(core.agents() + [entry])
+        try:
+            self._start(entry)
+        except Exception as e:
+            return {'error': str(e)}
+        return {'id': entry['id']}
+
+    def fork_session(self, sid, name):
+        """Adds a session named `name` to agents.json that starts from Claude session `sid`'s
+        conversation so far (claude --fork-session), with its model, and starts its tab; `sid`
+        goes on unchanged. Returns {'id': ...} or {'error': ...}."""
+        name = ' '.join(str(name).split())
+        if not name:
+            return {'error': 'type a name'}
+        if any(e['name'] == name for e in core.agents()):
+            return {'error': f"'{name}' is already in agents.json"}
+        source = next((e for e in core.agents() if e['id'] == sid), None)
+        if is_codex(source) or is_agy(source):
+            return {'error': 'only a Claude session can be forked'}
+        if not transcript_path(sid):
+            return {'error': 'that session has no conversation yet'}
+        entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1, 'fork_of': sid}
+        if source and source.get('model'):
+            entry['model'] = source['model']
         core.save_agents(core.agents() + [entry])
         try:
             self._start(entry)
