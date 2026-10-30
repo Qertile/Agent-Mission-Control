@@ -862,6 +862,22 @@ class Api:
         return {'chat': True, 'total': len(msgs), 'status': status,
                 'messages': msgs[-remote.CHAT_MAX:] if len(msgs) != since else []}
 
+    def _remote_usage(self):
+        """Each tool's limits in percent used, as the usage panel shows them:
+        [{'tool', 'limits': [{'caption', 'pct'}]}], a tool left out until it has numbers."""
+        u, out = self._usage, []
+        if u['snap']:
+            out.append({'tool': 'Claude', 'limits': [{'caption': p['caption'], 'pct': round(p['frac'] * 100)}
+                                                     for p in self._claude_usage()['pies']]})
+        cx = u['codex']
+        if cx and cx['windows']:
+            out.append({'tool': 'Codex', 'limits': [{'caption': window_caption(w['minutes']), 'pct': round(w['used'])}
+                                                    for w in cx['windows']]})
+        if u['agy'] and any(is_agy(e) for e in core.agents()):
+            out.append({'tool': 'Antigravity', 'limits': [{'caption': g['group'].replace(' AND ', '/'), 'pct': round(g['used'])}
+                                                          for g in u['agy']]})
+        return [t for t in out if t['limits']]
+
     def _remote_open(self, tid):
         """Starts a closed tab, as the desktop's History does. Returns None or what went wrong."""
         err = self.open_tab(tid)

@@ -296,7 +296,8 @@ def agy_models():
         return []
     try:
         out = subprocess.run([exe, 'models'], capture_output=True, text=True, timeout=30,
-                             stdin=subprocess.DEVNULL).stdout
+                             stdin=subprocess.DEVNULL,
+                             creationflags=0x08000000 if os.name == 'nt' else 0).stdout   # CREATE_NO_WINDOW
     except (OSError, subprocess.SubprocessError):
         return []
     return [line.split('\t')[0] for line in out.splitlines() if '\t' in line]

@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – usage on the phone; no agy window on Windows
+
+### Added
+- **Phone page: usage**, a line per tool with each limit in percent used (Claude 5H and
+  WEEK, Codex's windows, Antigravity's model groups), refreshed every 30 seconds.
+- README: *Phone* (both languages).
+
+### Fixed
+- **Windows: a console window flashed every 10 minutes** while Agent Mission Control read
+  `agy models`; that call now starts agy with no window, as Cross-check already did.
+
 ## 2026-10-30 – v2.4: thinking… on the phone
 
 ### Added

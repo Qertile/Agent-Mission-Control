@@ -18,6 +18,10 @@
          box-sizing: border-box; }
   #head { display: flex; gap: 6px; align-items: center; padding: 6px 8px; background: var(--bar);
           border-bottom: 1px solid var(--line); }
+  #usage { color: var(--note); font-size: 12px; padding: 2px 10px; background: var(--bar);
+           border-bottom: 1px solid var(--line); }
+  #usage:empty { display: none; }
+  #usage b { color: var(--title); font-weight: normal; }
   #dot { width: 10px; height: 10px; border-radius: 50%; background: var(--grey); flex: none; }
   select, button, textarea { font: inherit; color: var(--title); background: var(--bg);
                              border: 1px solid var(--line); border-radius: 4px; }
@@ -54,6 +58,7 @@
   <button id="view">Term</button>
   <button id="smaller">A−</button><button id="bigger">A+</button>
 </div>
+<div id="usage"></div>
 <div id="screen"><div id="term"></div><div id="chat"></div><div id="thinking">thinking…</div></div>
 <div id="msg"></div>
 <div id="keys">
@@ -206,6 +211,16 @@ $('go').onclick = async () => {
   say(r.error);
 };
 
+// Each tool's limits in percent used, the same numbers as the desktop's usage panel.
+async function loadUsage() {
+  try {
+    const u = await call('/api/usage');
+    $('usage').innerHTML = u.map(t => `<div><b>${esc(t.tool)}</b> ` +
+      t.limits.map(l => `${esc(l.caption)} ${l.pct}%`).join(' · ') + '</div>').join('');
+  } catch (e) {}
+}
+loadUsage();
+setInterval(loadUsage, 30000);
 loadTabs().then(poll);
 setInterval(loadTabs, 3000);
 </script>

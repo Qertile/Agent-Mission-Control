@@ -149,6 +149,8 @@ def handler(api, token, web_dir):
                 return self.reply(200, api._remote_tabs())
             if url.path == '/api/out':
                 return self.reply(200, api._remote_out(q.get('id', ''), int(q.get('since') or 0)))
+            if url.path == '/api/usage':
+                return self.reply(200, api._remote_usage())
             if url.path == '/api/chat':
                 return self.reply(200, api._remote_chat(q.get('id', ''), int(q.get('since') or 0)))
             self.reply(404, {'error': 'not found'})

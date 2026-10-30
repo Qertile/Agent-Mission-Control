@@ -119,6 +119,9 @@ running sessions, each one's conversation or terminal, and a box to type into it
 - **Open it:** `http://<Tailscale address>:8770/#t=<token>` once; the phone keeps the
   token and drops it from the address, so later just `http://<Tailscale address>:8770/`
   (it can be added to the home screen). Every request without the token gets 403.
+- **Usage:** a line per tool with its limits in percent used, the same numbers as the
+  usage panel: Claude `5H` and `WEEK`, Codex's windows, Antigravity's model groups. A
+  tool shows once it has numbers (Antigravity only when `agents.json` has an agy session).
 - **Top:** a list of the running sessions with their status; the closed ones are under
   *History*, and picking one opens it, as the desktop's `+` → *History* does.
 - **Chat / Term:** *Chat* (the default) shows only the messages typed and the replies,
@@ -357,6 +360,9 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **打開：** 第一次用 `http://<Tailscale 位址>:8770/#t=<token>`。手機會記住 token，
   並從網址拿掉，之後只要開 `http://<Tailscale 位址>:8770/`（可以加到主畫面）。
   沒有帶 token 的要求一律回 403。
+- **用量：** 每個工具一行，顯示各限制的已用百分比，和用量面板的數字相同：Claude 的
+  `5H` 和 `WEEK`、Codex 的各個週期、Antigravity 的各模型群組。工具有數字後才顯示
+  （Antigravity 要 `agents.json` 裡有 agy session 才會顯示）。
 - **上方清單：** 列出執行中的 session 和狀態；已關閉的放在 *History*，選了就會打開它，
   和桌面版的 `+` → *History* 一樣。
 - **Chat / Term：** *Chat*（預設）只顯示你打的訊息和回答，不顯示工具呼叫和思考過程
