@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.6.1` (current) | `v2.6` plus forking a Claude session (right-click → *Fork…*, or `+` → *Fork session…*) and clicking in a Claude or Codex tab focusing it again. See `CHANGELOG.md`. |
+| `v2.7` (current) | `v2.6.1` plus Relax mode: the Tasks and Sessions columns as a camp, a building per session growing with its messages, people by status, Cross-check campfires, a task board and stamina bars (⚙ → *Layout* → *Relax*). See `CHANGELOG.md`. |
+| `v2.6.1` | `v2.6` plus forking a Claude session (right-click → *Fork…*, or `+` → *Fork session…*) and clicking in a Claude or Codex tab focusing it again. See `CHANGELOG.md`. |
 | `v2.6` | `v2.5` plus pinned messages (desktop, remote desktop and phone), selecting text by dragging in Claude and Codex tabs, files uploaded from the phone, questions with options in the phone's chat view (the one waiting too, with a hook), and Markdown tables drawn as tables on the phone. See `CHANGELOG.md`. |
 | `v2.5` | `v2.4.1` plus the remote desktop (the whole window in another computer's browser over Tailscale) and Cross-check's two word limits (reply 200, conclusion 500). See `CHANGELOG.md`. |
 | `v2.4.1` | `v2.4` plus each tool's usage on the phone page, the session menu on a tab's right-click, Codex ticked by default in Cross-check when installed, and no console window flashing for `agy models` on Windows. See `CHANGELOG.md`. |
@@ -175,6 +176,28 @@ Tailscale network and token as the phone page.
   not change them (in a smaller browser window their right and bottom edges are cut off).
 - **Not available there:** pasting an image from this computer's clipboard (the button
   path; Ctrl+V of an image in that browser saves it here) and dropping files on a terminal.
+
+## Relax mode
+
+The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *Layout* →
+*Relax* (*Office* goes back). The choice is kept per computer; the terminals stay as they are.
+
+- **A building per session**, scattered about the camp, its name under it. It grows with
+  the messages typed into the session: a campfire at 0, a tent from 1, a cabin from 10, a
+  house from 50, a tower from 200 (Antigravity, whose conversations cannot be read: 6 per
+  hour open). An ended session is a wreck with its name in dark grey.
+- **Its person**, near it: working while the session is busy, waving while it waits for
+  you, sitting or strolling about while idle.
+- **A Cross-check discussion** is a campfire with its models on the logs around it; the one
+  answering stands, and the fire burns while a step runs.
+- **Mouse:** hovering shows the name, status and messages; double-click shows the tab
+  (an ended one starts again, a discussion opens); right-click is the session list's menu.
+- **Top:** the open tasks on a board (click a status to change it, as in the Tasks
+  column) and *⚡ Stamina*, each tool's limits left.
+- It draws only what changes, about 7% of one CPU core (Office: 4%), and nothing while the
+  window is hidden or in Office mode.
+- The pictures come from Kenney's *Survival Kit* and *Fantasy Town Kit* (CC0,
+  [kenney.nl](https://www.kenney.nl)); `Session HUD/tools/relax_art.py` makes them, once.
 
 ## Task list
 
@@ -343,7 +366,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.6.1`（目前） | `v2.6` 再加上 fork Claude session（右鍵 → *Fork…*，或 `+` → *Fork session…*）；在 Claude 或 Codex 分頁點一下又能直接打字。詳見 `CHANGELOG.md`。 |
+| `v2.7`（目前） | `v2.6.1` 再加上 Relax 模式：Tasks 和 Sessions 兩欄換成營地，每個 session 一棟隨訊息數長大的建築，小人依狀態動作，Cross-check 是營火，上方有任務公告板和 Stamina（⚙ → *Layout* → *Relax*）。詳見 `CHANGELOG.md`。 |
+| `v2.6.1` | `v2.6` 再加上 fork Claude session（右鍵 → *Fork…*，或 `+` → *Fork session…*）；在 Claude 或 Codex 分頁點一下又能直接打字。詳見 `CHANGELOG.md`。 |
 | `v2.6` | `v2.5` 再加上釘選訊息（桌面版、遠端桌面、手機）；在 Claude 和 Codex 分頁拖曳選取文字；從手機上傳檔案；手機 Chat 顯示有選項的提問（加 hook 後連等待中的也會顯示）；手機上的 Markdown 表格畫成表格。詳見 `CHANGELOG.md`。 |
 | `v2.5` | `v2.4.1` 再加上遠端桌面（透過 Tailscale 在另一台電腦的瀏覽器打開整個視窗），以及 Cross-check 的兩個字數上限（回覆 200、結論 500）。詳見 `CHANGELOG.md`。 |
 | `v2.4.1` | `v2.4` 再加上手機頁顯示各工具的用量；在分頁上按右鍵也有 session 選單；Cross-check 預設勾選有安裝的 Codex；Windows 上讀 `agy models` 時不再閃出主控台視窗。詳見 `CHANGELOG.md`。 |
@@ -465,6 +489,27 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   終端機右邊和下面會被切掉）。
 - **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦），
   以及把檔案拖進終端機。
+
+## Relax 模式
+
+Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layout* → *Relax*（選 *Office*
+換回來）。每台電腦各自記住選擇；終端機分頁不受影響。
+
+- **每個 session 一棟建築**，散布在營地裡，名字寫在下面。打進 session 的訊息越多，建築
+  越大：0 則是營火、1 則起是帳篷、10 則起是小木屋、50 則起是房子、200 則起是高塔
+  （Antigravity 的對話讀不到，改用開著的時間，每小時算 6 則）。結束的 session 變成廢墟，
+  名字是深灰色。
+- **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒著時坐著或四處走走。
+- **Cross-check 討論**是一堆營火，參與的模型坐在周圍的木頭上；正在回答的站著，步驟進行
+  中時有火焰。
+- **滑鼠**：移到上面顯示名稱、狀態和訊息數；雙擊切到它的分頁（結束的會重新啟動，討論會
+  打開）；右鍵是 session 清單的選單。
+- **上方**：公告板列出未完成的任務（點狀態可以改，和 Tasks 欄一樣），*⚡ Stamina* 顯示各
+  工具剩下的用量。
+- 只重畫有變的部分，大約占一個 CPU 核心的 7%（Office 是 4%）；視窗隱藏或在 Office 模式時
+  完全不跑。
+- 圖片來自 Kenney 的 *Survival Kit* 和 *Fantasy Town Kit*（CC0，
+  [kenney.nl](https://www.kenney.nl)），由 `Session HUD/tools/relax_art.py` 產生一次。
 
 ## 任務清單
 

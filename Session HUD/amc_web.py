@@ -59,6 +59,7 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
 PIN_MAX = 20_000                           # characters kept of one pinned message
+AGY_TURNS_PER_HOUR = 6                     # Relax mode's level for Antigravity, which has no readable turns
 # Codex makes a tab's thread as the tab starts (session_meta's time) but writes the
 # rollout only at the first message, so a new tab's thread is the new rollout in
 # WORK_DIR whose thread started this close after the tab.
@@ -67,6 +68,17 @@ THREAD_MATCH = (timedelta(seconds=-2), timedelta(seconds=30))
 
 def pins_path():
     return os.path.join(os.path.dirname(core.AGENTS_PATH), 'pins.json')
+
+
+def typed_message(line, tool):
+    """Whether a transcript line (bytes) is a message typed into the session, told by its
+    text alone, without parsing: for Claude a user line that is not a tool's result, a note
+    of Claude Code's own (isMeta, a <command>) or a subagent's; for Codex a user_message."""
+    if tool == 'codex':
+        return b'"type":"user_message"' in line
+    return (b'"type":"user"' in line and b'"tool_result"' not in line and b'"isMeta":true' not in line
+            and b'"isSidechain":true' not in line and b'"isCompactSummary":true' not in line
+            and b'"content":"<' not in line and b'"text":"<' not in line)
 
 
 def arg_value(flag):
@@ -298,6 +310,7 @@ class Api:
                        'account': None, 'account_at': None, 'account_error': None, 'codex': None,
                        'agy': None, 'agy_at': None}
         self._samples, self._transcripts, self._last_len = {}, {}, {}
+        self._turns = {}                   # transcript path -> (bytes read, turns counted)
         self._sessions = []
         self._codex_models = []
         self._disc_tabs = set()            # the discussions with a tab open on the page
@@ -361,7 +374,8 @@ class Api:
         return self.tabs()
 
     def tabs(self):
-        return [{'id': e['id'], 'name': e['name'], 'running': e['id'] in self._terms} for e in core.agents()]
+        return [{'id': e['id'], 'name': e['name'], 'tool': e.get('tool') or 'claude', 'running': e['id'] in self._terms}
+                for e in core.agents()]
 
     def open_tab(self, tid):
         """Starts the tab's process when it is not running. Returns None or what went wrong."""
@@ -531,7 +545,8 @@ class Api:
                          'tool': (entry or {}).get('tool') or 'claude', 'models': self._models_for(entry),
                          'tab': s['sid'] in self._terms,
                          'headless': s['sid'] not in self._terms and headless(s['pid']),
-                         'samples': list(self._samples.get(s['sid'], []))})
+                         'samples': list(self._samples.get(s['sid'], [])),
+                         'turns': self._turn_count(s, (entry or {}).get('tool') or 'claude')})
         rows += self._discussion_rows()
         note = f"{len(rows)} active · sessions {datetime.now():%H:%M:%S}"
         if u['fetched']:
@@ -541,6 +556,29 @@ class Api:
             elif u['account_error']:
                 note += f" · account: {u['account_error']}"
         return {'rows': rows, 'usage': self._usage_view(), 'note': note}
+
+    def _turn_count(self, s, tool):
+        """How many messages were typed into the session (Relax mode's building level), read
+        on from where the last call stopped. Antigravity's conversations cannot be read: an
+        hour open counts as AGY_TURNS_PER_HOUR."""
+        if tool == 'agy':
+            return int((datetime.now() - s['started']).total_seconds() / 3600 * AGY_TURNS_PER_HOUR) if s.get('started') else 0
+        path = s.get('transcript') or self._transcripts.get(s['sid'])
+        if not path:
+            path = self._transcripts[s['sid']] = transcript_path(s['sid'])
+        if not path:
+            return 0
+        done, n = self._turns.get(path, (0, 0))
+        try:
+            with open(path, 'rb') as f:
+                f.seek(done)
+                data = f.read()
+        except OSError:
+            return n
+        data = data[:data.rfind(b'\n') + 1]   # a line still being written waits for the next call
+        n += sum(1 for line in data.splitlines() if typed_message(line, tool))
+        self._turns[path] = (done + len(data), n)
+        return n
 
     def terminate(self, sid, pid):
         """Ends a session: its tab's process here, otherwise the process itself."""
@@ -671,7 +709,12 @@ class Api:
                          'up': format_uptime(datetime.strptime(d['created'], '%Y-%m-%d %H:%M:%S')),
                          'updated': datetime.fromtimestamp(modified).strftime('%Y-%m-%d %H:%M:%S') if modified else '',
                          'listed': True, 'autoOpen': bool(d.get('autoOpen')), 'model': '', 'tool': 'disc', 'models': [],
-                         'tab': did in self._disc_tabs, 'headless': False, 'samples': []})
+                         'tab': did in self._disc_tabs, 'headless': False, 'samples': [],
+                         # Relax mode's campfire: each participant's tool, and whether its
+                         # answer is under way.
+                         'people': [{'tool': p['tool'], 'talking': any(e['who'] == i and e['status'] == 'thinking'
+                                                                        for e in d['entries'])}
+                                    for i, p in enumerate(d['participants'])]})
         return rows
 
     def discussions(self):

@@ -2,6 +2,30 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – v2.7: Relax mode
+
+### Added
+- **Relax mode** (⚙ → *Layout* → *Relax*, kept per computer): the Tasks and Sessions
+  columns become a camp seen from above (`web/relax.js`), merged from the `relax-mode`
+  branch.
+  - A building per session, scattered, growing with the messages typed into it
+    (transcripts read as they grow; Antigravity: 6 per hour open): campfire 0, tent 1,
+    cabin 10, house 50, tower 200. An ended session is a wreck, its name dark grey.
+  - Its person by status: busy works, waiting waves, idle sits and strolls every 20–40 s.
+  - Cross-check discussions as a campfire with the models on logs, the answering one
+    standing, flames while a step runs.
+  - A sticky top bar: the open tasks on a board (status click opens the status menu) and
+    stamina bars (each tool's limits left).
+  - Hover for name, status and messages; double-click shows the tab, starts an ended
+    session or opens a discussion; right-click is the session menu.
+  - Drawn only when it changes, people on a 5 Hz timer redrawing only their squares:
+    about 7% of one core against Office's 4%, +17 MB; nothing while hidden or in Office.
+  - Pictures: Kenney's Survival Kit and Fantasy Town Kit (CC0), made once by
+    `tools/relax_art.py` + `relax_art.html` (not used at run time).
+- The session rows carry `turns` (messages typed) and the tab list each tab's `tool`.
+- README: *Relax mode* (both languages); Versions: `v2.7`.
+- Tagged `v2.7`.
+
 ## 2026-10-31 – v2.6.1: fork a session
 
 ### Added

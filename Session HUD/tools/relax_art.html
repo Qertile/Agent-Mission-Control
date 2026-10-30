@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Relax art</title>
+<style>body { margin: 0; background: #333; color: #ddd; font: 13px monospace; } canvas { display: block; }</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div id="log"></div>
+<script type="module">
+// Puts Kenney models together and saves each picture as a 256 px transparent PNG. Every
+// picture has the same scale, and the ground point (0, 0, 0) lands at the same place in
+// it (x 50%, y 88%), so Relax mode draws them on one ground line.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+
+const api = () => window.pywebview.api;
+const log = t => { document.getElementById('log').textContent += t + '\n'; };
+const SIZE = 512, OUT = 256, FRAME = 4.6;      // render size, saved size, world units across
+const SK = 1.8;                               // Survival Kit is smaller than the town kit
+
+// [kit, model, x, y, z, turn (degrees about the vertical), scale, tilt x, tilt z (degrees)]
+// Town-kit walls stand on the +x side of their 1 x 1 cell; a turn of 90 puts one on -z,
+// 180 on -x, 270 on +z (the side facing the camera).
+const sides = (y, model, front, x = 0) => [
+  ['ftk', model, x, y, 0, 0], ['ftk', model, x, y, 0, 90], ['ftk', model, x, y, 0, 180], ['ftk', front, x, y, 0, 270]];
+const PICTURES = {
+  'level0': [['sk', 'campfire-pit', 0, 0, 0, 0, SK], ['sk', 'resource-wood', 0.45, 0, -0.25, 40, SK]],
+  'level1': [['sk', 'tent', 0, 0, -0.15, 0, SK], ['sk', 'tent-canvas', 0, 0, -0.15, 0, SK], ['sk', 'campfire-pit', 0.55, 0, 0.6, 0, SK]],
+  'level2': [...sides(0, 'wall-wood', 'wall-wood-door'), ['ftk', 'roof-point', 0, 1, 0, 0],
+             ['sk', 'campfire-pit', 0.85, 0, 0.85, 0, SK]],
+  'level3': [...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall-wood', 'wall-wood-window-shutters'),
+             ['ftk', 'roof-high-point', 0, 2, 0, 0], ['ftk', 'banner-red', 0.62, 0, 0.62, 0]],
+  'level4': [...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall', 'wall-window-stone'),
+             ...sides(2, 'wall', 'wall-window-stone'), ['ftk', 'roof-high-point', 0, 3, 0, 0],
+             ['ftk', 'banner-green', 0.62, 0, 0.62, 0]],
+  // A Cross-check discussion: a fire with a log to sit on for each participant (where
+  // relax.js seats them: SEATS there, in world units).
+  'meeting': [['sk', 'campfire-pit', 0, 0, 0, 0, SK * 1.6], ['sk', 'tree-log', -1.1, 0, 0.15, 0, 1],
+              ['sk', 'tree-log', 0.15, 0, -1.1, 90, 1], ['sk', 'tree-log', -0.85, 0, -0.85, -45, 1]],
+  'tree': [['sk', 'tree', 0, 0, 0, 0, SK]],
+  'tree-autumn': [['sk', 'tree-autumn', 0, 0, 0, 0, SK]],
+  'rock': [['sk', 'rock-a', 0, 0, 0, 0, SK]],
+  // An ended session: its tent fallen down, planks and logs about, the fire out.
+  'ruin': [['sk', 'tent', -0.05, 0.05, -0.1, 20, SK, 0, 78], ['sk', 'tent-canvas-half', 0.2, 0.02, 0.05, -30, SK, 85, 0],
+           ['sk', 'resource-planks', 0.45, 0, 0.3, 25, SK], ['sk', 'tree-log-small', -0.45, 0, 0.3, 110, 1.1],
+           ['sk', 'campfire-pit', 0.55, 0, 0.7, 0, SK]],
+};
+
+const loaders = {}, cache = {};
+async function loader(kit) {
+  if (!loaders[kit]) {
+    const tex = await api().texture(kit);
+    const manager = new THREE.LoadingManager();
+    manager.setURLModifier(url => url.endsWith('colormap.png') ? tex : url);
+    loaders[kit] = new GLTFLoader(manager);
+  }
+  return loaders[kit];
+}
+async function gltf(kit, name) {
+  const key = kit + '/' + name;
+  if (!cache[key]) {
+    const b64 = await api().model(kit, name);
+    const buf = Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+    const l = await loader(kit);
+    cache[key] = await new Promise((ok, fail) => l.parse(buf, '', ok, fail));
+  }
+  return cache[key];
+}
+async function model(kit, name) { return (await gltf(kit, name)).scene.clone(); }
+
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(SIZE, SIZE);
+renderer.setClearColor(0x000000, 0);
+document.body.appendChild(renderer.domElement);
+const camera = new THREE.OrthographicCamera(-FRAME / 2, FRAME / 2, FRAME * 0.88, -FRAME * 0.12, 0.1, 100);
+camera.position.set(10, 8.5, 10);
+camera.lookAt(0, 0, 0);
+const small = document.createElement('canvas');
+small.width = small.height = OUT;
+
+async function picture(name, parts) {
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 2.4));
+  const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+  sun.position.set(4, 8, 3);
+  scene.add(sun);
+  for (const [kit, m, x, y, z, turn, scale = 1, tiltX = 0, tiltZ = 0] of parts) {
+    const o = await model(kit, m);
+    o.position.set(x, y, z);
+    o.rotation.set(tiltX * Math.PI / 180, turn * Math.PI / 180, tiltZ * Math.PI / 180, 'YXZ');
+    o.scale.setScalar(scale);
+    scene.add(o);
+  }
+  renderer.render(scene, camera);
+  const g = small.getContext('2d');
+  g.clearRect(0, 0, OUT, OUT);
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(renderer.domElement, 0, 0, OUT, OUT);
+  return api().save(name, small.toDataURL('image/png'));
+}
+
+// The people: one row per tool, 28 frames of 128 px each: 14 facing the lower right, then
+// the same 14 facing the lower left. Of each 14: 0 standing, 1-4 walking, 5-8 working
+// (interact), 9-12 waving (emote-yes), 13 sitting. Half the buildings' frame at half the
+// size, so a person has the buildings' scale when Relax mode draws a frame at half a
+// building's size, its feet at the same 88% line.
+const PEOPLE = [['claude', 'character-female-c'], ['codex', 'character-female-e'], ['agy', 'character-male-c']];
+const CELL = 128;
+// [clip, frames]: each clip's frames are spread over one cycle of it.
+const ACTS = [['idle', 1], ['walk', 4], ['interact-right', 4], ['emote-yes', 4], ['sit', 1]];
+const PER_DIR = ACTS.reduce((n, [, k]) => n + k, 0);
+async function people() {
+  const cam = new THREE.OrthographicCamera(-FRAME / 4, FRAME / 4, FRAME / 2 * 0.88, -FRAME / 2 * 0.12, 0.1, 100);
+  cam.position.copy(camera.position);
+  cam.lookAt(0, 0, 0);
+  const sheet = document.createElement('canvas');
+  sheet.width = CELL * PER_DIR * 2; sheet.height = CELL * PEOPLE.length;
+  const g = sheet.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  for (const [row, [, name]] of PEOPLE.entries()) {
+    const src = await gltf('mc', name);
+    const clip = n => src.animations.find(a => a.name === n);
+    for (const [d, turn] of [[0, 90], [1, 0]]) {           // facing +x shows lower right, +z lower left
+      let f = 0;
+      for (const [name, n] of ACTS) {
+        const c = clip(name);
+        for (let k = 0; k < n; k++, f++) {
+          const scene = new THREE.Scene();
+          scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 2.4));
+          const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+          sun.position.set(4, 8, 3);
+          scene.add(sun);
+          const o = SkeletonUtils.clone(src.scene);
+          o.rotation.y = turn * Math.PI / 180;
+          scene.add(o);
+          const mixer = new THREE.AnimationMixer(o);
+          mixer.clipAction(c).play();
+          // One frame: the clip's start (sitting: its end, seated); several: through it.
+          mixer.setTime(n === 1 ? (name === 'sit' ? c.duration * 0.99 : 0) : k / n * c.duration);
+          renderer.render(scene, cam);
+          g.drawImage(renderer.domElement, (d * PER_DIR + f) * CELL, row * CELL, CELL, CELL);
+        }
+      }
+    }
+  }
+  return api().save('people', sheet.toDataURL('image/png'));
+}
+
+// The module may load after pywebview is ready, or before.
+async function run() {
+  const done = [];
+  try {
+    for (const [name, parts] of Object.entries(PICTURES)) done.push(await picture(name, parts));
+    done.push(await people());
+    await api().done('saved:\n' + done.join('\n'));
+  } catch (e) {
+    log('failed: ' + e);
+    await api().done('failed: ' + e + '\n' + done.join('\n'));
+  }
+}
+if (window.pywebview && window.pywebview.api && window.pywebview.api.model) run();
+else window.addEventListener('pywebviewready', run);
+</script>
+</body>
+</html>
