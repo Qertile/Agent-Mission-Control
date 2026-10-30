@@ -858,7 +858,8 @@ class Api:
         else:
             path, parse = core.transcript_path(tid), remote.claude_message
         msgs = remote.chat(path, parse) if path else []
-        return {'chat': True, 'total': len(msgs),
+        status = next((s['status'] for s in self._sessions if s['sid'] == tid), '')
+        return {'chat': True, 'total': len(msgs), 'status': status,
                 'messages': msgs[-remote.CHAT_MAX:] if len(msgs) != since else []}
 
     def _remote_open(self, tid):

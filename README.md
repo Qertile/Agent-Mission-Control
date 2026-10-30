@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.3` (current) | `v2.2` plus Cross-check: Claude, Codex and Antigravity discuss or review one question in a `⚖` tab, with a summary, follow-ups with a conclusion, the total tokens in the session list, and *Send to…* a session's tab. See `CHANGELOG.md`. |
+| `v2.4` (current) | `v2.3` plus the phone page over Tailscale (sessions, chat or terminal view, keys, a message box), images pasted from the clipboard, task results with a history and Discard, sessions reordered by dragging in the session list, and the name Agent Mission Control throughout. See `CHANGELOG.md`. |
+| `v2.3` | `v2.2` plus Cross-check: Claude, Codex and Antigravity discuss or review one question in a `⚖` tab, with a summary, follow-ups with a conclusion, the total tokens in the session list, and *Send to…* a session's tab. See `CHANGELOG.md`. |
 | `v2.2` | `v2.1` plus themes (`⚙`), Antigravity (`agy`) tabs, the usage panel split per tool (Claude, Codex, Antigravity) with each weekly reset, a pulsing dot on busy tabs, the taskbar icon, and `+` `⇔` `⚙` pinned at the right of the tab bar. See `CHANGELOG.md`. |
 | `v2.1` | `v2.0` plus a model per session, Codex tabs, panes as in VS Code (split by dragging a tab onto a pane's edge, tab order by dragging), files dropped on a pane typed in as paths, and Ctrl+Tab between tabs. See `CHANGELOG.md`. |
 | `v2.0` | One Agent Mission Control window (`amc_web.py`, pywebview + xterm.js) with the task list, the session monitor and a terminal tab per session; the same code on Windows and Linux. The Agents Launcher only starts this window. |
@@ -121,7 +122,8 @@ running sessions, each one's conversation or terminal, and a box to type into it
 - **Top:** a list of the running sessions with their status; the closed ones are under
   *History*, and picking one opens it, as the desktop's `+` → *History* does.
 - **Chat / Term:** *Chat* (the default) shows only the messages typed and the replies,
-  without tool calls or thinking (Claude and Codex). *Term* shows the tab's terminal at
+  without tool calls or thinking (Claude and Codex), and a pulsing *thinking…* line at
+  the bottom while the session is busy. *Term* shows the tab's terminal at
   the desktop's size; switch to it to see a permission prompt. Antigravity sessions show
   *Term* only (their conversations are stored in a binary format). A− / A+ change the
   text size.
@@ -281,7 +283,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.3`（目前） | `v2.2` 再加上 Cross-check：Claude、Codex、Antigravity 在 `⚖` 分頁裡討論或審查同一個問題，最後整理；追問會附結論；session 清單顯示所有模型的 token 總數；結論可用 *Send to…* 送進 session 分頁。詳見 `CHANGELOG.md`。 |
+| `v2.4`（目前） | `v2.3` 再加上透過 Tailscale 的手機頁（session 清單、對話或終端機畫面、按鍵、輸入框）；從剪貼簿貼上圖片；任務的結果、歷史和丟棄；在 session 清單拖曳調整順序；名稱全面改成 Agent Mission Control。詳見 `CHANGELOG.md`。 |
+| `v2.3` | `v2.2` 再加上 Cross-check：Claude、Codex、Antigravity 在 `⚖` 分頁裡討論或審查同一個問題，最後整理；追問會附結論；session 清單顯示所有模型的 token 總數；結論可用 *Send to…* 送進 session 分頁。詳見 `CHANGELOG.md`。 |
 | `v2.2` | `v2.1` 再加上：主題（`⚙`）、Antigravity（`agy`）分頁、用量面板依工具分段（Claude、Codex、Antigravity）並顯示各自的週重置時間、busy 分頁的圓點會閃、工作列圖示，以及 `+` `⇔` `⚙` 固定在分頁列右邊。詳見 `CHANGELOG.md`。 |
 | `v2.1` | `v2.0` 再加上：每個 session 可選模型、Codex 分頁、像 VS Code 的窗格（把分頁拖到窗格邊緣來分割、拖曳分頁排順序）、檔案拖到窗格會打出路徑、Ctrl+Tab 切換分頁。詳見 `CHANGELOG.md`。 |
 | `v2.0` | 單一 Agent Mission Control 視窗（`amc_web.py`，pywebview 加 xterm.js），裡面有任務清單、Session Monitor，每個 session 一個終端機分頁；Windows 和 Linux 用同一份程式。Agents Launcher 只負責啟動這個視窗。 |
@@ -357,7 +360,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **上方清單：** 列出執行中的 session 和狀態；已關閉的放在 *History*，選了就會打開它，
   和桌面版的 `+` → *History* 一樣。
 - **Chat / Term：** *Chat*（預設）只顯示你打的訊息和回答，不顯示工具呼叫和思考過程
-  （Claude 和 Codex）。*Term* 顯示那個分頁的終端機畫面，大小和桌面版相同；要看權限詢問
+  （Claude 和 Codex）；session 忙的時候，最下面有一行閃爍的 *thinking…*。*Term* 顯示那個分頁的終端機畫面，大小和桌面版相同；要看權限詢問
   時切到這裡。Antigravity 的對話以二進位格式儲存，所以只有 *Term*。A− / A+ 調整字的大小。
 - **按鍵：** `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` 直接打進 session，足夠回答權限詢問。
   權限詢問在桌面版的分頁上也照常顯示。

@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – v2.4: thinking… on the phone
+
+### Added
+- **Chat view shows *thinking…*** at the bottom while the session is busy, pulsing like a
+  busy tab's dot on the desktop; it goes when the session is idle. The chat API now
+  returns the session's status.
+- Tagged `v2.4`.
+
 ## 2026-10-30 – phone page
 
 ### Added

@@ -31,7 +31,11 @@
        font-size: var(--chat-font, 14px); line-height: 1.4; }
   .m.user { background: var(--line); color: var(--accent); margin-left: 15%; }
   .m.assistant { color: var(--title); }
-  body.chat #term, body:not(.chat) #chat { display: none; }
+  body.chat #term, body:not(.chat) #chat, body:not(.chat) #thinking, body:not(.busy) #thinking { display: none; }
+  /* While the session works: the same pulse as a busy tab's dot on the desktop. */
+  #thinking { color: var(--note); font-style: italic; padding: 0 16px 10px; font-size: var(--chat-font, 14px);
+              animation: pulse 0.8s ease-in-out infinite alternate; }
+  @keyframes pulse { to { opacity: 0.2; } }
   #keys { display: flex; gap: 4px; padding: 4px 8px; overflow-x: auto; border-top: 1px solid var(--line); }
   #keys button { padding: 6px 9px; }
   #send { display: flex; gap: 6px; padding: 4px 8px 8px; }
@@ -50,7 +54,7 @@
   <button id="view">Term</button>
   <button id="smaller">A−</button><button id="bigger">A+</button>
 </div>
-<div id="screen"><div id="term"></div><div id="chat"></div></div>
+<div id="screen"><div id="term"></div><div id="chat"></div><div id="thinking">thinking…</div></div>
 <div id="msg"></div>
 <div id="keys">
   <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
@@ -106,6 +110,10 @@ function drawView() {
   $('view').disabled = !t || t.tool === 'agy';
 }
 
+function showStatus(status) {
+  $('dot').style.background = COLORS[status] || 'var(--grey)';
+  document.body.classList.toggle('busy', status === 'busy' || status === 'running');
+}
 function drawTabs() {
   const sel = $('tabs');
   // Running tabs on top; closed ones under History, as in the desktop's + menu. Picking one opens it.
@@ -117,7 +125,7 @@ function drawTabs() {
       closed.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('') + '</optgroup>' : '');
   sel.value = current;
   const t = tabs.find(t => t.id === current);
-  $('dot').style.background = COLORS[t && t.status] || 'var(--grey)';
+  showStatus(t && t.status);
   drawView();
 }
 async function loadTabs() {
@@ -131,7 +139,13 @@ function pick(id) { reset(id); drawTabs(); }
 
 async function pollChat() {
   const id = current, o = await call(`/api/chat?id=${encodeURIComponent(id)}&since=${said}`);
-  if (id !== current || !o.chat || o.total === said) return;
+  if (id !== current || !o.chat) return;
+  const was = document.body.classList.contains('busy');
+  showStatus(o.status);
+  if (o.total === said) {
+    if (!was && document.body.classList.contains('busy')) $('screen').scrollTop = $('screen').scrollHeight;
+    return;
+  }
   const screen = $('screen'), atEnd = said < 0 || screen.scrollTop + screen.clientHeight >= screen.scrollHeight - 40;
   $('chat').innerHTML = o.messages.map(m => `<div class="m ${m.who === 'user' ? 'user' : 'assistant'}">${esc(m.text)}</div>`).join('')
     || '<div class="m assistant">(no messages yet)</div>';
