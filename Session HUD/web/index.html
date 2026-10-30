@@ -59,6 +59,8 @@
   #grid { flex: 1; overflow-y: auto; }
   .row-s { border-bottom: 1px solid var(--bar); min-height: 48px; cursor: default; }
   .row-s.sel { background: var(--bar); }
+  .row-s.mark-before { box-shadow: inset 0 3px 0 var(--accent); }    /* where a dragged row would go */
+  .row-s.mark-after { box-shadow: inset 0 -3px 0 var(--accent); }
   .row-s .who { display: flex; align-items: center; text-align: left; padding: 4px 8px; gap: 8px; min-width: 0; }
   .row-s .who svg { flex-shrink: 0; }
   .row-s .who .txt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -1177,9 +1179,10 @@ function spark(samples, scale) {
          `<polyline points="${line}" style="fill:none;stroke:var(--accent)" stroke-width="1.4"/></svg>`;
 }
 function drawGrid() {
+  if (rowDrag) return;                       // a redraw would end the drag
   const scale = Math.max(2048, ...rows.flatMap(r => r.samples));
   $('grid').innerHTML = rows.length ? rows.map((r, i) => `
-    <div class="row-s${r.sid === selected ? ' sel' : ''}" data-i="${i}">
+    <div class="row-s${r.sid === selected ? ' sel' : ''}" data-i="${i}"${r.listed && !r.disc ? ' draggable="true"' : ''}>
       <div class="who"><div class="txt">${r.disc ? `<span class="${r.tab ? 'tabmark' : ''}">⚖</span>`
                                                 : r.tab ? '<span class="tabmark">▸</span>' : '▹'} ${esc(r.name)}
         <div class="sub">· ${esc(r.short)}${r.disc ? '' : `  (pid ${esc(r.pid)})`}</div></div>${spark(r.samples, scale)}</div>
@@ -1188,6 +1191,44 @@ function drawGrid() {
     </div>`).join('') : '<div class="note" style="padding:8px">No active sessions</div>';
 }
 const rowAt = e => { const el = e.target.closest('.row-s'); return el ? rows[+el.dataset.i] : null; };
+// Drag an agents.json session up or down the list: it moves in agents.json, so the tab
+// bar follows (as dragging a tab along the tab bar does).
+let rowDrag = null, rowTarget = null;     // the sid dragged; [sid, after] of the marked spot
+function rowMark(el, target) {
+  document.querySelectorAll('.row-s.mark-before, .row-s.mark-after')
+    .forEach(x => x.classList.remove('mark-before', 'mark-after'));
+  rowTarget = target;
+  if (el && target) el.classList.add(target[1] ? 'mark-after' : 'mark-before');
+}
+$('grid').addEventListener('dragstart', e => {
+  const r = rowAt(e);
+  if (!r || !r.listed || r.disc) { e.preventDefault(); return; }
+  rowDrag = r.sid;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', r.name);
+});
+$('grid').addEventListener('dragover', e => {
+  if (!rowDrag) return;
+  e.preventDefault();
+  const el = e.target.closest('.row-s'), r = rowAt(e);
+  if (!r || !r.listed || r.disc || r.sid === rowDrag) { rowMark(null, null); return; }
+  const b = el.getBoundingClientRect();
+  e.dataTransfer.dropEffect = 'move';
+  rowMark(el, [r.sid, e.clientY > b.top + b.height / 2]);
+});
+$('grid').addEventListener('drop', async e => {
+  if (!rowDrag) return;
+  e.preventDefault();
+  const id = rowDrag, target = rowTarget;
+  rowDrag = null;
+  rowMark(null, null);
+  if (target) {
+    await api().move_session(id, target[0], target[1]);
+    await amc.syncTabs();
+  }
+  refresh();
+});
+$('grid').addEventListener('dragend', () => { rowDrag = null; rowMark(null, null); drawGrid(); });
 // The list is redrawn every second, which loses the browser's dblclick, so a second
 // click on the same row within 400 ms counts as one.
 let lastClick = {sid: null, at: 0};

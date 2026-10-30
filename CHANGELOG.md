@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – reorder sessions in the session list
+
+### Added
+- **Drag a session up or down the session list** to reorder it; a bar marks where it will
+  go. The order is saved in `agents.json` (as dragging a tab does), so the tab bar follows.
+  Only `agents.json` sessions move; discussions and sessions from other terminals don't.
+- README: *Session list* (both languages).
+
 ## 2026-10-30 – status menu order
 
 ### Changed
