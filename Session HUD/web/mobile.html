@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060a06">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>AMC</title>
+<link rel="stylesheet" href="xterm.css">
+<style>
+  :root { --bg: #060a06; --bar: #0a100a; --line: #16301c; --accent: #33ff66; --title: #8cff8c;
+          --note: #5a9664; --busy: #00dcff; --wait: #ffc400; --idle: #8cff8c; --grey: #8c96a0; --red: #ff5a5a; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--title);
+               font-family: 'DejaVu Sans Mono', Consolas, monospace; font-size: 14px; }
+  body { display: flex; flex-direction: column; height: 100dvh;
+         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+         box-sizing: border-box; }
+  #head { display: flex; gap: 6px; align-items: center; padding: 6px 8px; background: var(--bar);
+          border-bottom: 1px solid var(--line); }
+  #dot { width: 10px; height: 10px; border-radius: 50%; background: var(--grey); flex: none; }
+  select, button, textarea { font: inherit; color: var(--title); background: var(--bg);
+                             border: 1px solid var(--line); border-radius: 4px; }
+  select { flex: 1; min-width: 0; padding: 6px; appearance: none; -webkit-appearance: none; }
+  button { padding: 6px 10px; flex: none; }
+  button:active { background: var(--line); }
+  #screen { flex: 1; overflow: auto; min-height: 0; -webkit-overflow-scrolling: touch; }
+  #term { display: inline-block; }
+  #chat { padding: 8px; }
+  .m { white-space: pre-wrap; word-break: break-word; margin: 0 0 10px; padding: 6px 8px; border-radius: 6px;
+       font-size: var(--chat-font, 14px); line-height: 1.4; }
+  .m.user { background: var(--line); color: var(--accent); margin-left: 15%; }
+  .m.assistant { color: var(--title); }
+  body.chat #term, body:not(.chat) #chat { display: none; }
+  #keys { display: flex; gap: 4px; padding: 4px 8px; overflow-x: auto; border-top: 1px solid var(--line); }
+  #keys button { padding: 6px 9px; }
+  #send { display: flex; gap: 6px; padding: 4px 8px 8px; }
+  textarea { flex: 1; min-width: 0; padding: 6px; resize: none; height: 2.6em; }
+  #msg { color: var(--red); font-size: 12px; padding: 0 8px; }
+  #msg:empty { display: none; }
+  #login { padding: 16px; }
+  #login input { font: inherit; width: 100%; box-sizing: border-box; padding: 6px; margin: 8px 0;
+                 color: var(--title); background: var(--bg); border: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div id="head">
+  <span id="dot"></span>
+  <select id="tabs"></select>
+  <button id="view">Term</button>
+  <button id="smaller">A−</button><button id="bigger">A+</button>
+</div>
+<div id="screen"><div id="term"></div><div id="chat"></div></div>
+<div id="msg"></div>
+<div id="keys">
+  <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+  <button data-key="up">↑</button><button data-key="down">↓</button>
+  <button data-key="backspace">⌫</button><button data-key="enter">Enter</button><button data-key="esc">Esc</button>
+  <button data-key="shift-tab">⇧Tab</button>
+</div>
+<div id="send">
+  <textarea id="text" placeholder="Message"></textarea>
+  <button id="go">Send</button>
+</div>
+<script src="xterm.js"></script>
+<script>
+// The token comes once in the link (#t=...), then is kept on the phone and dropped from the address.
+function store(k, v) { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch (e) {} return v; }
+const fromLink = new URLSearchParams(location.hash.slice(1)).get('t');
+if (fromLink) { store('amc-token', fromLink); history.replaceState(null, '', location.pathname); }
+const token = store('amc-token');
+const $ = id => document.getElementById(id);
+const COLORS = {busy: 'var(--busy)', running: 'var(--busy)', waiting: 'var(--wait)', idle: 'var(--idle)'};
+
+if (!token) {
+  document.body.innerHTML = '<div id="login">Open the link with its token (…/#t=&lt;token&gt;), or type the token from hud-config.json:' +
+    '<input id="tok" autocomplete="off"><button id="ok">OK</button></div>';
+  $('ok').onclick = () => { store('amc-token', $('tok').value.trim()); location.reload(); };
+  throw new Error('no token');
+}
+
+async function call(path, body) {
+  const r = await fetch(path, body === undefined ? {headers: {'X-AMC-Token': token}} :
+    {method: 'POST', headers: {'X-AMC-Token': token, 'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  if (r.status === 403) { store('amc-token', ''); throw new Error('wrong token: open the link with the token again'); }
+  return r.json();
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c]); }
+function say(text) { $('msg').textContent = text || ''; }
+
+let font = +(store('amc-font') || 9);
+const term = new Terminal({fontFamily: "'DejaVu Sans Mono', Consolas, monospace", fontSize: font,
+  scrollback: 5000, disableStdin: true, cursorBlink: false,
+  theme: {background: '#060a06', foreground: '#8cff8c', cursor: '#33ff66'}});
+term.open($('term'));
+
+let tabs = [], current = store('amc-tab') || '', since = 0, size = '', said = -1;
+// Chat shows only the typed messages and the replies (Claude, Codex); Term shows the
+// terminal, needed to see a permission prompt. Antigravity has Term only.
+let wantChat = store('amc-view') !== 'term';
+function chatView() { const t = tabs.find(t => t.id === current); return wantChat && !!t && t.tool !== 'agy'; }
+function drawView() {
+  document.body.classList.toggle('chat', chatView());
+  const t = tabs.find(t => t.id === current);
+  $('view').textContent = chatView() ? 'Term' : 'Chat';
+  $('view').disabled = !t || t.tool === 'agy';
+}
+
+function drawTabs() {
+  const sel = $('tabs');
+  // Running tabs on top; closed ones under History, as in the desktop's + menu. Picking one opens it.
+  const open = tabs.filter(t => t.running), closed = tabs.filter(t => !t.running);
+  if (!open.some(t => t.id === current)) reset((open[0] || {}).id || '');
+  sel.innerHTML = (open.length ? '' : '<option value="">(no session running)</option>') +
+    open.map(t => `<option value="${esc(t.id)}">${esc(t.name)} · ${esc(t.status || '-')}</option>`).join('') +
+    (closed.length ? '<optgroup label="History">' +
+      closed.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('') + '</optgroup>' : '');
+  sel.value = current;
+  const t = tabs.find(t => t.id === current);
+  $('dot').style.background = COLORS[t && t.status] || 'var(--grey)';
+  drawView();
+}
+async function loadTabs() {
+  try { tabs = await call('/api/tabs'); drawTabs(); say(''); } catch (e) { say(e.message); }
+}
+function reset(id) {
+  if (id === current) return;
+  current = id; store('amc-tab', id); since = 0; size = ''; said = -1; term.reset(); $('chat').innerHTML = '';
+}
+function pick(id) { reset(id); drawTabs(); }
+
+async function pollChat() {
+  const id = current, o = await call(`/api/chat?id=${encodeURIComponent(id)}&since=${said}`);
+  if (id !== current || !o.chat || o.total === said) return;
+  const screen = $('screen'), atEnd = said < 0 || screen.scrollTop + screen.clientHeight >= screen.scrollHeight - 40;
+  $('chat').innerHTML = o.messages.map(m => `<div class="m ${m.who === 'user' ? 'user' : 'assistant'}">${esc(m.text)}</div>`).join('')
+    || '<div class="m assistant">(no messages yet)</div>';
+  said = o.total;
+  if (atEnd) screen.scrollTop = screen.scrollHeight;
+}
+
+async function poll() {
+  if (current && chatView()) {
+    try { await pollChat(); } catch (e) { say(e.message); }
+  } else if (current) {
+    try {
+      const id = current, o = await call(`/api/out?id=${encodeURIComponent(id)}&since=${since}`);
+      if (id === current) {
+        if (o.size && o.size.join() !== size) { size = o.size.join(); term.resize(o.size[0], o.size[1]); }
+        if (o.reset) term.reset();
+        if (o.data) {
+          const screen = $('screen'), atEnd = screen.scrollTop + screen.clientHeight >= screen.scrollHeight - 20;
+          term.write(o.data, () => { if (atEnd) screen.scrollTop = screen.scrollHeight; });
+        }
+        since = o.end;
+      }
+    } catch (e) { say(e.message); }
+  }
+  setTimeout(poll, 400);
+}
+
+$('tabs').onchange = async e => {
+  const id = e.target.value, t = tabs.find(t => t.id === id);
+  if (t && !t.running) {
+    e.target.value = current;
+    say('opening ' + t.name + '…');
+    const r = await call('/api/open', {id}).catch(err => ({error: err.message}));
+    if (r.error) return say(r.error);
+    await loadTabs();
+  }
+  pick(id);
+};
+$('view').onclick = () => {
+  wantChat = !chatView(); store('amc-view', wantChat ? 'chat' : 'term'); drawView();
+  const screen = $('screen'); screen.scrollTop = screen.scrollHeight;
+};
+function setFont() { term.options.fontSize = font; document.body.style.setProperty('--chat-font', (font + 5) + 'px'); store('amc-font', font); }
+setFont();
+$('smaller').onclick = () => { font = Math.max(5, font - 1); setFont(); };
+$('bigger').onclick = () => { font = Math.min(20, font + 1); setFont(); };
+document.querySelectorAll('#keys button').forEach(b => b.onclick = async () => {
+  const r = await call('/api/key', {id: current, key: b.dataset.key}).catch(e => ({error: e.message}));
+  say(r.error);
+});
+$('go').onclick = async () => {
+  const text = $('text').value;
+  if (!text.trim() || !current) return;
+  $('go').disabled = true;
+  const r = await call('/api/send', {id: current, text}).catch(e => ({error: e.message}));
+  $('go').disabled = false;
+  if (!r.error) $('text').value = '';
+  say(r.error);
+};
+
+loadTabs().then(poll);
+setInterval(loadTabs, 3000);
+</script>
+</body>
+</html>

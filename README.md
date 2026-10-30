@@ -102,6 +102,34 @@ Differences from Windows:
     Built-in prices cover Opus 5.5 / 5, Sonnet 5.5 / 5 and Haiku 5.5; other models
     are charged like Sonnet.
 
+## Phone
+
+Off until you turn it on. Agent Mission Control can serve a page for your phone: the
+running sessions, each one's conversation or terminal, and a box to type into it.
+
+- **Turn it on:** add `"remote": {"token": "<a long random string>"}` to
+  `Session HUD/hud-config.json` and restart Agent Mission Control. Remove the block to turn
+  it off.
+- **Network:** it listens only on this computer's [Tailscale](https://tailscale.com)
+  address (`tailscale ip -4`), port 8770, so only devices on your Tailscale account reach
+  it, encrypted. Install Tailscale on the computer and the phone with the same login. It
+  starts within 30 seconds of Tailscale coming up. `"host"` and `"port"` in the block
+  override the address and port.
+- **Open it:** `http://<Tailscale address>:8770/#t=<token>` once; the phone keeps the
+  token and drops it from the address, so later just `http://<Tailscale address>:8770/`
+  (it can be added to the home screen). Every request without the token gets 403.
+- **Top:** a list of the running sessions with their status; the closed ones are under
+  *History*, and picking one opens it, as the desktop's `+` → *History* does.
+- **Chat / Term:** *Chat* (the default) shows only the messages typed and the replies,
+  without tool calls or thinking (Claude and Codex). *Term* shows the tab's terminal at
+  the desktop's size; switch to it to see a permission prompt. Antigravity sessions show
+  *Term* only (their conversations are stored in a binary format). A− / A+ change the
+  text size.
+- **Keys:** `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` are typed straight into the session, enough to
+  answer a permission prompt. Permission prompts still show in the desktop tab too.
+- **Message box:** *Send* types the text into the session and submits it, as if typed
+  at the desktop.
+
 ## Task list
 
 `Task Manager\CLAUDE.md` tells a Claude session how to keep the task list:
@@ -311,6 +339,29 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   - `modelPrices`（可選）：覆寫或新增模型牌價，單位為每百萬 token 美元，格式
     `[輸入, 輸出, cache write, cache read]`，例如 `"opus-5-5": [4, 20, 5, 0.2]`。
     內建已有 Opus 5.5／5、Sonnet 5.5／5、Haiku 5.5 的價格；其他模型以 Sonnet 價格計算。
+
+## 手機
+
+預設關閉。開啟後，Agent Mission Control 會提供一個手機頁：列出執行中的 session，
+可以看每個 session 的對話或終端機畫面，也能輸入文字給它。
+
+- **開啟：** 在 `Session HUD/hud-config.json` 加上 `"remote": {"token": "<一串夠長的亂碼>"}`，
+  重開 Agent Mission Control。刪掉這段就關閉。
+- **網路：** 只在這台電腦的 [Tailscale](https://tailscale.com) 位址（`tailscale ip -4`）
+  的 8770 port 上提供，所以只有登入同一個 Tailscale 帳號的裝置連得到，連線有加密。
+  電腦和手機都要裝 Tailscale 並登入同一個帳號。Tailscale 連上後 30 秒內就會開始提供。
+  這段設定裡的 `"host"` 和 `"port"` 可以改位址和 port。
+- **打開：** 第一次用 `http://<Tailscale 位址>:8770/#t=<token>`。手機會記住 token，
+  並從網址拿掉，之後只要開 `http://<Tailscale 位址>:8770/`（可以加到主畫面）。
+  沒有帶 token 的要求一律回 403。
+- **上方清單：** 列出執行中的 session 和狀態；已關閉的放在 *History*，選了就會打開它，
+  和桌面版的 `+` → *History* 一樣。
+- **Chat / Term：** *Chat*（預設）只顯示你打的訊息和回答，不顯示工具呼叫和思考過程
+  （Claude 和 Codex）。*Term* 顯示那個分頁的終端機畫面，大小和桌面版相同；要看權限詢問
+  時切到這裡。Antigravity 的對話以二進位格式儲存，所以只有 *Term*。A− / A+ 調整字的大小。
+- **按鍵：** `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` 直接打進 session，足夠回答權限詢問。
+  權限詢問在桌面版的分頁上也照常顯示。
+- **輸入框：** *Send* 把文字打進 session 並送出，和在桌面版打字一樣。
 
 ## 任務清單
 

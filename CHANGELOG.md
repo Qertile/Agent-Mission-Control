@@ -2,6 +2,20 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – phone page
+
+### Added
+- **A page for the phone** (`Session HUD/remote.py`, `web/mobile.html`), off unless
+  `hud-config.json` has `"remote": {"token": ...}`. It listens only on the Tailscale
+  address, port 8770, and every API call needs the token (403 otherwise).
+- The running sessions in a list, the closed ones under *History* (picking one opens it).
+- *Chat* view: only the typed messages and the replies, read from the Claude transcript or
+  the Codex rollout (no tool calls, no thinking). *Term* view: the tab's terminal at the
+  desktop's size, from the last 400,000 characters of its output that the window now
+  keeps. Antigravity has *Term* only.
+- Keys `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` and a message box that types into the session.
+- README: *Phone* (both languages).
+
 ## 2026-10-30 – name: Agent Mission Control
 
 ### Changed

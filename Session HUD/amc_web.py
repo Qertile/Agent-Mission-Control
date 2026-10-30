@@ -36,6 +36,7 @@ from webview.dom import DOMEventHandler
 
 import amc_core as core
 import discuss
+import remote
 from amc_core import (HERE, TASK_DIR, TASKS_PATH, XLSX_PATH, TASKS_SCRIPT, LAUNCHER_DIR, WORK_DIR,
                       CREATE_ON_SEND, load_json, active_sessions, transcript_path, account_usage,
                       format_tokens, format_remaining, format_uptime)
@@ -53,6 +54,7 @@ ACTIVITY_WINDOW = 60
 # The page's theme variables, so the status colors follow the theme.
 STATUS_COLORS = {'busy': 'var(--busy)', 'running': 'var(--busy)', 'waiting': 'var(--wait)', 'idle': 'var(--idle)'}
 GREY = 'var(--grey)'
+HISTORY = 400_000                          # characters of each tab's output kept for the phone page
 # The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
@@ -230,6 +232,7 @@ class Term:
         self.started = datetime.now()
         self.enters = deque(maxlen=20)     # when Enter was typed: tells apart Codex/agy tabs started together
         self.before = set()                # agy: the conversations there when it started
+        self.size = (100, 30)              # cols, rows: the phone page draws at the same size
         threading.Thread(target=self.pump, args=(tid, on_output, on_exit), daemon=True).start()
 
     def pump(self, tid, on_output, on_exit):
@@ -250,6 +253,7 @@ class Term:
 
     def resize(self, cols, rows):
         self.proc.setwinsize(rows, cols)
+        self.size = (cols, rows)
 
     def alive(self):
         try:
@@ -275,6 +279,7 @@ class Api:
         self._terms = {}                   # agents.json id -> Term while its process runs
         self._out = {}                     # id -> output not yet handed to the page
         self._out_lock = threading.Lock()
+        self._hist = {}                    # id -> {'buf': the latest output, 'end': chars ever written}
         self._start_lock = threading.Lock()
         self._config = load_json(os.path.join(HERE, 'hud-config.json')) or {}
         self._usage = {'snap': None, 'fetched': None, 'failed': False, 'week': None, 'week_at': None,
@@ -296,6 +301,7 @@ class Api:
         threading.Thread(target=self._usage_loop, daemon=True).start()
         threading.Thread(target=self._activity_loop, daemon=True).start()
         threading.Thread(target=self._agy_usage_loop, daemon=True).start()
+        remote.start(self, self._config.get('remote'), os.path.join(HERE, 'web'))
         running = {s['sid'] for s in active_sessions()}
         for e in core.agents():
             # A session already running elsewhere (another terminal) is left there.
@@ -812,6 +818,66 @@ class Api:
     def _output(self, tid, data):
         with self._out_lock:
             self._out[tid] = self._out.get(tid, '') + data
+            h = self._hist.setdefault(tid, {'buf': '', 'end': 0})
+            h['buf'] = (h['buf'] + data)[-HISTORY:]
+            h['end'] += len(data)
+
+    # --- phone page (remote.py) -> python
+
+    def _remote_tabs(self):
+        status = {s['sid']: s['status'] for s in self._sessions}
+        return [{'id': e['id'], 'name': e['name'], 'tool': e.get('tool') or 'claude',
+                 'running': e['id'] in self._terms, 'status': status.get(e['id'], '')}
+                for e in core.agents()]
+
+    def _remote_out(self, tid, since):
+        """The tab's output after `since` (a count of characters), or all that is kept with
+        reset=True when `since` is older than that. size is the terminal's cols and rows."""
+        term = self._terms.get(tid)
+        with self._out_lock:
+            h = self._hist.get(tid) or {'buf': '', 'end': 0}
+            start = h['end'] - len(h['buf'])
+            if start <= since <= h['end']:
+                data, reset = h['buf'][since - start:], False
+            else:
+                data, reset = h['buf'], True
+            end = h['end']
+        return {'data': data, 'end': end, 'reset': reset, 'running': bool(term),
+                'size': term.size if term else None}
+
+    def _remote_chat(self, tid, since):
+        """The conversation without tool calls or thinking: the latest messages when there are
+        more than `since`, else none. chat=False for Antigravity, whose conversations are
+        binary, so the page shows its terminal."""
+        entry = next((e for e in core.agents() if e['id'] == tid), None) or {}
+        if is_agy(entry):
+            return {'chat': False}
+        if is_codex(entry):
+            thread = codex_thread(entry)
+            path, parse = core.codex_rollout(thread) if thread else '', remote.codex_message
+        else:
+            path, parse = core.transcript_path(tid), remote.claude_message
+        msgs = remote.chat(path, parse) if path else []
+        return {'chat': True, 'total': len(msgs),
+                'messages': msgs[-remote.CHAT_MAX:] if len(msgs) != since else []}
+
+    def _remote_open(self, tid):
+        """Starts a closed tab, as the desktop's History does. Returns None or what went wrong."""
+        err = self.open_tab(tid)
+        if not err:
+            self._js('amc.syncTabs()')
+        return err
+
+    def _remote_send(self, tid, text):
+        entry = next((e for e in core.agents() if e['id'] == tid), None)
+        return self.send(entry['name'], text) if entry else 'no such session'
+
+    def _remote_key(self, tid, data):
+        term = self._terms.get(tid)
+        if not term:
+            return 'not running'
+        term.write(data)
+        return None
 
     def _exited(self, tid, term):
         if self._terms.get(tid) is term:
