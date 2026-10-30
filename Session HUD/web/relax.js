@@ -17,6 +17,11 @@ const relax = (() => {
   const TOP = {level0: 0.80, level1: 0.66, level2: 0.56, level3: 0.29, level4: 0.10, ruin: 0.72};  // its top
   const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff'};
   const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0'};
+  // The building grows with the messages typed into the session (agy: its hours open):
+  // a campfire at 0, then a tent, a cabin, a house, a tower.
+  const LEVELS = [[200, 'level4'], [50, 'level3'], [10, 'level2'], [1, 'level1'], [0, 'level0']];
+  const BOARD_MAX = 8;                     // tasks on the board; the rest are counted
+  const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
   const img = {};
   let on = false, sig = '', spots = [], hover = null, msgTimer = 0;
   let bg = null, dpr = 1, plot = 150, timer = 0;
@@ -41,12 +46,14 @@ const relax = (() => {
   // left out), then the agents.json sessions that are not running (ended).
   function buildings() {
     const list = rows.filter(r => !r.disc).map(r => ({id: r.sid, name: r.name, tool: r.tool || 'claude',
-                                                      status: r.status, row: r}));
+                                                      status: r.status, row: r, level: level(r.turns || 0)}));
     const seen = new Set(list.map(b => b.id));
     for (const t of amc.stopped || [])
       if (!seen.has(t.id)) list.push({id: t.id, name: t.name, tool: t.tool || 'claude', status: 'ended', row: null});
     return list;
   }
+
+  function level(turns) { return LEVELS.find(([n]) => turns >= n)[1]; }
 
   // A random number source that gives the same numbers for the same seed.
   function rng(seed) {
@@ -98,7 +105,7 @@ const relax = (() => {
     const cols = Math.max(2, Math.floor(w / 150));
     plot = w / cols;
     // Room for every building with space around it; past that, the camp scrolls.
-    const h = Math.max(box.clientHeight, Math.ceil(list.length / cols) * plot * 1.6 + 60);
+    const h = Math.max(box.clientHeight - $('relax-top').offsetHeight, Math.ceil(list.length / cols) * plot * 1.6 + 60);
     const placed = place(list, w, h, plot);
     dpr = window.devicePixelRatio || 1;
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
@@ -114,8 +121,8 @@ const relax = (() => {
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
     for (const {x: cx, y: ground, b} of [...placed].sort((a, c) => a.y - c.y)) {
-      // An ended session is a wreck; phase 2: the level from the session's finished turns.
-      const level = b.status === 'ended' ? 'ruin' : 'level1';
+      // An ended session is a wreck.
+      const level = b.status === 'ended' ? 'ruin' : b.level;
       const s = plot * 1.5, pic = img[level];
       // A patch of earth under each building.
       g.fillStyle = 'rgba(120, 90, 50, 0.35)';
@@ -263,10 +270,45 @@ const relax = (() => {
   function update(force) {
     if (!on || document.hidden) return;
     const list = buildings(), box = $('relax');
-    const now = JSON.stringify([box.clientWidth, box.clientHeight, list.map(b => [b.id, b.name, b.tool, b.status])]);
+    const now = JSON.stringify([box.clientWidth, box.clientHeight, $('relax-top').offsetHeight,
+                                list.map(b => [b.id, b.name, b.tool, b.status, b.level])]);
     if (now === sig && !force) return;
     sig = now;
     draw(list);
+  }
+
+  // --- above the camp: the open tasks on a board, and each tool's limits as stamina
+
+  let boardTasks = [], staminaSig = '';
+  async function loadTasks() {
+    const {tasks, remaining} = await api().task_list();
+    boardTasks = tasks;
+    const shown = tasks.slice(0, BOARD_MAX), more = tasks.length - shown.length + (remaining || 0);
+    $('board').innerHTML = '<div class="h">📋 Tasks</div>' + (shown.length ? shown.map((t, i) =>
+      `<div class="board-row"><span class="what" title="${esc(t.text)}">${esc(t.text.charAt(0).toUpperCase() + t.text.slice(1))}</span>` +
+      (t.due ? `<span class="due">${esc(t.due)}</span>` : '') +
+      `<span class="st" data-i="${i}" style="color:${TASK_COLORS[t.status] || TASK_COLORS.Pending}">${esc(t.status || 'Pending')}</span></div>`).join('')
+      : '<div class="more">No open tasks</div>') + (more > 0 ? `<div class="more">+${more} more</div>` : '');
+  }
+  // The limits left, as the Office usage panel's pies show them used: green, then
+  // yellow under half, red under a fifth.
+  function stamina(u) {
+    const bars = [];
+    if (u && !u.message) {
+      for (const p of (u.claude && u.claude.pies) || []) bars.push(['Claude ' + p.caption, p.frac]);
+      for (const w of (u.codex && u.codex.windows) || []) bars.push(['Codex ' + w.caption, w.frac]);
+      for (const g of (u.agy && u.agy.groups) || []) bars.push([g.caption, g.frac]);
+    }
+    const now = JSON.stringify(bars);
+    if (now === staminaSig) return;
+    staminaSig = now;
+    $('stamina').innerHTML = '<div class="h">⚡ Stamina</div>' + (bars.length ? bars.map(([k, used]) => {
+      const left = Math.max(0, Math.min(1, 1 - used)), pct = Math.round(left * 100);
+      const color = left < 0.2 ? '#e05a4a' : left < 0.5 ? '#e6b422' : '#6cc04a';
+      return `<div class="bar" title="${esc(k)}: ${Math.round(used * 100)}% used"><span class="k">${esc(k)}</span>` +
+        `<span class="track"><span class="fill" style="display:block;width:${pct}%;background:${color}"></span></span>` +
+        `<span class="v">${pct}%</span></div>`;
+    }).join('') : '<div>reading usage…</div>');
   }
 
   function set(mode) {
@@ -275,7 +317,7 @@ const relax = (() => {
     document.body.classList.toggle('relax', on);
     sig = '';
     clock();
-    if (on) load().then(() => update(true));
+    if (on) { loadTasks(); load().then(() => update(true)); }
   }
 
   function wire() {
@@ -297,12 +339,21 @@ const relax = (() => {
       if (b === hover) return;
       hover = b;
       cv.style.cursor = b ? 'pointer' : '';
-      cv.title = b ? `${b.name} · ${b.status}${b.status === 'ended' ? ' (double-click to start)' : ''}` : '';
+      cv.title = !b ? '' : b.status === 'ended' ? `${b.name} · ended (double-click to start)`
+        : `${b.name} · ${b.status} · ${b.tool === 'agy' ? (b.row.up || '') + ' open' : (b.row.turns || 0) + ' messages'}`;
+    });
+    // A task's status on the board opens the same menu as in the Tasks column.
+    $('board').addEventListener('click', e => {
+      const i = e.target.dataset.i;
+      if (i === undefined) return;
+      e.stopPropagation();
+      taskEdit = boardTasks[+i];
+      showAt($('status-menu'), e.clientX, e.clientY);
     });
     new ResizeObserver(() => update()).observe($('relax'));
     document.addEventListener('visibilitychange', () => { update(); clock(); });
     set(saved() === 'relax' ? 'relax' : 'office');
   }
 
-  return {wire, set, update, get on() { return on; }};
+  return {wire, set, update, stamina, loadTasks, get on() { return on; }};
 })();

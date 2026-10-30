@@ -17,6 +17,24 @@
   #relax { display: none; grid-column: 1 / 4; grid-row: 1; position: relative; min-width: 0; min-height: 0;
            overflow-y: auto; overflow-x: hidden; background: #4b7a46; }
   #relax-canvas { display: block; }
+  /* Above the camp, staying there as it scrolls: the task board and the stamina bars. */
+  #relax-top { position: sticky; top: 0; z-index: 1; display: flex; gap: 8px; padding: 6px; font-size: 12px;
+               background: #6b4a2b; border-bottom: 3px solid #4a3019; color: #fff3d6; }
+  #board { flex: 1; min-width: 0; max-height: 120px; overflow-y: auto; padding: 4px 8px;
+           background: #a87b4f; border: 2px solid #4a3019; border-radius: 3px; box-shadow: inset 0 0 0 2px #c4955f; }
+  #board .h, #stamina .h { color: #fff3d6; font-weight: bold; margin-bottom: 2px; }
+  #board .board-row { display: flex; gap: 8px; color: #2b1a0c; padding: 1px 0; }
+  #board .board-row .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #board .board-row .due { color: #4a3019; }
+  #board .board-row .st { cursor: pointer; font-weight: bold; }
+  #board .board-row .st:hover { text-decoration: underline; }
+  #board .more { color: #4a3019; font-style: italic; }
+  #stamina { width: 230px; flex: none; }
+  #stamina .bar { display: grid; grid-template-columns: 90px 1fr 38px; gap: 6px; align-items: center; margin: 2px 0; }
+  #stamina .bar .k { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #stamina .bar .track { height: 9px; background: #2b1a0c; border: 1px solid #4a3019; border-radius: 2px; overflow: hidden; }
+  #stamina .bar .fill { height: 100%; }
+  #stamina .bar .v { text-align: right; }
   #relax-msg { position: absolute; left: 8px; bottom: 8px; color: #fff; background: rgba(0, 0, 0, 0.6);
                padding: 3px 8px; border-radius: 4px; font-size: 12px; }
   #relax-msg:empty { display: none; }
@@ -249,7 +267,8 @@
 <div class="menu" id="result-box"><input id="result-in" spellcheck="false"></div>
 <div class="menu" id="restore-menu"><div>Restore → Pending</div></div>
 <div class="menu" id="add-menu"></div>
-<div id="relax"><canvas id="relax-canvas"></canvas><div id="relax-msg"></div></div>
+<div id="relax"><div id="relax-top"><div id="board"></div><div id="stamina"></div></div>
+  <canvas id="relax-canvas"></canvas><div id="relax-msg"></div></div>
 <div class="menu" id="set-menu"></div>
 <div class="menu" id="send-menu"></div>
 <div id="xc">
@@ -1382,6 +1401,7 @@ $('row-menu').addEventListener('click', async e => {
 // ---------------------------------------------------------------- tasks
 let taskEdit = null, taskHistory = false;
 async function refreshTasks() {
+  if (relax.on) relax.loadTasks();          // the board shows the open tasks even when History is on here
   if (taskHistory) return drawTaskHistory();
   const {tasks, remaining} = await api().task_list();
   if (taskHistory) return;                  // switched to History while it was read
@@ -1552,6 +1572,7 @@ async function refresh() {
   drawGrid();
   drawUsage(s.usage);
   $('grid-note').textContent = s.note;
+  relax.stamina(s.usage);
   relax.update();
 }
 async function init() {
