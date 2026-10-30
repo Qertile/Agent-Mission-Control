@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.4.1` (current) | `v2.4` plus each tool's usage on the phone page, the session menu on a tab's right-click, Codex ticked by default in Cross-check when installed, and no console window flashing for `agy models` on Windows. See `CHANGELOG.md`. |
+| `v2.5` (current) | `v2.4.1` plus the remote desktop (the whole window in another computer's browser over Tailscale) and Cross-check's two word limits (reply 200, conclusion 500). See `CHANGELOG.md`. |
+| `v2.4.1` | `v2.4` plus each tool's usage on the phone page, the session menu on a tab's right-click, Codex ticked by default in Cross-check when installed, and no console window flashing for `agy models` on Windows. See `CHANGELOG.md`. |
 | `v2.4` | `v2.3` plus the phone page over Tailscale (sessions, chat or terminal view, keys, a message box), images pasted from the clipboard, task results with a history and Discard, sessions reordered by dragging in the session list, and the name Agent Mission Control throughout. See `CHANGELOG.md`. |
 | `v2.3` | `v2.2` plus Cross-check: Claude, Codex and Antigravity discuss or review one question in a `⚖` tab, with a summary, follow-ups with a conclusion, the total tokens in the session list, and *Send to…* a session's tab. See `CHANGELOG.md`. |
 | `v2.2` | `v2.1` plus themes (`⚙`), Antigravity (`agy`) tabs, the usage panel split per tool (Claude, Codex, Antigravity) with each weekly reset, a pulsing dot on busy tabs, the taskbar icon, and `+` `⇔` `⚙` pinned at the right of the tab bar. See `CHANGELOG.md`. |
@@ -306,7 +307,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.4.1`（目前） | `v2.4` 再加上手機頁顯示各工具的用量；在分頁上按右鍵也有 session 選單；Cross-check 預設勾選有安裝的 Codex；Windows 上讀 `agy models` 時不再閃出主控台視窗。詳見 `CHANGELOG.md`。 |
+| `v2.5`（目前） | `v2.4.1` 再加上遠端桌面（透過 Tailscale 在另一台電腦的瀏覽器打開整個視窗），以及 Cross-check 的兩個字數上限（回覆 200、結論 500）。詳見 `CHANGELOG.md`。 |
+| `v2.4.1` | `v2.4` 再加上手機頁顯示各工具的用量；在分頁上按右鍵也有 session 選單；Cross-check 預設勾選有安裝的 Codex；Windows 上讀 `agy models` 時不再閃出主控台視窗。詳見 `CHANGELOG.md`。 |
 | `v2.4` | `v2.3` 再加上透過 Tailscale 的手機頁（session 清單、對話或終端機畫面、按鍵、輸入框）；從剪貼簿貼上圖片；任務的結果、歷史和丟棄；在 session 清單拖曳調整順序；名稱全面改成 Agent Mission Control。詳見 `CHANGELOG.md`。 |
 | `v2.3` | `v2.2` 再加上 Cross-check：Claude、Codex、Antigravity 在 `⚖` 分頁裡討論或審查同一個問題，最後整理；追問會附結論；session 清單顯示所有模型的 token 總數；結論可用 *Send to…* 送進 session 分頁。詳見 `CHANGELOG.md`。 |
 | `v2.2` | `v2.1` 再加上：主題（`⚙`）、Antigravity（`agy`）分頁、用量面板依工具分段（Claude、Codex、Antigravity）並顯示各自的週重置時間、busy 分頁的圓點會閃、工作列圖示，以及 `+` `⇔` `⚙` 固定在分頁列右邊。詳見 `CHANGELOG.md`。 |

@@ -2,7 +2,7 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-10-30 – remote desktop
+## 2026-10-30 – v2.5: remote desktop
 
 ### Added
 - **The whole window in another computer's browser** (`"desktopPort"` in the `"remote"`
@@ -13,7 +13,8 @@ All notable changes to this project are listed here, newest first.
   this computer's clipboard cannot be called; files outside `web/` are not served.
 - The terminals keep this computer's size there; dropping files is not available.
 - `init()` runs once: a remote page opening does not start the sessions again.
-- README: *Remote desktop* (both languages).
+- README: *Remote desktop* (both languages); Versions: `v2.5`.
+- Tagged `v2.5`.
 
 ## 2026-10-30 – two word limits in Cross-check
 
