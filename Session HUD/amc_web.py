@@ -883,6 +883,7 @@ class Api:
         msgs = remote.chat(path, parse) if path else []
         status = next((s['status'] for s in self._sessions if s['sid'] == tid), '')
         return {'chat': True, 'total': len(msgs), 'status': status,
+                'asking': '' if is_codex(entry) else remote.asking(tid, path),
                 'messages': msgs[-remote.CHAT_MAX:] if len(msgs) != since else []}
 
     def _remote_usage(self):

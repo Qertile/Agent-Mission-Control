@@ -133,10 +133,26 @@ running sessions, each one's conversation or terminal, and a box to type into it
   the desktop's size; switch to it to see a permission prompt. Antigravity sessions show
   *Term* only (their conversations are stored in a binary format). A− / A+ change the
   text size.
+- **Questions with options** (Claude's AskUserQuestion) show in *Chat* with numbered
+  options (`❓`), and the answer as `✅ …`. While one waits for an answer, Claude Code has
+  not written it to the transcript yet; to see it in *Chat* then (in a framed box at the
+  bottom, answered with the number keys), add these hooks to `~/.claude/settings.json`
+  (each computer has its own; on Windows use `python`). Without them, answer in *Term*.
+  ```json
+  "hooks": {
+    "PreToolUse":  [{"matcher": "AskUserQuestion", "hooks": [{"type": "command", "command": "python3 \"<repo>/Session HUD/ask_hook.py\""}]}],
+    "PostToolUse": [{"matcher": "AskUserQuestion", "hooks": [{"type": "command", "command": "python3 \"<repo>/Session HUD/ask_hook.py\""}]}]
+  }
+  ```
+  The hook keeps the waiting question in `<temp>/amc-ask/<session id>.json` and removes it
+  once answered; it always exits 0, so it never stops a question.
 - **Keys:** `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` are typed straight into the session, enough to
   answer a permission prompt. Permission prompts still show in the desktop tab too.
 - **Message box:** *Send* types the text into the session and submits it, as if typed
   at the desktop.
+- **📎 Files:** pick photos or files (up to 20 MB each); each one is saved on this
+  computer as `<temp>/amc-paste/phone-<time>-<name>` and its path added to the message
+  box, so Claude or Codex can read it.
 
 ## Remote desktop
 
@@ -392,9 +408,23 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **Chat / Term：** *Chat*（預設）只顯示你打的訊息和回答，不顯示工具呼叫和思考過程
   （Claude 和 Codex）；session 忙的時候，最下面有一行閃爍的 *thinking…*；Markdown 表格畫成表格，比螢幕寬時只有那張表格能左右滑。*Term* 顯示那個分頁的終端機畫面，大小和桌面版相同；要看權限詢問
   時切到這裡。Antigravity 的對話以二進位格式儲存，所以只有 *Term*。A− / A+ 調整字的大小。
+- **有選項的提問**（Claude 的 AskUserQuestion）會在 *Chat* 顯示成 `❓` 加編號選項，
+  回答顯示成 `✅ …`。等待回答時 Claude Code 還沒把提問寫進對話紀錄；要在這時就從
+  *Chat* 看到（最下面加框顯示，用數字鍵回答），在 `~/.claude/settings.json` 加上這兩條
+  hook（每台電腦各自設定；Windows 用 `python`）。沒加的話，到 *Term* 回答。
+  ```json
+  "hooks": {
+    "PreToolUse":  [{"matcher": "AskUserQuestion", "hooks": [{"type": "command", "command": "python3 \"<repo>/Session HUD/ask_hook.py\""}]}],
+    "PostToolUse": [{"matcher": "AskUserQuestion", "hooks": [{"type": "command", "command": "python3 \"<repo>/Session HUD/ask_hook.py\""}]}]
+  }
+  ```
+  hook 把等待中的提問存在 `<temp>/amc-ask/<session id>.json`，回答後刪掉；它一律以 0
+  結束，不會擋住提問。
 - **按鍵：** `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` 直接打進 session，足夠回答權限詢問。
   權限詢問在桌面版的分頁上也照常顯示。
 - **輸入框：** *Send* 把文字打進 session 並送出，和在桌面版打字一樣。
+- **📎 檔案：** 選照片或檔案（每個最多 20 MB），存到這台電腦的
+  `<temp>/amc-paste/phone-<時間>-<檔名>`，路徑會加進輸入框，讓 Claude 或 Codex 讀取。
 
 ## 遠端桌面
 

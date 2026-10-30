@@ -41,7 +41,10 @@
   .tbl th, .tbl td { border: 1px solid var(--note); padding: 3px 6px; vertical-align: top; text-align: left;
                      min-width: 4em; white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
   .tbl th { color: var(--accent); }
-  body.chat #term, body:not(.chat) #chat, body:not(.chat) #thinking, body:not(.busy) #thinking { display: none; }
+  body.chat #term, body:not(.chat) #chat, body:not(.chat) #thinking, body:not(.busy) #thinking,
+  body:not(.chat) #asking, #asking:empty { display: none; }
+  /* The question Claude waits on (ask_hook.py): answered with the keys below. */
+  #asking { border: 1px solid var(--accent); }
   /* While the session works: the same pulse as a busy tab's dot on the desktop. */
   #thinking { color: var(--note); font-style: italic; padding: 0 16px 10px; font-size: var(--chat-font, 14px);
               animation: pulse 0.8s ease-in-out infinite alternate; }
@@ -65,7 +68,7 @@
   <button id="smaller">A−</button><button id="bigger">A+</button>
 </div>
 <div id="usage"></div>
-<div id="screen"><div id="term"></div><div id="chat"></div><div id="thinking">thinking…</div></div>
+<div id="screen"><div id="term"></div><div id="chat"></div><div id="thinking">thinking…</div><div id="asking" class="m assistant"></div></div>
 <div id="msg"></div>
 <div id="keys">
   <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
@@ -74,6 +77,8 @@
   <button data-key="shift-tab">⇧Tab</button>
 </div>
 <div id="send">
+  <button id="attach" title="send a photo or a file">📎</button>
+  <input id="file" type="file" multiple hidden>
   <textarea id="text" placeholder="Message"></textarea>
   <button id="go">Send</button>
 </div>
@@ -172,14 +177,21 @@ async function loadTabs() {
 function reset(id) {
   if (id === current) return;
   current = id; store('amc-tab', id); since = 0; size = ''; said = -1; term.reset(); $('chat').innerHTML = '';
+  asked = ''; $('asking').innerHTML = '';
 }
 function pick(id) { reset(id); drawTabs(); }
 
+let asked = '';                            // the question shown in #asking
 async function pollChat() {
   const id = current, o = await call(`/api/chat?id=${encodeURIComponent(id)}&since=${said}`);
   if (id !== current || !o.chat) return;
   const was = document.body.classList.contains('busy');
   showStatus(o.status);
+  if (asked !== (o.asking || '')) {
+    asked = o.asking || '';
+    $('asking').innerHTML = asked ? render(asked) : '';
+    if (o.asking) $('screen').scrollTop = $('screen').scrollHeight;
+  }
   if (o.total === said) {
     if (!was && document.body.classList.contains('busy')) $('screen').scrollTop = $('screen').scrollHeight;
     return;
@@ -234,6 +246,35 @@ document.querySelectorAll('#keys button').forEach(b => b.onclick = async () => {
   const r = await call('/api/key', {id: current, key: b.dataset.key}).catch(e => ({error: e.message}));
   say(r.error);
 });
+// 📎: each file chosen goes to the computer (POST /api/upload, at most 20 MB) and its path
+// is added to the message box, to send with a few words ("look at this").
+const UPLOAD_MAX = 20 * 1024 * 1024;
+function upload(file) {
+  return new Promise(ok => {
+    if (file.size > UPLOAD_MAX) return ok({error: `${file.name}: over 20 MB`});
+    const x = new XMLHttpRequest();
+    x.open('POST', '/api/upload');
+    x.setRequestHeader('X-AMC-Token', token);
+    x.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
+    x.upload.onprogress = e => { if (e.lengthComputable) say(`uploading ${file.name} ${Math.round(e.loaded / e.total * 100)}%`); };
+    x.onload = () => { try { ok(JSON.parse(x.responseText)); } catch (e) { ok({error: 'upload failed (' + x.status + ')'}); } };
+    x.onerror = () => ok({error: 'upload failed: no connection'});
+    x.send(file);
+  });
+}
+$('attach').onclick = () => $('file').click();
+$('file').onchange = async e => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  for (const f of files) {
+    const r = await upload(f);
+    if (r.error) { say(r.error); return; }
+    const box = $('text');
+    box.value = (box.value && !/\s$/.test(box.value) ? box.value + ' ' : box.value) + r.path + ' ';
+  }
+  say('');
+  $('text').focus();
+};
 $('go').onclick = async () => {
   const text = $('text').value;
   if (!text.trim() || !current) return;

@@ -13,6 +13,10 @@ import hmac
 import json
 import mimetypes
 import os
+import re
+import tempfile
+from datetime import datetime
+from urllib.parse import unquote
 import subprocess
 import sys
 import threading
@@ -27,26 +31,73 @@ STATIC = {'/': ('mobile.html', 'text/html; charset=utf-8'),
 # The keys the page's buttons send: enough to answer a permission prompt.
 KEYS = {'1': '1', '2': '2', '3': '3', 'enter': '\r', 'esc': '\x1b', 'up': '\x1b[A',
         'down': '\x1b[B', 'backspace': '\x7f', 'tab': '\t', 'shift-tab': '\x1b[Z'}
+UPLOAD_MAX = 20 * 1024 * 1024             # bytes: one file sent from the phone
 CHAT_MAX = 60                              # the latest messages the chat view gets
 _chats = {}                                # transcript path -> (bytes read, [messages]), read on as it grows
 _chats_lock = threading.Lock()
 
 
+ANSWERED = 'Your questions have been answered:'
+
+
+def question(q):
+    """One AskUserQuestion question as text: the question, then its options numbered as
+    Claude Code shows them (the number keys pick one), then Other."""
+    lines = [f"❓ {q.get('header') + ': ' if q.get('header') else ''}{q.get('question', '')}"
+             + (' (pick any)' if q.get('multiSelect') else '')]
+    opts = q.get('options') or []
+    for i, o in enumerate(opts, 1):
+        lines.append(f"  {i}. {o.get('label', '')}" + (f" — {o['description']}" if o.get('description') else ''))
+    lines.append(f'  {len(opts) + 1}. Other (type your own)')
+    return '\n'.join(lines)
+
+
 def claude_message(e):
     """(who, text) for a typed message or a reply in a Claude transcript line, else None.
-    Tool calls, their results, thinking and Claude Code's own notes are left out."""
+    Tool calls, their results, thinking and Claude Code's own notes are left out, except
+    the questions Claude asks with options (AskUserQuestion) and the answers to them."""
     if e.get('isSidechain') or e.get('isMeta') or e.get('isCompactSummary') or e.get('type') not in ('user', 'assistant'):
         return None
     c = (e.get('message') or {}).get('content')
     blocks = [{'type': 'text', 'text': c}] if isinstance(c, str) else (c or [])
-    if any(b.get('type') == 'tool_result' for b in blocks):
-        return None
-    text = '\n'.join(b.get('text', '') for b in blocks if b.get('type') == 'text').strip()
+    for b in blocks:
+        if b.get('type') != 'tool_result':
+            continue
+        r = b.get('content')
+        r = r if isinstance(r, str) else ' '.join(x.get('text', '') for x in r or [] if isinstance(x, dict))
+        if not r.startswith(ANSWERED):
+            return None
+        answers = re.findall(r'"=\s*"(.*?)"(?:[,.]|\s+selected)', r, re.S)
+        return ('user', '✅ ' + ' / '.join(a.strip() for a in answers) if answers else r[len(ANSWERED):].strip())
+    asked = [question(q) for b in blocks if b.get('type') == 'tool_use' and b.get('name') == 'AskUserQuestion'
+             for q in (b.get('input') or {}).get('questions') or []]
+    text = '\n'.join([b.get('text', '') for b in blocks if b.get('type') == 'text'] + asked).strip()
     if e['type'] == 'user' and text.startswith('<bash-input>'):
         text = '! ' + text[len('<bash-input>'):].replace('</bash-input>', '')
     elif e['type'] == 'user' and text.startswith('<'):
         return None
     return (e['type'], text) if text else None
+
+
+def asking(sid, transcript):
+    """The question Claude session `sid` waits on, as chat text (question() for each), or ''.
+    ask_hook.py keeps it in <temp>/amc-ask while it waits; one whose answer (or refusal, when
+    Esc dismissed it and the hook could not remove the file) is in the transcript is over."""
+    path = os.path.join(tempfile.gettempdir(), 'amc-ask', f'{sid}.json')
+    try:
+        with open(path, encoding='utf-8') as f:
+            q = json.load(f)
+    except (OSError, ValueError):
+        return ''
+    if q.get('id') and transcript:
+        try:
+            with open(transcript, 'rb') as f:
+                f.seek(max(0, os.path.getsize(transcript) - 1024 * 1024))
+                if f'"tool_use_id":"{q["id"]}"'.encode() in f.read():
+                    return ''
+        except OSError:
+            pass
+    return '\n'.join(question(x) for x in q.get('questions') or [])
 
 
 def codex_message(e):
@@ -210,9 +261,29 @@ def handler(api, token, web_dir):
                 return self.reply(200, api._remote_chat(q.get('id', ''), int(q.get('since') or 0)))
             self.reply(404, {'error': 'not found'})
 
+        def upload(self):
+            """A file from the phone (the request body; its name in X-File-Name), saved where a
+            pasted image goes. Returns its path, which the page puts in its message box."""
+            size = int(self.headers.get('Content-Length') or 0)
+            if size > UPLOAD_MAX:
+                return self.reply(413, {'error': f'over {UPLOAD_MAX // 1024 // 1024} MB'})
+            data = self.rfile.read(size)
+            name = os.path.basename(unquote(self.headers.get('X-File-Name') or 'file'))
+            stem, ext = os.path.splitext(name)
+            stem = re.sub(r'[^\w.-]+', '_', stem, flags=re.ASCII).strip('_.')[:60] or 'file'
+            ext = re.sub(r'[^\w.]+', '', ext, flags=re.ASCII)[:10]
+            folder = os.path.join(tempfile.gettempdir(), 'amc-paste')
+            os.makedirs(folder, exist_ok=True)
+            path = os.path.join(folder, f'phone-{datetime.now():%Y%m%d-%H%M%S-%f}-{stem}{ext}')
+            with open(path, 'wb') as f:
+                f.write(data)
+            self.reply(200, {'path': path})
+
         def do_POST(self):
             if not self.allowed():
                 return
+            if self.path == '/api/upload':
+                return self.upload()
             try:
                 body = json.loads(self.rfile.read(int(self.headers.get('Content-Length') or 0)) or b'{}')
             except ValueError:

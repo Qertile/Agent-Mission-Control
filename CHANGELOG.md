@@ -2,6 +2,20 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-30 – files and questions on the phone
+
+### Added
+- **📎 on the phone page:** photos and files (up to 20 MB each) are saved on this computer
+  as `<temp>/amc-paste/phone-<time>-<name>` and their paths added to the message box.
+- **Questions with options in the chat view:** Claude's AskUserQuestion shows as `❓` with
+  numbered options and Other, the answer as `✅ …` (several answers joined by ` / `).
+- **The question waiting for an answer** shows in a framed box at the bottom of the chat
+  view, answered with the number keys. Claude Code writes a question to the transcript only
+  once answered, so `ask_hook.py` (PreToolUse / PostToolUse hooks on AskUserQuestion in
+  `~/.claude/settings.json`, set up by hand) keeps it in `<temp>/amc-ask/` meanwhile. A
+  question whose answer or refusal is already in the transcript is not shown.
+- README: *Phone* (both languages).
+
 ## 2026-10-30 – tables on the phone
 
 ### Fixed
