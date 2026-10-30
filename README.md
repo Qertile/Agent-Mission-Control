@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.5` (current) | `v2.4.1` plus the remote desktop (the whole window in another computer's browser over Tailscale) and Cross-check's two word limits (reply 200, conclusion 500). See `CHANGELOG.md`. |
+| `v2.6` (current) | `v2.5` plus pinned messages (desktop, remote desktop and phone), selecting text by dragging in Claude and Codex tabs, files uploaded from the phone, questions with options in the phone's chat view (the one waiting too, with a hook), and Markdown tables drawn as tables on the phone. See `CHANGELOG.md`. |
+| `v2.5` | `v2.4.1` plus the remote desktop (the whole window in another computer's browser over Tailscale) and Cross-check's two word limits (reply 200, conclusion 500). See `CHANGELOG.md`. |
 | `v2.4.1` | `v2.4` plus each tool's usage on the phone page, the session menu on a tab's right-click, Codex ticked by default in Cross-check when installed, and no console window flashing for `agy models` on Windows. See `CHANGELOG.md`. |
 | `v2.4` | `v2.3` plus the phone page over Tailscale (sessions, chat or terminal view, keys, a message box), images pasted from the clipboard, task results with a history and Discard, sessions reordered by dragging in the session list, and the name Agent Mission Control throughout. See `CHANGELOG.md`. |
 | `v2.3` | `v2.2` plus Cross-check: Claude, Codex and Antigravity discuss or review one question in a `⚖` tab, with a summary, follow-ups with a conclusion, the total tokens in the session list, and *Send to…* a session's tab. See `CHANGELOG.md`. |
@@ -334,7 +335,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.5`（目前） | `v2.4.1` 再加上遠端桌面（透過 Tailscale 在另一台電腦的瀏覽器打開整個視窗），以及 Cross-check 的兩個字數上限（回覆 200、結論 500）。詳見 `CHANGELOG.md`。 |
+| `v2.6`（目前） | `v2.5` 再加上釘選訊息（桌面版、遠端桌面、手機）；在 Claude 和 Codex 分頁拖曳選取文字；從手機上傳檔案；手機 Chat 顯示有選項的提問（加 hook 後連等待中的也會顯示）；手機上的 Markdown 表格畫成表格。詳見 `CHANGELOG.md`。 |
+| `v2.5` | `v2.4.1` 再加上遠端桌面（透過 Tailscale 在另一台電腦的瀏覽器打開整個視窗），以及 Cross-check 的兩個字數上限（回覆 200、結論 500）。詳見 `CHANGELOG.md`。 |
 | `v2.4.1` | `v2.4` 再加上手機頁顯示各工具的用量；在分頁上按右鍵也有 session 選單；Cross-check 預設勾選有安裝的 Codex；Windows 上讀 `agy models` 時不再閃出主控台視窗。詳見 `CHANGELOG.md`。 |
 | `v2.4` | `v2.3` 再加上透過 Tailscale 的手機頁（session 清單、對話或終端機畫面、按鍵、輸入框）；從剪貼簿貼上圖片；任務的結果、歷史和丟棄；在 session 清單拖曳調整順序；名稱全面改成 Agent Mission Control。詳見 `CHANGELOG.md`。 |
 | `v2.3` | `v2.2` 再加上 Cross-check：Claude、Codex、Antigravity 在 `⚖` 分頁裡討論或審查同一個問題，最後整理；追問會附結論；session 清單顯示所有模型的 token 總數；結論可用 *Send to…* 送進 session 分頁。詳見 `CHANGELOG.md`。 |

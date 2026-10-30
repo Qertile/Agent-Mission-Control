@@ -2,7 +2,7 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-10-30 – pinned messages
+## 2026-10-30 – v2.6: pinned messages
 
 ### Added
 - **Pins, each session its own, the same on the desktop, the remote desktop and the
@@ -20,7 +20,8 @@ All notable changes to this project are listed here, newest first.
 ### Fixed
 - **Remote desktop in a browser that keeps nothing** (private mode) asked for the token
   even when the link carried it.
-- README: *Working in the window*, *Phone*, *Remote desktop* (both languages).
+- README: *Working in the window*, *Phone*, *Remote desktop* (both languages); Versions: `v2.6`.
+- Tagged `v2.6`.
 
 ## 2026-10-30 – files and questions on the phone
 
