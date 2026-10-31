@@ -1237,6 +1237,7 @@ $('set-btn').addEventListener('click', async e => {
       `<div data-mode="${k}">${(k === 'relax') === relax.on ? '✓' : '\u00a0'} ${label}</div>`).join('') +
     `<hr><div data-sub="theme">Theme: ${esc(themeName)} ▸</div>` +
     `<div data-sub="ai" title="the AI that Task Reminder and Session Manager start with">Default AI: ${AI_LABELS[def.tool]} ▸</div>` +
+    '<div data-sub="remote" title="open AMC from your phone or another computer">Remote Access AMC ▸</div>' +
     '<hr><div class="disabled">Accounts</div><div id="acct-list"><div class="disabled">\u00a0 reading…</div></div>' +
     '<hr><div data-update="1">Update</div>' +
     '<div data-feedback="1">Send feedback…</div>';
@@ -1253,7 +1254,31 @@ $('set-btn').addEventListener('click', async e => {
 });
 // The second layer of ⚙: Theme and Default AI, each its own list with a way back.
 const AI_LABELS = {claude: 'Claude', codex: 'Codex', agy: 'Antigravity'};
+// Remote Access: the steps in order (Tailscale installed, logged in, AMC serving), each one
+// done ticked or a button for it, then the two links to paste on the other device.
+async function remoteMenu(st) {
+  const m = $('set-menu');
+  st = st || await api().remote_access();
+  const W = 'style="white-space:normal;max-width:360px"';
+  const step = (ok, done, todo, act) => ok ? `<div class="disabled">✓ ${done}</div>`
+                                           : `<div data-remote="${act}">→ ${todo}</div>`;
+  let html = '<div data-back="1">◂ Back</div><hr>' +
+    step(st.installed, 'Tailscale installed', '1. Install Tailscale', 'install');
+  if (st.installed) html += step(st.ip, `Tailscale logged in (${esc(st.ip || '')})`, '2. Log in to Tailscale', 'login');
+  if (st.ip) html += step(st.on, 'Remote access on', '3. Turn on remote access', 'on');
+  if (st.phone) {
+    html += '<hr>' +
+      `<div class="disabled" ${W}>On the phone or other computer: install Tailscale, log in with the same account, then open (click to copy):</div>` +
+      `<div data-copy="${esc(st.phone)}" ${W}>📱 Phone: ${esc(st.phone)}</div>` +
+      (st.desktop ? `<div data-copy="${esc(st.desktop)}" ${W}>🖥 Remote desktop: ${esc(st.desktop)}</div>` : '');
+  }
+  html += '<hr><div data-remote="check">↻ Check again</div><div class="err" id="remote-msg"></div>';
+  m.innerHTML = html;
+  const r = $('set-btn').getBoundingClientRect();
+  showAt(m, r.right - m.offsetWidth, r.bottom);
+}
 function setSubmenu(which) {
+  if (which === 'remote') return remoteMenu();
   const m = $('set-menu'), def = setMenuDef;
   m.innerHTML = '<div data-back="1">◂ Back</div><hr>' + (which === 'theme'
     ? Object.keys(THEMES).map(n => `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('')
@@ -1266,6 +1291,25 @@ function setSubmenu(which) {
 $('set-menu').addEventListener('click', e => {
   if (e.target.dataset.sub) { e.stopPropagation(); setSubmenu(e.target.dataset.sub); return; }
   if (e.target.dataset.back) { e.stopPropagation(); $('set-btn').click(); return; }
+  if (e.target.dataset.copy) {
+    e.stopPropagation();
+    copyText(e.target.dataset.copy);
+    $('remote-msg').style.color = 'var(--grey)';
+    $('remote-msg').textContent = 'copied';
+    return;
+  }
+  if (e.target.dataset.remote) {
+    const act = e.target.dataset.remote;
+    if (act === 'check') { e.stopPropagation(); remoteMenu(); return; }
+    if (act === 'on') { e.stopPropagation(); api().enable_remote().then(remoteMenu); return; }
+    // Install and login run in a tab; ⚙ → Remote Access AMC again (or Check again) after it.
+    (act === 'install' ? api().install_tailscale() : api().tailscale_login()).then(async r => {
+      if (r.error) { alert(r.error); return; }
+      await amc.syncTabs();
+      amc.select(r.id);
+    });
+    return;
+  }
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
   if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
   if (e.target.dataset.feedback) api().send_feedback();

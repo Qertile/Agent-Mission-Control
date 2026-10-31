@@ -20,6 +20,7 @@ import base64
 import json
 import os
 import re
+import secrets
 import shutil
 import signal
 import subprocess
@@ -395,6 +396,7 @@ class Api:
         threading.Thread(target=self._activity_loop, daemon=True).start()
         threading.Thread(target=self._agy_usage_loop, daemon=True).start()
         remote.start(self, self._config.get('remote'), os.path.join(HERE, 'web'))
+        self._remote_on = bool((self._config.get('remote') or {}).get('token'))
         running = {s['sid'] for s in active_sessions()}
         for e in core.agents():
             # A session already running elsewhere (another terminal) is left there.
@@ -660,6 +662,68 @@ class Api:
             print(f'--- {name} could not start: {e!r}  argv={argv}', file=sys.stderr, flush=True)
             return {'error': f'could not start: {e}'}
         return {'id': tid}
+
+    # --- ⚙ → Remote Access: Tailscale, then the phone (8770) and remote desktop (8771) pages
+
+    def remote_access(self):
+        """Where remote access stands: {'installed', 'ip', 'on', 'phone', 'desktop'}, the last
+        two the links to open on the other device (its address and token in them)."""
+        refresh_path()
+        installed = bool(shutil.which('tailscale'))
+        ip = remote.tailscale_ip() if installed else None
+        conf = self._config.get('remote') or {}
+        on = bool(conf.get('token')) and getattr(self, '_remote_on', False)
+        out = {'installed': installed, 'ip': ip, 'on': on, 'phone': '', 'desktop': ''}
+        if on and ip:
+            host = conf.get('host') or ip
+            out['phone'] = f"http://{host}:{conf.get('port') or remote.PORT}/#t={conf['token']}"
+            if conf.get('desktopPort'):
+                out['desktop'] = f"http://{host}:{conf['desktopPort']}/#t={conf['token']}"
+        return out
+
+    def install_tailscale(self):
+        """A tab running Tailscale's own installer (it asks for the admin password), then its
+        login (a link to open in the browser). Returns {'id': ...} or {'error': ...}."""
+        if WINDOWS:
+            script = os.path.join(tempfile.gettempdir(), 'amc-install-tailscale.ps1')
+            with open(script, 'w', encoding='utf-8-sig') as f:
+                f.write("$f = Join-Path $env:TEMP 'tailscale-setup.exe'\r\n"
+                        "Write-Host 'Downloading Tailscale...'\r\n"
+                        "$ProgressPreference = 'SilentlyContinue'\r\n"
+                        "Invoke-WebRequest https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe -OutFile $f -UseBasicParsing\r\n"
+                        "Write-Host 'Finish the Tailscale installer, then log in in the Tailscale window.'\r\n"
+                        "Start-Process $f -Wait\r\n"
+                        "Write-Host ''\r\nRead-Host 'Press Enter to close'\r\n")
+            argv = ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script]
+            return self._run_tab('install-tailscale', 'Install Tailscale', 'tailscale', [], argv)
+        return self._run_tab('install-tailscale', 'Install Tailscale', 'tailscale',
+                             ['(curl -fsSL https://tailscale.com/install.sh || wget -qO- https://tailscale.com/install.sh) | sh',
+                              'sudo tailscale up'])
+
+    def tailscale_login(self):
+        """A tab running `tailscale up`: it prints a link to log in with in the browser."""
+        return self._run_tab('tailscale-login', 'Tailscale login', 'tailscale',
+                             ['tailscale up' if WINDOWS else 'sudo tailscale up'])
+
+    def enable_remote(self):
+        """Turns remote access on: a new token (and the remote desktop on 8771) in
+        hud-config.json's "remote" when there is none, and starts serving now."""
+        path = os.path.join(HERE, 'hud-config.json')
+        config = load_json(path) or {}
+        conf = config.get('remote') or {}
+        if not conf.get('token'):
+            conf['token'] = secrets.token_urlsafe(24)
+            conf.setdefault('desktopPort', 8771)
+            config['remote'] = conf
+            with open(path + '.tmp', 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+                f.write('\n')
+            os.replace(path + '.tmp', path)
+        self._config['remote'] = conf
+        if not getattr(self, '_remote_on', False):
+            remote.start(self, conf, os.path.join(HERE, 'web'))
+            self._remote_on = True
+        return self.remote_access()
 
     def update(self):
         """⚙ → Update: `git pull --ff-only` in this folder (a clone of the GitHub repo),

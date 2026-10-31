@@ -126,7 +126,13 @@ Differences from Windows:
 Off until you turn it on. Agent Mission Control can serve a page for your phone: the
 running sessions, each one's conversation or terminal, and a box to type into it.
 
-- **Turn it on:** add `"remote": {"token": "<a long random string>"}` to
+- **Guided:** `⚙` → *Remote Access AMC ▸* walks through it: *Install Tailscale* (its own
+  installer in a tab), *Log in to Tailscale* (`tailscale up`), *Turn on remote access* (a
+  new token and the remote desktop on 8771 in `hud-config.json`, served at once), then shows
+  both links, `http://<Tailscale address>:8770/#t=<token>` (phone) and `…:8771/#t=<token>`
+  (remote desktop); click one to copy it. On the other device, install Tailscale and log in
+  with the same account, then paste the link.
+- **Turn it on by hand:** add `"remote": {"token": "<a long random string>"}` to
   `Session HUD/hud-config.json` and restart Agent Mission Control. Remove the block to turn
   it off.
 - **Network:** it listens only on this computer's [Tailscale](https://tailscale.com)
@@ -500,7 +506,12 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 預設關閉。開啟後，Agent Mission Control 會提供一個手機頁：列出執行中的 session，
 可以看每個 session 的對話或終端機畫面，也能輸入文字給它。
 
-- **開啟：** 在 `Session HUD/hud-config.json` 加上 `"remote": {"token": "<一串夠長的亂碼>"}`，
+- **引導設定：** `⚙` → *Remote Access AMC ▸* 會一步步帶你做：*Install Tailscale*（在分頁裡跑
+  官方安裝程式）、*Log in to Tailscale*（`tailscale up`）、*Turn on remote access*（在
+  `hud-config.json` 產生新 token 並開啟 8771 遠端桌面，立刻開始提供），最後顯示兩個網址：
+  `http://<Tailscale 位址>:8770/#t=<token>`（手機）和 `…:8771/#t=<token>`（遠端桌面），點一下
+  就複製。在另一台裝置上裝好 Tailscale、登入同一個帳號，再貼上網址即可。
+- **手動開啟：** 在 `Session HUD/hud-config.json` 加上 `"remote": {"token": "<一串夠長的亂碼>"}`，
   重開 Agent Mission Control。刪掉這段就關閉。
 - **網路：** 只在這台電腦的 [Tailscale](https://tailscale.com) 位址（`tailscale ip -4`）
   的 8770 port 上提供，所以只有登入同一個 Tailscale 帳號的裝置連得到，連線有加密。

@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – Remote Access AMC
+
+### Added
+- ⚙ → *Remote Access AMC ▸*: the steps in order, each ticked when done or a button for it:
+  *Install Tailscale* (a tab: `tailscale.com/install.sh` then `sudo tailscale up` on Linux,
+  `tailscale-setup-latest.exe` on Windows), *Log in to Tailscale* (a `tailscale up` tab),
+  *Turn on remote access* (a new token and `"desktopPort": 8771` in `hud-config.json` when
+  there is none, served without a restart); then the phone (8770) and remote desktop (8771)
+  links with the token, copied on click. *Check again* reads it all again.
+- README: Phone (both languages).
+
 ## 2026-11-01 – a shorter ⚙ menu
 
 ### Changed
