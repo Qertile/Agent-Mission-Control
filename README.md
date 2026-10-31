@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.3` (current) | `v3.5.2` plus *Agy · Switch…* in ⚙ → Accounts, the version at the foot of ⚙, and pasting screenshots on Linux that copy only a file link (or that GTK cannot read). See `CHANGELOG.md`. |
+| `v3.5.4` (current) | `v3.5.3` plus *Update* really restarting Agent Mission Control on Windows. See `CHANGELOG.md`. |
+| `v3.5.3` | `v3.5.2` plus *Agy · Switch…* in ⚙ → Accounts, the version at the foot of ⚙, and pasting screenshots on Linux that copy only a file link (or that GTK cannot read). See `CHANGELOG.md`. |
 | `v3.5.2` | `v3.5.1` plus ⚙ → *Remote Access AMC ▸* (a guided Tailscale setup, then the phone and remote desktop links), *Theme ▸* and *Default AI ▸* as second-layer lists, and *New Agy session…* in `+`. See `CHANGELOG.md`. |
 | `v3.5.1` | `v3.5` plus *Update* (asks, then restarts Agent Mission Control after a new version, also in a folder that is not a git clone), installing a tool from `+` working on Windows, and install and login errors shown. See `CHANGELOG.md`. |
 | `v3.5` | `v3.4` plus moving Task Reminder and Session Manager to the new Default AI (after asking), the new tab first reading the last 50 messages, and the phone's chat view reading Codex 0.16x's rollouts. See `CHANGELOG.md`. |
@@ -431,7 +432,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.3`（目前） | `v3.5.2` 再加上：⚙ → Accounts 的 *Agy · Switch…*、⚙ 最下面顯示版本，以及 Linux 上只複製檔案連結（或 GTK 讀不到）的截圖也能貼上。詳見 `CHANGELOG.md`。 |
+| `v3.5.4`（目前） | `v3.5.3` 再加上：Windows 上 *Update* 後真的會自動重開。詳見 `CHANGELOG.md`。 |
+| `v3.5.3` | `v3.5.2` 再加上：⚙ → Accounts 的 *Agy · Switch…*、⚙ 最下面顯示版本，以及 Linux 上只複製檔案連結（或 GTK 讀不到）的截圖也能貼上。詳見 `CHANGELOG.md`。 |
 | `v3.5.2` | `v3.5.1` 再加上：⚙ → *Remote Access AMC ▸*（引導設定 Tailscale，最後給手機和遠端桌面的網址）、*Theme ▸* 和 *Default AI ▸* 移到第二層、`+` 選單改成 *New Agy session…*。詳見 `CHANGELOG.md`。 |
 | `v3.5.1` | `v3.5` 再加上：*Update*（先確認，有新版就自動重開；不是 git clone 的資料夾也能用）、Windows 上從 `+` 安裝工具能正常執行、安裝和登入失敗時顯示原因。詳見 `CHANGELOG.md`。 |
 | `v3.5` | `v3.4` 再加上：換 Default AI 時可把 Task Reminder 和 Session Manager 一起換過去（會先問），新分頁先讀最近 50 則對話；手機 Chat 頁能讀 Codex 0.16x 的對話紀錄。詳見 `CHANGELOG.md`。 |

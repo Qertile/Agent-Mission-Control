@@ -818,17 +818,42 @@ class Api:
         return {'text': 'Updated (this folder is now a git clone)', 'restart': True}
 
     def restart(self):
-        """⚙ → Update: starts the launcher, which closes this window the way its close button
-        does (its tabs end, their conversations kept) and opens a new one that resumes them."""
+        """⚙ → Update: closes this window the way its close button does (its tabs end, their
+        conversations kept) and, once this process is gone, starts the launcher, which opens
+        a new one that resumes them. The waiting is done by a small detached helper."""
+        pid = os.getpid()
         if WINDOWS:
-            ps1 = os.path.join(LAUNCHER_DIR, 'launch-agents.ps1')
-            subprocess.Popen(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1],
-                             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
-                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            q = lambda p: "'" + p.replace("'", "''") + "'"
+            helper = os.path.join(tempfile.gettempdir(), 'amc-restart.ps1')
+            with open(helper, 'w', encoding='utf-8-sig') as f:
+                f.write(f"Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue\r\n"
+                        f"& {q(os.path.join(LAUNCHER_DIR, 'launch-agents.ps1'))}\r\n")
+            argv = ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+                    '-File', helper]
+            # A hidden console of its own (PowerShell does not run with none, DETACHED_PROCESS),
+            # and out of this process's job when allowed, so it outlives this window.
+            base = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+            try:
+                subprocess.Popen(argv, creationflags=base | subprocess.CREATE_BREAKAWAY_FROM_JOB,
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except OSError:
+                subprocess.Popen(argv, creationflags=base,
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         else:
-            subprocess.Popen([sys.executable, os.path.join(LAUNCHER_DIR, 'launch-agents.py')],
+            subprocess.Popen(['sh', '-c', 'while kill -0 "$1" 2>/dev/null; do sleep 0.3; done; exec "$2" "$3"',
+                              'sh', str(pid), sys.executable, os.path.join(LAUNCHER_DIR, 'launch-agents.py')],
                              start_new_session=True, stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f'restart: helper started, closing pid {pid}', file=sys.stderr, flush=True)
+
+        def close():
+            time.sleep(0.5)                # this call answers the page first
+            try:
+                self._window.destroy()
+            except Exception as e:
+                print(f'restart: could not close the window: {e!r}', file=sys.stderr, flush=True)
+                os._exit(0)
+        threading.Thread(target=close, daemon=True).start()
 
     def send_feedback(self):
         """⚙ → Send feedback: a new email in the default mail app."""

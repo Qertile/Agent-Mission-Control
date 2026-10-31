@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – v3.5.4: Update restarts on Windows
+
+### Fixed
+- ⚙ → *Update* on Windows said "restarting…" but did not restart: the launcher was started
+  as PowerShell with `DETACHED_PROCESS` (no console), which likely ended at once. Now a
+  helper with a hidden console of its own (out of the window's job when allowed) waits for
+  this process to end, then runs the launcher; the window closes itself as its close button
+  does. Linux the same, with `sh`. Both steps are logged (`amc-web.log`).
+- Versions: `v3.5.4`.
+- Tagged `v3.5.4`.
+
 ## 2026-11-01 – v3.5.3: Agy in Accounts, pasting screenshots on Linux, the version in ⚙
 
 ### Added
