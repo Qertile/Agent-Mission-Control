@@ -1225,7 +1225,7 @@ $('wide-btn').addEventListener('click', () => amc.toggleWide());
 // Settings: for now the theme, the current one ticked.
 $('set-btn').addEventListener('click', async e => {
   e.stopPropagation();
-  const m = $('set-menu'), def = await api().default_tool();
+  const m = $('set-menu'), def = setMenuDef = await api().default_tool();
   m.innerHTML = '<div class="disabled">Layout</div>' +
     [['office', 'Office'], ['relax', 'Relax']].map(([k, label]) =>
       `<div data-mode="${k}">${(k === 'relax') === relax.on ? '✓' : '\u00a0'} ${label}</div>`).join('') +
@@ -1253,7 +1253,22 @@ $('set-menu').addEventListener('click', e => {
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
   if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
   if (e.target.dataset.feedback) api().send_feedback();
-  if (e.target.dataset.tool) api().set_default_tool(e.target.dataset.tool);
+  if (e.target.dataset.tool) {
+    // Task Reminder / Session Manager on another tool: ask whether they move too.
+    const k = e.target.dataset.tool, label = {claude: 'Claude', codex: 'Codex', agy: 'Antigravity'};
+    const other = (setMenuDef.made || []).filter(x => x.tool !== k);
+    if (k === setMenuDef.tool || !other.length) { api().set_default_tool(k, false); return; }
+    e.stopPropagation();
+    const busy = other.filter(x => x.busy).map(x => x.name);
+    $('set-menu').innerHTML =
+      `<div class="disabled" style="white-space:normal;max-width:300px">${other.map(x => `${esc(x.name)} (${label[x.tool]})`).join(', ')}: ` +
+      `move to ${label[k]} too? It starts a new conversation that first reads the last 50 messages.</div>` +
+      (busy.length ? `<div class="err" style="white-space:normal;max-width:300px">${esc(busy.join(', '))} is working now and will be stopped.</div>` : '') +
+      `<div data-move="${k}">Move them to ${label[k]}</div><div data-keep="${k}">Only for new ones</div>`;
+    return;
+  }
+  if (e.target.dataset.move) api().set_default_tool(e.target.dataset.move, true);
+  if (e.target.dataset.keep) api().set_default_tool(e.target.dataset.keep, false);
   if (e.target.dataset.login) api().switch_account(e.target.dataset.login).then(async r => {
     if (r.error) return;
     await amc.syncTabs();
@@ -1271,7 +1286,7 @@ $('set-menu').addEventListener('click', e => {
     });
   }
 });
-let resizeFrame = 0;
+let setMenuDef = {}, resizeFrame = 0;
 new ResizeObserver(() => {
   if (!resizeFrame) resizeFrame = requestAnimationFrame(() => { resizeFrame = 0; amc.render(); });
 }).observe($('terms'));

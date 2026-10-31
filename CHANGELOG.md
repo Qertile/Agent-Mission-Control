@@ -2,6 +2,25 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – v3.5: move Task Reminder and Session Manager to the Default AI
+
+### Added
+- ⚙ → *Default AI* asks when `Task Reminder` / `Session Manager` are on another tool
+  (and says which one is working and would be stopped): *Move them to …* replaces each
+  entry in place (new id, the new tool, no model) and restarts an open one; *Only for new
+  ones* changes the setting only.
+- The move writes the old conversation's last 50 messages (Claude or Codex; not
+  Antigravity) to `Agents Launcher/handoff/<name>.md` (`.gitignore`d), and the new tab's
+  first prompt asks it to read that first. Tested with a real Codex tab: it read the file,
+  then `CLAUDE.md`, and answered "Task Reminder 就緒".
+
+### Fixed
+- The phone's chat view (and the handoff) read Codex 0.16x rollouts, which have
+  `item_completed` UserMessage / AgentMessage events instead of `user_message` /
+  `agent_message`; Codex chats were empty before.
+- README: Default AI (both languages); Versions: `v3.5`.
+- Tagged `v3.5`.
+
 ## 2026-10-31 – v3.4: install a missing AI tool from +
 
 ### Added

@@ -59,6 +59,8 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
 FEEDBACK_MAIL = 'mailto:yushunwang.wys@gmail.com?subject=AMC%20Feedback'   # ⚙ → Send feedback
+HANDOFF_MESSAGES = 50                      # of a conversation, for the tool it moves to
+HANDOFF_DIR = os.path.join(LAUNCHER_DIR, 'handoff')
 PIN_MAX = 20_000                           # characters kept of one pinned message
 AGY_TURNS_PER_HOUR = 6                     # Relax mode's level for Antigravity, which has no readable turns
 # Codex makes a tab's thread as the tab starts (session_meta's time) but writes the
@@ -235,6 +237,11 @@ def agent_argv(entry):
         return [os.environ.get('COMSPEC', 'cmd.exe') if WINDOWS else os.environ.get('SHELL', '/bin/bash')]
     sid, name = entry['id'], entry['name']
     prompt = first_prompt(name)
+    if prompt and entry.get('handoff'):
+        # Moved from another tool by ⚙ → Default AI: that conversation's end, to read first.
+        prompt += (f"\n\n開始前先讀 `{entry['handoff']}`：那是你接手前，這個 session 用 "
+                   f"{discuss.LABELS.get(entry.get('handoff_from'), '')} 時最近 {HANDOFF_MESSAGES} 則對話，"
+                   "照著接續，不要重做已經做完的事。")
     if is_codex(entry):
         argv = [shutil.which('codex') or 'codex']
         model = ['-m', entry['model']] if entry.get('model') else []
@@ -449,14 +456,21 @@ class Api:
         """⚙ → Default AI: the tool Task Reminder and Session Manager are made with on their
         first send. {'tool': 'claude' | 'codex' | 'agy', 'installed': [...]}. hud-config.json's
         "defaultTool" when installed, otherwise Claude Code, Codex, Antigravity, the first
-        installed. An existing tab keeps its tool."""
+        installed. `made`: those two already in agents.json, with their tool and busy or not."""
         installed = [t for t in ('claude', 'codex', 'agy') if shutil.which(t)]
         chosen = self._config.get('defaultTool')
         tool = chosen if chosen in installed else (installed or ['claude'])[0]
-        return {'tool': tool, 'installed': installed}
+        busy = {s['sid'] for s in self._sessions if s.get('status') == 'busy'}
+        made = [{'name': e['name'], 'tool': e.get('tool') or 'claude', 'busy': e['id'] in busy}
+                for e in core.agents() if e['name'] in CREATE_ON_SEND]
+        return {'tool': tool, 'installed': installed, 'made': made}
 
-    def set_default_tool(self, tool):
-        """Keeps `tool` as "defaultTool" in hud-config.json, the rest of the file as it was."""
+    def set_default_tool(self, tool, move=False):
+        """Keeps `tool` as "defaultTool" in hud-config.json, the rest of the file as it was.
+        move: Task Reminder and Session Manager on another tool move to this one too: each
+        gets a new entry in its place (new id, no model), with its last HANDOFF_MESSAGES
+        messages in handoff/<name>.md to read first (none from Antigravity, which cannot be
+        read), and starts again if it was running. The old conversation stays in its tool."""
         if tool not in ('claude', 'codex', 'agy'):
             return
         path = os.path.join(HERE, 'hud-config.json')
@@ -467,6 +481,54 @@ class Api:
             f.write('\n')
         os.replace(path + '.tmp', path)
         self._config['defaultTool'] = tool
+        if move:
+            self._move_to(tool)
+
+    def _move_to(self, tool):
+        sessions, restart = core.agents(), []
+        for i, e in enumerate(sessions):
+            if e['name'] not in CREATE_ON_SEND or (e.get('tool') or 'claude') == tool:
+                continue
+            new = {k: v for k, v in e.items() if k in ('name', 'window', 'autoOpen')}
+            new['id'] = str(uuid.uuid4())
+            if tool != 'claude':
+                new['tool'] = tool
+            handoff = self._handoff(e)
+            if handoff:
+                new.update(handoff=handoff, handoff_from=e.get('tool') or 'claude')
+            sessions[i] = new
+            term = self._terms.get(e['id'])
+            if term:
+                term.close()
+                restart.append(new)
+        core.save_agents(sessions)
+        for new in restart:
+            try:
+                self._start(new)
+            except Exception:
+                pass
+        self._js('amc.syncTabs()')
+
+    def _handoff(self, entry):
+        """Writes the entry's last HANDOFF_MESSAGES messages to handoff/<name>.md; returns
+        its path, or '' when there are none (Antigravity's conversations cannot be read)."""
+        if is_agy(entry):
+            return ''
+        if is_codex(entry):
+            thread = codex_thread(entry)
+            path, parse, label = core.codex_rollout(thread) if thread else '', remote.codex_message, 'Codex'
+        else:
+            path, parse, label = core.transcript_path(entry['id']), remote.claude_message, 'Claude'
+        msgs = remote.chat(path, parse)[-HANDOFF_MESSAGES:] if path else []
+        if not msgs:
+            return ''
+        os.makedirs(HANDOFF_DIR, exist_ok=True)
+        out = os.path.join(HANDOFF_DIR, f"{entry['name']}.md")
+        with open(out, 'w', encoding='utf-8') as f:
+            f.write(f"# {entry['name']}：用 {label} 時最近 {len(msgs)} 則對話\n\n")
+            for m in msgs:
+                f.write(f"**{'使用者' if m['who'] == 'user' else label}：**\n\n{m['text']}\n\n---\n\n")
+        return out
 
     @staticmethod
     def _git():

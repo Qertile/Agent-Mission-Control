@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.4` (current) | `v3.3` plus installing a missing AI tool from `+`: *New … session… (install)* runs Claude Code's, Codex's or Antigravity's own installer in a tab. See `CHANGELOG.md`. |
+| `v3.5` (current) | `v3.4` plus moving Task Reminder and Session Manager to the new Default AI (after asking), the new tab first reading the last 50 messages, and the phone's chat view reading Codex 0.16x's rollouts. See `CHANGELOG.md`. |
+| `v3.4` | `v3.3` plus installing a missing AI tool from `+`: *New … session… (install)* runs Claude Code's, Codex's or Antigravity's own installer in a tab. See `CHANGELOG.md`. |
 | `v3.3` | `v3.2` plus ⚙ → *Accounts*: each tool's logged-in account, and *Switch…* to log out and in with another (Claude Code, Codex). See `CHANGELOG.md`. |
 | `v3.2` | `v3.1` plus ⚙ → *Default AI* (the tool Task Reminder and Session Manager start with) and *Update from GitHub* installing git when there is none. See `CHANGELOG.md`. |
 | `v3.1` | `v3.0` plus forking Codex sessions (`codex fork`), Session Manager and Task Reminder on Codex or Antigravity when Claude Code is not installed, *New Claude session…* in `+`, and ⚙ → *Update from GitHub* and *Send feedback…*. See `CHANGELOG.md`. |
@@ -331,9 +332,13 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   terminals, and is kept for the next start.
 - **Default AI:** `⚙` → *Default AI* picks Claude, Codex or Antigravity (only the installed
   ones) for `Task Reminder` and `Session Manager`, made on their first send. Kept as
-  `"defaultTool"` in `Session HUD/hud-config.json`. A tab already in `agents.json` keeps its
-  tool; remove it there to have it made again with the new one. With none picked: Claude
-  Code, otherwise Codex, otherwise Antigravity.
+  `"defaultTool"` in `Session HUD/hud-config.json`. When those two are already on another
+  tool, it asks: *Move them to …* gives each a new entry in its place (new id, the new
+  tool, no model) and restarts it if it was open; its last 50 messages go to
+  `Agents Launcher/handoff/<name>.md` (not in git), which the new tab reads first. The old
+  conversation stays in the old tool; Antigravity's cannot be read, so it starts fresh.
+  *Only for new ones* leaves them as they are. With none picked: Claude Code, otherwise
+  Codex, otherwise Antigravity.
 - **Accounts:** `⚙` → *Accounts* shows the account each installed tool is logged in with
   (`claude auth status`, `codex login status`). *Switch…* opens a `Claude login` / `Codex
   login` tab that runs the tool's own logout and login (the browser opens for the new
@@ -406,7 +411,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.4`（目前） | `v3.3` 再加上從 `+` 安裝沒裝的 AI 工具：*New … session… (install)* 會在分頁裡執行 Claude Code、Codex 或 Antigravity 官方的安裝程式。詳見 `CHANGELOG.md`。 |
+| `v3.5`（目前） | `v3.4` 再加上：換 Default AI 時可把 Task Reminder 和 Session Manager 一起換過去（會先問），新分頁先讀最近 50 則對話；手機 Chat 頁能讀 Codex 0.16x 的對話紀錄。詳見 `CHANGELOG.md`。 |
+| `v3.4` | `v3.3` 再加上從 `+` 安裝沒裝的 AI 工具：*New … session… (install)* 會在分頁裡執行 Claude Code、Codex 或 Antigravity 官方的安裝程式。詳見 `CHANGELOG.md`。 |
 | `v3.3` | `v3.2` 再加上 ⚙ → *Accounts*：顯示各工具登入的帳號，*Switch…* 登出再登入另一個帳號（Claude Code、Codex）。詳見 `CHANGELOG.md`。 |
 | `v3.2` | `v3.1` 再加上：⚙ → *Default AI*（Task Reminder 和 Session Manager 用哪個 AI 建立），以及 *Update from GitHub* 在沒有 git 時先幫你裝。詳見 `CHANGELOG.md`。 |
 | `v3.1` | `v3.0` 再加上：Codex session 也能 fork（`codex fork`）；沒裝 Claude Code 時，Session Manager 和 Task Reminder 改用 Codex 或 Antigravity；`+` 選單改成 *New Claude session…*；⚙ → *Update from GitHub* 和 *Send feedback…*。詳見 `CHANGELOG.md`。 |
@@ -660,9 +666,11 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   主題會套用到整個視窗和終端機，下次啟動仍然保留。
 - **預設 AI**：`⚙` → *Default AI* 選 Claude、Codex 或 Antigravity（只能選有裝的），
   `Task Reminder` 和 `Session Manager` 第一次送出訊息建立時就用它。存在
-  `Session HUD/hud-config.json` 的 `"defaultTool"`。已經在 `agents.json` 裡的分頁保持原本的
-  工具；想換就把它從 `agents.json` 刪掉，下次會用新的重建。沒選時依序用 Claude Code、
-  Codex、Antigravity。
+  `Session HUD/hud-config.json` 的 `"defaultTool"`。這兩個分頁已經用別的工具時會先問：
+  *Move them to …* 會在原位置換成新的一筆（新 id、新工具、不帶 model），原本開著就重開；最近
+  50 則對話寫進 `Agents Launcher/handoff/<名稱>.md`（不進 git），新分頁會先讀它。舊對話留在
+  原工具裡；Antigravity 的讀不到，所以從頭開始。*Only for new ones* 則不動它們。沒選時依序用
+  Claude Code、Codex、Antigravity。
 - **帳號**：`⚙` → *Accounts* 顯示每個已安裝工具登入的帳號（`claude auth status`、
   `codex login status`）。*Switch…* 會開一個 `Claude login`／`Codex login` 分頁，執行工具自己的
   登出和登入（瀏覽器會開登入頁），按 Enter 後關閉。之後這個工具的所有分頁都改用新帳號。

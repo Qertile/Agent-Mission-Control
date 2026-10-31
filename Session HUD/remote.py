@@ -101,9 +101,19 @@ def asking(sid, transcript):
 
 
 def codex_message(e):
-    """The same for a Codex rollout line: its user_message and agent_message events."""
+    """The same for a Codex rollout line: its user_message and agent_message events, or
+    (newer Codex, 0.16x) its item_completed events for a UserMessage or AgentMessage."""
     p = e.get('payload') or {}
-    if e.get('type') != 'event_msg' or p.get('type') not in ('user_message', 'agent_message'):
+    if e.get('type') != 'event_msg':
+        return None
+    if p.get('type') == 'item_completed':
+        item = p.get('item') or {}
+        if item.get('type') not in ('UserMessage', 'AgentMessage'):
+            return None
+        text = '\n'.join(c.get('text', '') for c in item.get('content') or []
+                         if isinstance(c, dict) and c.get('type') in ('text', 'Text')).strip()
+        return ('user' if item['type'] == 'UserMessage' else 'assistant', text) if text else None
+    if p.get('type') not in ('user_message', 'agent_message'):
         return None
     text = (p.get('message') or '').strip()
     return ('user' if p['type'] == 'user_message' else 'assistant', text) if text else None
