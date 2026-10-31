@@ -2,6 +2,13 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – the phone's Chat button on Antigravity
+
+### Fixed
+- On the phone page an Antigravity session's *Chat* button was disabled with no sign of
+  why, so pressing it did nothing. It is now greyed but pressable, and says "Antigravity
+  has no Chat view (its conversations cannot be read): Term only".
+
 ## 2026-11-01 – v3.5.7: New token, and a warning
 
 ### Added

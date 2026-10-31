@@ -162,7 +162,9 @@ function drawView() {
   document.body.classList.toggle('chat', chatView());
   const t = tabs.find(t => t.id === current);
   $('view').textContent = chatView() ? 'Term' : 'Chat';
-  $('view').disabled = !t || t.tool === 'agy';
+  // Antigravity: no Chat (its conversations are binary). Greyed but still pressable, to say so.
+  $('view').disabled = !t;
+  $('view').style.opacity = t && t.tool === 'agy' ? 0.4 : '';
 }
 
 function showStatus(status) {
@@ -281,6 +283,8 @@ $('tabs').onchange = async e => {
   pick(id);
 };
 $('view').onclick = () => {
+  const t = tabs.find(t => t.id === current);
+  if (t && t.tool === 'agy') return say('Antigravity has no Chat view (its conversations cannot be read): Term only');
   wantChat = !chatView(); store('amc-view', wantChat ? 'chat' : 'term'); drawView();
   const screen = $('screen'); screen.scrollTop = screen.scrollHeight;
 };
