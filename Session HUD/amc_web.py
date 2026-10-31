@@ -613,23 +613,32 @@ class Api:
                 'agy': 'https://antigravity.google/cli/install'}
         if tool not in urls:
             return {'error': f'unknown tool {tool}'}
+        name = 'Install ' + discuss.LABELS[tool]
         if WINDOWS:
-            # Encoded: no quotes or | for cmd.exe (which runs the tab) to mangle. With -Command
-            # "…", PowerShell got the line as a quoted string and only printed it.
-            script = f'irm {urls[tool]}.ps1 | iex'
-            cmd = ('powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand '
-                   + base64.b64encode(script.encode('utf-16-le')).decode())
-        else:
-            shell = 'sh' if tool == 'codex' else 'bash'
-            cmd = (f'(curl -fsSL {urls[tool]}.sh || wget -qO- {urls[tool]}.sh) | {shell}')
-        return self._run_tab(f'install-{tool}', 'Install ' + discuss.LABELS[tool], tool, [cmd])
+            # PowerShell runs the tab itself, from a script file: through cmd.exe the quotes
+            # of -Command "…" were mangled (PowerShell only printed the line), and Windows
+            # security refused -EncodedCommand ("access denied").
+            script = os.path.join(tempfile.gettempdir(), f'amc-install-{tool}.ps1')
+            with open(script, 'w', encoding='utf-8-sig') as f:
+                # A PowerShell of its own: the installers end with `exit`, which here would close
+                # the tab before its last lines could be read.
+                f.write(f"powershell -NoProfile -ExecutionPolicy Bypass -Command 'irm {urls[tool]}.ps1 | iex'\r\n"
+                        "Write-Host ''\r\nRead-Host 'Press Enter to close'\r\n")
+            argv = ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script]
+            return self._run_tab(f'install-{tool}', name, tool, [], argv)
+        shell = 'sh' if tool == 'codex' else 'bash'
+        cmd = f'(curl -fsSL {urls[tool]}.sh || wget -qO- {urls[tool]}.sh) | {shell}'
+        return self._run_tab(f'install-{tool}', name, tool, [cmd])
 
-    def _run_tab(self, tid, name, tool, cmds):
-        """A tab not in agents.json running `cmds` one after another, then waiting for Enter
-        and going away. PATH is read again after it, for what an installer added."""
+    def _run_tab(self, tid, name, tool, cmds, argv=None):
+        """A tab not in agents.json running `cmds` one after another (or `argv`, which waits
+        itself), then waiting for Enter and going away. PATH is read again after it, for
+        what an installer added."""
         if tid in self._terms:
             return {'id': tid}
-        if WINDOWS:
+        if argv:
+            pass
+        elif WINDOWS:
             argv = ['cmd.exe', '/c', ' & '.join(cmds + ['echo.', 'pause'])]
         else:
             argv = ['/bin/sh', '-c', '; '.join(cmds + ['echo', 'printf "Press Enter to close"', 'read x'])]

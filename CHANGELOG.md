@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – installing a tool on Windows, again
+
+### Fixed
+- `+` → *Download and install it* on Windows said "could not start: access denied": Windows
+  security likely refuses `powershell -ExecutionPolicy Bypass -EncodedCommand` (v3.5.2). The
+  tab now runs `powershell.exe -File <temp>\amc-install-<tool>.ps1` itself (no cmd.exe),
+  whose first line runs `irm <url>.ps1 | iex` in a PowerShell of its own, so the installers'
+  `exit` does not close the tab before *Press Enter to close*.
+
 ## 2026-11-01 – install and login errors shown
 
 ### Changed
