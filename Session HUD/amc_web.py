@@ -409,6 +409,8 @@ class Api:
             if not shutil.which('agy') and '--shell' not in sys.argv:
                 return {'error': 'agy is not on PATH'}
             entry['tool'] = 'agy'
+        elif not shutil.which('claude') and '--shell' not in sys.argv:
+            return {'error': 'claude is not on PATH'}
         core.save_agents(core.agents() + [entry])
         try:
             self._start(entry)

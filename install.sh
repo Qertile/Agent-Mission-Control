@@ -2,7 +2,8 @@
 # One-step setup on Linux (the counterpart of install.ps1). Nothing is copied
 # anywhere - the tools run from this folder. Setting up means four things:
 #   1. checking the programs the tools call (Claude Code, Python 3 with pywebview,
-#      ptyprocess, openpyxl and Tk, the DejaVu Sans Mono font);
+#      ptyprocess, openpyxl and Tk, the DejaVu Sans Mono font), and offering to
+#      install what is missing (apt for the packages, Anthropic's installer for Claude Code);
 #   2. making your own agents.json, hud-config.json, tasks.md and TaskDatabase.xlsx
 #      from their templates, if they are not there yet;
 #   3. putting the "Agent Mission Control" shortcut on the desktop;
@@ -30,14 +31,42 @@ has() { command -v "$1" >/dev/null 2>&1 && echo 1 || echo 0; }
 py() { python3 -c "$1" >/dev/null 2>&1 && echo 1 || echo 0; }
 
 echo -e "\n\e[36m== 1. Checking what the tools need ==\e[0m"
-report 'Claude Code (claude)' "$(has claude)" 'install Claude Code and check that "claude" runs in a new terminal.'
+font() { fc-list 2>/dev/null | grep -q 'DejaVu Sans Mono' && echo 1 || echo 0; }
+# The apt package for each missing item, offered as one "sudo apt install".
+pkgs=()
+[ "$(has python3)" = 1 ] || pkgs+=(python3)
+[ "$(py 'import webview')" = 1 ] || pkgs+=(python3-webview)
+[ "$(py 'import ptyprocess')" = 1 ] || pkgs+=(python3-ptyprocess)
+[ "$(py 'import tkinter')" = 1 ] || pkgs+=(python3-tk)
+[ "$(py 'import openpyxl')" = 1 ] || pkgs+=(python3-openpyxl)
+[ "$(font)" = 1 ] || pkgs+=(fonts-dejavu-core)
+# Claude Code's own installer is downloaded with curl, which a new Ubuntu may not have.
+[ "$(has claude)" = 1 ] || [ "$(has curl)" = 1 ] || pkgs+=(curl)
+if [ "$1" != --check-only ] && [ ${#pkgs[@]} -gt 0 ] && [ "$(has apt-get)" = 1 ] &&
+   ask "  Missing: ${pkgs[*]}. Install them now with sudo apt install?" Y; then
+    sudo apt-get update && sudo apt-get install -y "${pkgs[@]}"
+fi
+# Claude Code: Anthropic's own installer, into ~/.local/bin (already on PATH above).
+if [ "$1" != --check-only ] && [ "$(has claude)" = 0 ] && [ "$(has curl)" = 1 ] &&
+   ask '  Claude Code is missing. Install it now?' Y; then
+    curl -fsSL https://claude.ai/install.sh | bash
+fi
+
+# Optional: a PC can use only Codex or Antigravity tabs. At least one of the three is needed.
+optional() {   # optional "name" ok? "fix"
+    if [ "$2" = 1 ]; then echo "  OK       $1"; else echo -e "  \e[90mOPTIONAL $1 - $3\e[0m"; fi
+}
+claude_ok="$(has claude)"
+optional 'Claude Code (claude)' "$claude_ok" 'curl -fsSL https://claude.ai/install.sh | bash'
+optional 'Codex CLI (codex)' "$(has codex)" 'npm install -g @openai/codex'
+optional 'Antigravity CLI (agy)' "$(has agy)" 'install Antigravity and check that "agy" runs in a new terminal.'
+[ "$claude_ok$(has codex)$(has agy)" = 000 ] && report 'An AI tool (claude, codex or agy)' 0 'install at least one of the three above.'
 report 'Python 3 (python3)' "$(has python3)" 'sudo apt install python3'
 report 'Python pywebview' "$(py 'import webview')" 'sudo apt install python3-webview'
 report 'Python ptyprocess' "$(py 'import ptyprocess')" 'sudo apt install python3-ptyprocess'
 report 'Python Tk (tkinter, for the task popup)' "$(py 'import tkinter')" 'sudo apt install python3-tk'
 report 'Python openpyxl' "$(py 'import openpyxl')" 'sudo apt install python3-openpyxl'
-font=0; fc-list | grep -q 'DejaVu Sans Mono' && font=1
-report 'Font DejaVu Sans Mono' "$font" 'sudo apt install fonts-dejavu-core'
+report 'Font DejaVu Sans Mono' "$(font)" 'sudo apt install fonts-dejavu-core'
 chmod +x "$root/Agents Launcher/launch-agents.py" "$root/Daily Summary/jobs.py"
 
 if [ "$1" = --check-only ]; then
@@ -51,8 +80,11 @@ from_template() {   # from_template file template
     [ -e "$root/$1" ] && { echo "  Kept     $1"; return 1; }
     cp "$root/$2" "$root/$1" && echo "  Created  $1"
 }
-from_template agents.json agents.template.json &&
-    sed -i "s/__NEW_ID__/$(cat /proc/sys/kernel/random/uuid)/" "$root/agents.json"
+# The template's one tab is a Claude tab; without claude, start with no tabs (add them with +).
+if from_template agents.json agents.template.json; then
+    if [ "$claude_ok" = 1 ]; then sed -i "s/__NEW_ID__/$(cat /proc/sys/kernel/random/uuid)/" "$root/agents.json"
+    else printf '{\n  "sessions": [\n  ]\n}\n' > "$root/agents.json"; fi
+fi
 from_template 'Session HUD/hud-config.json' 'Session HUD/hud-config.template.json'
 from_template 'Task Manager/tasks.md' 'Task Manager/tasks.template.md'
 from_template 'Task Manager/TaskDatabase.xlsx' 'Task Manager/TaskDatabase.template.xlsx'

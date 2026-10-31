@@ -2,6 +2,24 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – v3.0: installing on a new PC
+
+### Changed
+- `install.ps1` (Windows) offers to install each missing item instead of only listing
+  it, just for this user, no admin needed: Claude Code (Anthropic's installer, its
+  `.local\bin` added to PATH), Python 3.12.10 from python.org (x64 or ARM64, before the
+  Store stub on PATH, then the pip modules in the same run), the NuGet provider before
+  ImportExcel, and DejaVu Sans Mono 2.37 from GitHub into the user's fonts.
+- `install.sh` (Linux) offers one `sudo apt install` for the missing packages (with
+  `curl` when Claude Code is missing), then Claude Code with Anthropic's installer.
+- Claude Code, Codex and Antigravity are each optional in both installers (`OPTIONAL`);
+  only having none of the three counts as missing. Without Claude Code, a new
+  `agents.json` starts with no tabs instead of a Claude tab that cannot start.
+- `+` → *New session…* says "claude is not on PATH" when it is missing, like Codex and
+  agy, instead of adding a tab that cannot start.
+- README: Requirements, Setup and Linux (both languages); Versions: `v3.0`.
+- Tagged `v3.0`.
+
 ## 2026-10-31 – v2.7: Relax mode
 
 ### Added

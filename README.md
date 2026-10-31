@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v2.7` (current) | `v2.6.1` plus Relax mode: the Tasks and Sessions columns as a camp, a building per session growing with its messages, people by status, Cross-check campfires, a task board and stamina bars (⚙ → *Layout* → *Relax*). See `CHANGELOG.md`. |
+| `v3.0` (current) | `v2.7` plus an installer for a new PC: `install.bat` and `install.sh` offer to install what is missing (Claude Code, Python 3 and its modules, ImportExcel, the font), and Claude Code, Codex and Antigravity are each optional as long as one is there. See `CHANGELOG.md`. |
+| `v2.7` | `v2.6.1` plus Relax mode: the Tasks and Sessions columns as a camp, a building per session growing with its messages, people by status, Cross-check campfires, a task board and stamina bars (⚙ → *Layout* → *Relax*). See `CHANGELOG.md`. |
 | `v2.6.1` | `v2.6` plus forking a Claude session (right-click → *Fork…*, or `+` → *Fork session…*) and clicking in a Claude or Codex tab focusing it again. See `CHANGELOG.md`. |
 | `v2.6` | `v2.5` plus pinned messages (desktop, remote desktop and phone), selecting text by dragging in Claude and Codex tabs, files uploaded from the phone, questions with options in the phone's chat view (the one waiting too, with a hook), and Markdown tables drawn as tables on the phone. See `CHANGELOG.md`. |
 | `v2.5` | `v2.4.1` plus the remote desktop (the whole window in another computer's browser over Tailscale) and Cross-check's two word limits (reply 200, conclusion 500). See `CHANGELOG.md`. |
@@ -37,7 +38,8 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 ## Requirements
 
 - Windows 10 or 11
-- Claude Code CLI, with `claude` on PATH
+- At least one of these AI tools (the installer offers to install Claude Code):
+- Claude Code CLI, with `claude` on PATH (also needed for the scheduled summaries)
 - Optional, for Codex tabs: Codex CLI with `codex` on PATH (`npm install -g @openai/codex`,
   which needs Node.js), logged in with `codex login`
 - Optional, for Antigravity tabs: the Antigravity CLI with `agy` on PATH, signed in
@@ -54,12 +56,15 @@ and never overwrites it, so a `git pull` leaves your copies alone.
 1. Copy the `Agent-Mission-Control` folder into the folder your Claude sessions should work in.
    That parent folder becomes every tab's working directory.
 2. Double-click `install.bat`. It checks what the tools need (Claude Code, Python 3
-   and its modules, the ImportExcel module, the DejaVu Sans Mono font), makes your
+   and its modules, the ImportExcel module, the DejaVu Sans Mono font) and offers to
+   install each missing one just for you, no admin needed (Claude Code with Anthropic's
+   installer, Python 3.12 from python.org, the font from DejaVu's GitHub). It makes your
    own `agents.json`, `hud-config.json`, `tasks.md` and `TaskDatabase.xlsx` from their
    templates if they are missing, puts the **Agent Mission Control** shortcut on the desktop,
    and asks which scheduled jobs to register. Nothing is copied elsewhere - the tools run
    from this folder. Run it again after moving the folder.
-3. List your tabs in `agents.json` (it starts with one, `Session Manager`): one entry per
+3. List your tabs in `agents.json` (it starts with one, `Session Manager`; with no Claude
+   Code installed it starts empty, so add Codex or Antigravity tabs with `+`): one entry per
    Claude Code session, with a name and a fixed session id (make one with
    `powershell -c "[guid]::NewGuid()"`). Agent Mission Control shows them in this order
    under these names. An optional `"model"` (for example `"sonnet"`) is passed as
@@ -84,7 +89,9 @@ reports are shared.
 | `Daily Summary\run-*.ps1` + Task Scheduler | `Daily Summary/jobs.py review / daily / weekly` + systemd user timers |
 
 Needs: `sudo apt install python3-webview python3-ptyprocess python3-openpyxl python3-tk fonts-dejavu-core`
-and Claude Code.
+and at least one of Claude Code, Codex and Antigravity. `./install.sh` offers to install
+what is missing: the packages with one `sudo apt install` (plus `curl` if needed), and
+Claude Code with Anthropic's installer.
 
 Differences from Windows:
 - Scheduled jobs are systemd user timers (`systemctl --user list-timers 'amc-*'`). A job
@@ -366,7 +373,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v2.7`（目前） | `v2.6.1` 再加上 Relax 模式：Tasks 和 Sessions 兩欄換成營地，每個 session 一棟隨訊息數長大的建築，小人依狀態動作，Cross-check 是營火，上方有任務公告板和 Stamina（⚙ → *Layout* → *Relax*）。詳見 `CHANGELOG.md`。 |
+| `v3.0`（目前） | `v2.7` 再加上新電腦的安裝：`install.bat` 和 `install.sh` 會問要不要幫你裝缺的東西（Claude Code、Python 3 與模組、ImportExcel、字型）；Claude Code、Codex、Antigravity 都改成選用，至少裝一個即可。詳見 `CHANGELOG.md`。 |
+| `v2.7` | `v2.6.1` 再加上 Relax 模式：Tasks 和 Sessions 兩欄換成營地，每個 session 一棟隨訊息數長大的建築，小人依狀態動作，Cross-check 是營火，上方有任務公告板和 Stamina（⚙ → *Layout* → *Relax*）。詳見 `CHANGELOG.md`。 |
 | `v2.6.1` | `v2.6` 再加上 fork Claude session（右鍵 → *Fork…*，或 `+` → *Fork session…*）；在 Claude 或 Codex 分頁點一下又能直接打字。詳見 `CHANGELOG.md`。 |
 | `v2.6` | `v2.5` 再加上釘選訊息（桌面版、遠端桌面、手機）；在 Claude 和 Codex 分頁拖曳選取文字；從手機上傳檔案；手機 Chat 顯示有選項的提問（加 hook 後連等待中的也會顯示）；手機上的 Markdown 表格畫成表格。詳見 `CHANGELOG.md`。 |
 | `v2.5` | `v2.4.1` 再加上遠端桌面（透過 Tailscale 在另一台電腦的瀏覽器打開整個視窗），以及 Cross-check 的兩個字數上限（回覆 200、結論 500）。詳見 `CHANGELOG.md`。 |
@@ -386,7 +394,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 ## 需求
 
 - Windows 10 或 11
-- Claude Code CLI，且 `claude` 在 PATH 中
+- 下面三個 AI 工具至少要有一個（安裝程式會問要不要幫你裝 Claude Code）：
+- Claude Code CLI，且 `claude` 在 PATH 中（排程的每日／每週摘要也需要它）
 - 選用，給 Codex 分頁用：Codex CLI，且 `codex` 在 PATH 中（`npm install -g @openai/codex`，
   需要 Node.js），並用 `codex login` 登入
 - 選用，給 Antigravity 分頁用：Antigravity CLI，且 `agy` 在 PATH 中，並已登入
@@ -403,11 +412,14 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 1. 把 `Agent-Mission-Control` 資料夾複製到你希望 Claude session 工作的資料夾裡。
    它的上一層資料夾就是每個分頁的工作目錄。
 2. 雙擊 `install.bat`。它會檢查工具需要的程式（Claude Code、Python 3 與它的模組、
-   ImportExcel 模組、DejaVu Sans Mono 字型），若還沒有 `agents.json`、
+   ImportExcel 模組、DejaVu Sans Mono 字型），缺的會一項一項問要不要幫你裝，只裝給
+   目前的使用者、不需要系統管理員（Claude Code 用 Anthropic 官方安裝程式、Python 3.12
+   從 python.org、字型從 DejaVu 的 GitHub）。若還沒有 `agents.json`、
    `hud-config.json`、`tasks.md`、`TaskDatabase.xlsx`，就從範本建立，接著在桌面建立
    **Agent Mission Control** 捷徑，並詢問要註冊哪些排程。不會把檔案複製到別處，工具直接
    從這個資料夾執行；資料夾搬家後再執行一次即可。
-3. 在 `agents.json` 列出你的分頁（一開始已有一筆 `Session Manager`）：每個
+3. 在 `agents.json` 列出你的分頁（一開始已有一筆 `Session Manager`；沒裝 Claude Code
+   時一開始是空的，用 `+` 新增 Codex 或 Antigravity 分頁）：每個
    Claude Code session 一筆，包含名稱和固定的 session id（用
    `powershell -c "[guid]::NewGuid()"` 產生）。Agent Mission Control 依這個順序、用這些
    名稱顯示。可選的 `"model"`（例如 `"sonnet"`）會以 `--model` 傳入，可用 session
