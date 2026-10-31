@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – Update restarts Agent Mission Control
+
+### Changed
+- ⚙ → *Update from GitHub* is now *Update*. It asks first ("… restarts, and every tab with
+  it"), and after pulling a new version restarts Agent Mission Control through its launcher
+  (`launch-agents.ps1` / `launch-agents.py`, which close the old window as its close button
+  does); already up to date or an error, it stays.
+- README: Update (both languages).
+
 ## 2026-11-01 – installing a tool on Windows, again
 
 ### Fixed

@@ -681,7 +681,7 @@ class Api:
             return {'error': out.splitlines()[-1] if out else 'git pull failed'}
         if 'Already up to date' in out:
             return {'text': 'Already up to date'}
-        return {'text': 'Updated: restart Agent Mission Control to use it'}
+        return {'text': 'Updated', 'restart': True}
 
     def _run_git(self, *args):
         kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
@@ -716,7 +716,20 @@ class Api:
                     return {'error': f"git {step[0]}: {out.splitlines()[-1] if out else 'failed'}"}
         except subprocess.TimeoutExpired:
             return {'error': 'git took over 2 minutes'}
-        return {'text': 'Updated (this folder is now a git clone): restart Agent Mission Control to use it'}
+        return {'text': 'Updated (this folder is now a git clone)', 'restart': True}
+
+    def restart(self):
+        """⚙ → Update: starts the launcher, which closes this window the way its close button
+        does (its tabs end, their conversations kept) and opens a new one that resumes them."""
+        if WINDOWS:
+            ps1 = os.path.join(LAUNCHER_DIR, 'launch-agents.ps1')
+            subprocess.Popen(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1],
+                             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.Popen([sys.executable, os.path.join(LAUNCHER_DIR, 'launch-agents.py')],
+                             start_new_session=True, stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def send_feedback(self):
         """⚙ → Send feedback: a new email in the default mail app."""

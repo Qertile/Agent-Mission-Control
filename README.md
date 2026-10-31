@@ -348,8 +348,10 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   login` tab that runs the tool's own logout and login (the browser opens for the new
   account), then closes on Enter. Every tab of that tool uses the new account from then on.
   Antigravity has no login command, so it is not listed.
-- **Update from GitHub:** `⚙` → *Update from GitHub* runs `git pull --ff-only` in this
-  folder and shows how it went under it; restart Agent Mission Control to use new code.
+- **Update:** `⚙` → *Update* asks first, then runs `git pull --ff-only` in this folder and
+  shows how it went. With a new version, Agent Mission Control restarts itself through its
+  launcher (every tab restarts, conversations go on); already up to date or an error, it
+  does not.
   A folder that is not a git clone (a downloaded zip, a copy) is made one first: your own
   files (`agents.json`, `hud-config.json`, `tasks.md` ...) stay as they are, and a file of
   the tools that differs from GitHub's is copied to `.update-backup/<time>/` before it is
@@ -685,8 +687,9 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   `codex login status`）。*Switch…* 會開一個 `Claude login`／`Codex login` 分頁，執行工具自己的
   登出和登入（瀏覽器會開登入頁），按 Enter 後關閉。之後這個工具的所有分頁都改用新帳號。
   Antigravity 沒有登入指令，所以不會列出。
-- **從 GitHub 更新**：`⚙` → *Update from GitHub* 會在這個資料夾執行 `git pull --ff-only`，
-  結果顯示在按鈕下方；重開 Agent Mission Control 才會用到新程式。不是 git clone 的資料夾
+- **更新**：`⚙` → *Update* 會先確認，再在這個資料夾執行 `git pull --ff-only` 並顯示結果。
+  有新版本時，Agent Mission Control 會透過啟動程式自己重開（所有分頁跟著重開，對話會接續）；
+  已是最新版或出錯時不會重開。不是 git clone 的資料夾
   （下載的 zip、複製來的）會先變成 clone：你自己的檔案（`agents.json`、`hud-config.json`、
   `tasks.md`…）不動，跟 GitHub 不同的程式檔會先備份到 `.update-backup/<時間>/` 再換掉。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
   官方的 zip，不需系統管理員）到 `%LOCALAPPDATA%\Programs\MinGit`，只給 Agent Mission Control

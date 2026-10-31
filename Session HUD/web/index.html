@@ -1242,7 +1242,7 @@ $('set-btn').addEventListener('click', async e => {
       def.installed.includes(k) ? `<div data-tool="${k}">${k === def.tool ? '✓' : '\u00a0'} ${label}</div>`
                                 : `<div class="disabled" title="not installed">\u00a0 ${label}</div>`).join('') +
     '<hr><div class="disabled">Accounts</div><div id="acct-list"><div class="disabled">\u00a0 reading…</div></div>' +
-    '<hr><div data-update="1">Update from GitHub</div><div class="err" id="update-msg"></div>' +
+    '<hr><div data-update="1">Update</div>' +
     '<div data-feedback="1">Send feedback…</div>';
   const r = $('set-btn').getBoundingClientRect();
   showAt(m, r.right - m.offsetWidth, r.bottom);
@@ -1281,6 +1281,16 @@ $('set-menu').addEventListener('click', e => {
     amc.select(r.id);
   });
   if (e.target.dataset.update) {
+    // Asked first: a new version means a restart, which restarts every tab.
+    e.stopPropagation();
+    $('set-menu').innerHTML =
+      '<div class="disabled" style="white-space:normal;max-width:300px">Update from GitHub? When there is a new ' +
+      'version, Agent Mission Control restarts, and every tab with it (conversations go on).</div>' +
+      '<div data-update-go="1">Update and restart</div><div data-cancel="1">Cancel</div>' +
+      '<div class="err" id="update-msg" style="white-space:normal;max-width:300px"></div>';
+    return;
+  }
+  if (e.target.dataset.updateGo) {
     // The menu stays open to show how it went.
     e.stopPropagation();
     const msg = $('update-msg');
@@ -1289,6 +1299,7 @@ $('set-menu').addEventListener('click', e => {
     api().update().then(r => {
       msg.style.color = r.error ? '' : 'var(--grey)';
       msg.textContent = r.error || r.text;
+      if (r.restart) { msg.textContent = 'restarting…'; api().restart(); }
     });
   }
 });
