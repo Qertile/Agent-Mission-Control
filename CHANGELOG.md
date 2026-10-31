@@ -2,23 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-10-31 – Update installs git
-
-### Changed
-- ⚙ → *Update from GitHub* installs git when there is none: on Windows the latest MinGit
-  from Git for Windows' GitHub releases (64-bit or ARM64) into
-  `%LOCALAPPDATA%\Programs\MinGit`, no admin, used by Agent Mission Control only (not
-  added to PATH); on Linux `pkexec apt-get install -y git`.
-- README: Update from GitHub (both languages).
-
-## 2026-10-31 – Default AI
+## 2026-10-31 – v3.2: Default AI, Update installs git
 
 ### Added
 - ⚙ → *Default AI*: Claude, Codex or Antigravity (installed ones only) for `Task Reminder`
   and `Session Manager`, made on their first send; kept as `"defaultTool"` in
   `hud-config.json`. Existing tabs keep their tool. With none picked, or the picked one
   not installed: Claude Code, otherwise Codex, otherwise Antigravity.
-- README: Default AI, Chat box (both languages).
+
+### Changed
+- ⚙ → *Update from GitHub* installs git when there is none: on Windows the latest MinGit
+  from Git for Windows' GitHub releases (64-bit or ARM64) into
+  `%LOCALAPPDATA%\Programs\MinGit`, no admin, used by Agent Mission Control only (not
+  added to PATH); on Linux `pkexec apt-get install -y git`.
+- README: Default AI, Chat box, Update from GitHub (both languages); Versions: `v3.2`.
+- Tagged `v3.2`.
 
 ## 2026-10-31 – v3.1: Codex fork, no-Claude PCs, Update and Feedback
 

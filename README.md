@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.1` (current) | `v3.0` plus forking Codex sessions (`codex fork`), Session Manager and Task Reminder on Codex or Antigravity when Claude Code is not installed, *New Claude session…* in `+`, and ⚙ → *Update from GitHub* and *Send feedback…*. See `CHANGELOG.md`. |
+| `v3.2` (current) | `v3.1` plus ⚙ → *Default AI* (the tool Task Reminder and Session Manager start with) and *Update from GitHub* installing git when there is none. See `CHANGELOG.md`. |
+| `v3.1` | `v3.0` plus forking Codex sessions (`codex fork`), Session Manager and Task Reminder on Codex or Antigravity when Claude Code is not installed, *New Claude session…* in `+`, and ⚙ → *Update from GitHub* and *Send feedback…*. See `CHANGELOG.md`. |
 | `v3.0` | `v2.7` plus an installer for a new PC: `install.bat` and `install.sh` offer to install what is missing (Claude Code, Python 3 and its modules, ImportExcel, the font), and Claude Code, Codex and Antigravity are each optional as long as one is there. See `CHANGELOG.md`. |
 | `v2.7` | `v2.6.1` plus Relax mode: the Tasks and Sessions columns as a camp, a building per session growing with its messages, people by status, Cross-check campfires, a task board and stamina bars (⚙ → *Layout* → *Relax*). See `CHANGELOG.md`. |
 | `v2.6.1` | `v2.6` plus forking a Claude session (right-click → *Fork…*, or `+` → *Fork session…*) and clicking in a Claude or Codex tab focusing it again. See `CHANGELOG.md`. |
@@ -391,7 +392,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.1`（目前） | `v3.0` 再加上：Codex session 也能 fork（`codex fork`）；沒裝 Claude Code 時，Session Manager 和 Task Reminder 改用 Codex 或 Antigravity；`+` 選單改成 *New Claude session…*；⚙ → *Update from GitHub* 和 *Send feedback…*。詳見 `CHANGELOG.md`。 |
+| `v3.2`（目前） | `v3.1` 再加上：⚙ → *Default AI*（Task Reminder 和 Session Manager 用哪個 AI 建立），以及 *Update from GitHub* 在沒有 git 時先幫你裝。詳見 `CHANGELOG.md`。 |
+| `v3.1` | `v3.0` 再加上：Codex session 也能 fork（`codex fork`）；沒裝 Claude Code 時，Session Manager 和 Task Reminder 改用 Codex 或 Antigravity；`+` 選單改成 *New Claude session…*；⚙ → *Update from GitHub* 和 *Send feedback…*。詳見 `CHANGELOG.md`。 |
 | `v3.0` | `v2.7` 再加上新電腦的安裝：`install.bat` 和 `install.sh` 會問要不要幫你裝缺的東西（Claude Code、Python 3 與模組、ImportExcel、字型）；Claude Code、Codex、Antigravity 都改成選用，至少裝一個即可。詳見 `CHANGELOG.md`。 |
 | `v2.7` | `v2.6.1` 再加上 Relax 模式：Tasks 和 Sessions 兩欄換成營地，每個 session 一棟隨訊息數長大的建築，小人依狀態動作，Cross-check 是營火，上方有任務公告板和 Stamina（⚙ → *Layout* → *Relax*）。詳見 `CHANGELOG.md`。 |
 | `v2.6.1` | `v2.6` 再加上 fork Claude session（右鍵 → *Fork…*，或 `+` → *Fork session…*）；在 Claude 或 Codex 分頁點一下又能直接打字。詳見 `CHANGELOG.md`。 |
