@@ -2,15 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-11-01 – Agy in Accounts
+## 2026-11-01 – v3.5.3: Agy in Accounts, pasting screenshots on Linux, the version in ⚙
 
 ### Added
 - ⚙ → Accounts lists *Agy · Switch…*: an `Agy login` tab running `agy` that types
   `/logout` once it is up (agy logs in and out only inside itself); `/login` is typed
   there, and quitting agy closes the tab. No account is shown: agy has no command for it.
-- README: Accounts (both languages).
-
-## 2026-11-01 – pasting screenshots on Linux
+- The foot of ⚙ shows the version, `git describe --tags --long` (`v3.5.3-0-g<commit>`), or
+  without git the newest version in CHANGELOG.md.
 
 ### Fixed
 - A screenshot tool that puts only a file link on the clipboard (`file://…`, no image)
@@ -18,7 +17,8 @@ All notable changes to this project are listed here, newest first.
 - On Linux, when GTK finds no image on the clipboard, `wl-paste` (Wayland) or `xclip` (X11)
   are asked; a paste that still finds none logs the session type, what the clipboard
   offered and which tools are there to stderr (`amc-web.log`).
-- README: Images (both languages).
+- README: Accounts, Images (both languages); Versions: `v3.5.3`.
+- Tagged `v3.5.3`.
 
 ## 2026-11-01 – v3.5.2: Remote Access AMC, a shorter ⚙ menu
 
@@ -34,8 +34,6 @@ All notable changes to this project are listed here, newest first.
 - ⚙ → *Theme ▸* and *Default AI ▸* are second-layer lists (with *◂ Back*); the first layer
   shows the current one ("Theme: Classic ▸"). The menu went from 22 lines to 10.
 - `+` → *New Antigravity session…* is now *New Agy session…*.
-- The foot of ⚙ shows the version, `git describe --tags --long` (`v3.5.2-0-g<commit>`), or
-  without git the newest version in CHANGELOG.md.
 - README: Phone, Theme, Default AI, Antigravity tabs (both languages); Versions: `v3.5.2`.
 - Tagged `v3.5.2`.
 
