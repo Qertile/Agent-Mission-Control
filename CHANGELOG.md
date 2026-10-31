@@ -2,52 +2,32 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-11-01 – Update restarts Agent Mission Control
+## 2026-11-01 – v3.5.1: Update restarts, non-clone folders, installing on Windows
 
 ### Changed
-- ⚙ → *Update from GitHub* is now *Update*. It asks first ("… restarts, and every tab with
-  it"), and after pulling a new version restarts Agent Mission Control through its launcher
-  (`launch-agents.ps1` / `launch-agents.py`, which close the old window as its close button
-  does); already up to date or an error, it stays.
-- README: Update (both languages).
-
-## 2026-11-01 – installing a tool on Windows, again
-
-### Fixed
-- `+` → *Download and install it* on Windows said "could not start: access denied": Windows
-  security likely refuses `powershell -ExecutionPolicy Bypass -EncodedCommand` (v3.5.2). The
-  tab now runs `powershell.exe -File <temp>\amc-install-<tool>.ps1` itself (no cmd.exe),
-  whose first line runs `irm <url>.ps1 | iex` in a PowerShell of its own, so the installers'
-  `exit` does not close the tab before *Press Enter to close*.
-
-## 2026-11-01 – install and login errors shown
-
-### Changed
+- ⚙ → *Update from GitHub* is now *Update*. It asks first, and after pulling a new version
+  restarts Agent Mission Control through its launcher (`launch-agents.ps1` /
+  `launch-agents.py`, which close the old window as its close button does); already up to
+  date or an error, it stays.
 - `+` → *Download and install it* keeps the menu open while it starts and shows why it
   could not start there (in red); a tab that ended at once says so. *Switch…* (Accounts)
   shows its error too. Both failed silently before.
 - An install or login tab's last output, how long it ran and, when it could not start, its
   command go to stderr (`Session HUD/amc-web.log` on Windows).
 
-## 2026-11-01 – v3.5.2: installing a tool on Windows
-
 ### Fixed
-- `+` → *Download and install it* on Windows only printed `irm … | iex`: cmd.exe, which
-  runs the tab, got the inner quotes of `-Command "…"` as `\"`, so PowerShell saw a quoted
-  string. The command now goes as `-EncodedCommand` (base64), with no quotes or `|`.
-- Versions: `v3.5.2`.
-- Tagged `v3.5.2`.
-
-## 2026-10-31 – v3.5.1: Update in a folder that is not a clone
-
-### Fixed
-- ⚙ → *Update from GitHub* said "this folder is not a git clone" for a downloaded zip or a
-  copied folder. It now makes it one: `git init`, `origin` =
+- *Update* said "this folder is not a git clone" for a downloaded zip or a copied folder.
+  It now makes it one: `git init`, `origin` =
   `https://github.com/Qertile/Agent-Mission-Control.git`, fetch `master`, a tools file that
   differs from GitHub's copied to `.update-backup/<time>/` (`.gitignore`d) and then replaced;
   your own `.gitignore`d files are left alone. Git is installed first when missing.
-- README: Update from GitHub (both languages); Versions: `v3.5.1`.
-- Tagged `v3.5.1`.
+- `+` → *Download and install it* on Windows only printed `irm … | iex` (cmd.exe turned the
+  inner quotes of `-Command "…"` into `\"`), and with `-EncodedCommand` said "access denied".
+  The tab now runs `powershell.exe -File <temp>\amc-install-<tool>.ps1` itself (no cmd.exe),
+  whose first line runs `irm <url>.ps1 | iex` in a PowerShell of its own, so the installers'
+  `exit` does not close the tab before *Press Enter to close*.
+- README: Update, Installing a tool (both languages); Versions: `v3.5.1`.
+- Tagged `v3.5.1` (an earlier `v3.5.1` and `v3.5.2` were withdrawn).
 
 ## 2026-10-31 – v3.5: move Task Reminder and Session Manager to the Default AI
 
