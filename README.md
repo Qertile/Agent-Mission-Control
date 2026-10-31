@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.7` (current) | `v3.5.6` plus *New token…* in ⚙ → *Remote Access AMC ▸* (the old links stop working at once) and a warning to keep the links private. See `CHANGELOG.md`. |
+| `v3.5.8` (current) | `v3.5.7` plus the phone's *Chat* button greyed on Antigravity sessions, saying why. See `CHANGELOG.md`. |
+| `v3.5.7` | `v3.5.6` plus *New token…* in ⚙ → *Remote Access AMC ▸* (the old links stop working at once) and a warning to keep the links private. See `CHANGELOG.md`. |
 | `v3.5.6` | `v3.5.5` plus deleting Cross-check discussions from `+` → *History*. See `CHANGELOG.md`. |
 | `v3.5.5` | `v3.5.4` plus replacing a session of the same name (after asking) and deleting closed sessions from `+` → *History*. See `CHANGELOG.md`. |
 | `v3.5.4` | `v3.5.3` plus *Update* really restarting Agent Mission Control on Windows. See `CHANGELOG.md`. |
@@ -440,7 +441,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.7`（目前） | `v3.5.6` 再加上：⚙ → *Remote Access AMC ▸* 的 *New token…*（舊網址立刻失效），以及不要外流網址的警告。詳見 `CHANGELOG.md`。 |
+| `v3.5.8`（目前） | `v3.5.7` 再加上：手機頁的 *Chat* 按鈕在 Antigravity session 上變灰，按下會說明原因。詳見 `CHANGELOG.md`。 |
+| `v3.5.7` | `v3.5.6` 再加上：⚙ → *Remote Access AMC ▸* 的 *New token…*（舊網址立刻失效），以及不要外流網址的警告。詳見 `CHANGELOG.md`。 |
 | `v3.5.6` | `v3.5.5` 再加上：`+` → *History* 可刪除 Cross-check 討論。詳見 `CHANGELOG.md`。 |
 | `v3.5.5` | `v3.5.4` 再加上：同名 session 可確認後取代、`+` → *History* 可刪除已關閉的 session。詳見 `CHANGELOG.md`。 |
 | `v3.5.4` | `v3.5.3` 再加上：Windows 上 *Update* 後真的會自動重開。詳見 `CHANGELOG.md`。 |
