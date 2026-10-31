@@ -422,6 +422,29 @@ class Api:
             return {'error': str(e)}
         return {'id': entry['id']}
 
+    def default_tool(self):
+        """⚙ → Default AI: the tool Task Reminder and Session Manager are made with on their
+        first send. {'tool': 'claude' | 'codex' | 'agy', 'installed': [...]}. hud-config.json's
+        "defaultTool" when installed, otherwise Claude Code, Codex, Antigravity, the first
+        installed. An existing tab keeps its tool."""
+        installed = [t for t in ('claude', 'codex', 'agy') if shutil.which(t)]
+        chosen = self._config.get('defaultTool')
+        tool = chosen if chosen in installed else (installed or ['claude'])[0]
+        return {'tool': tool, 'installed': installed}
+
+    def set_default_tool(self, tool):
+        """Keeps `tool` as "defaultTool" in hud-config.json, the rest of the file as it was."""
+        if tool not in ('claude', 'codex', 'agy'):
+            return
+        path = os.path.join(HERE, 'hud-config.json')
+        config = load_json(path) or {}
+        config['defaultTool'] = tool
+        with open(path + '.tmp', 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+            f.write('\n')
+        os.replace(path + '.tmp', path)
+        self._config['defaultTool'] = tool
+
     def update(self):
         """⚙ → Update: `git pull --ff-only` in this folder (a clone of the GitHub repo).
         Returns {'text': what happened} or {'error': ...}; the new code runs after a restart."""
@@ -536,8 +559,7 @@ class Api:
         entry = next((e for e in core.agents() if e['name'] == name), None)
         if not entry and name in CREATE_ON_SEND:
             entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1}
-            # Claude Code when installed, otherwise Codex, otherwise Antigravity.
-            tool = next((t for t in ('claude', 'codex', 'agy') if shutil.which(t)), 'claude')
+            tool = self.default_tool()['tool']
             if tool != 'claude':
                 entry['tool'] = tool
             core.save_agents(core.agents() + [entry])

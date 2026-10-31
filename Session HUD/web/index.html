@@ -1199,14 +1199,18 @@ $('add-menu').addEventListener('keydown', async e => {
 });
 $('wide-btn').addEventListener('click', () => amc.toggleWide());
 // Settings: for now the theme, the current one ticked.
-$('set-btn').addEventListener('click', e => {
+$('set-btn').addEventListener('click', async e => {
   e.stopPropagation();
-  const m = $('set-menu');
+  const m = $('set-menu'), def = await api().default_tool();
   m.innerHTML = '<div class="disabled">Layout</div>' +
     [['office', 'Office'], ['relax', 'Relax']].map(([k, label]) =>
       `<div data-mode="${k}">${(k === 'relax') === relax.on ? '✓' : '\u00a0'} ${label}</div>`).join('') +
     '<hr><div class="disabled">Theme</div>' + Object.keys(THEMES).map(n =>
     `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('') +
+    '<hr><div class="disabled" title="the AI that Task Reminder and Session Manager start with">Default AI</div>' +
+    [['claude', 'Claude'], ['codex', 'Codex'], ['agy', 'Antigravity']].map(([k, label]) =>
+      def.installed.includes(k) ? `<div data-tool="${k}">${k === def.tool ? '✓' : '\u00a0'} ${label}</div>`
+                                : `<div class="disabled" title="not installed">\u00a0 ${label}</div>`).join('') +
     '<hr><div data-update="1">Update from GitHub</div><div class="err" id="update-msg"></div>' +
     '<div data-feedback="1">Send feedback…</div>';
   const r = $('set-btn').getBoundingClientRect();
@@ -1216,6 +1220,7 @@ $('set-menu').addEventListener('click', e => {
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
   if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
   if (e.target.dataset.feedback) api().send_feedback();
+  if (e.target.dataset.tool) api().set_default_tool(e.target.dataset.tool);
   if (e.target.dataset.update) {
     // The menu stays open to show how it went.
     e.stopPropagation();

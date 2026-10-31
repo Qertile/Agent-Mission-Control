@@ -319,6 +319,11 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   green on black, the default), Dark, Light, Monokai, Solarized Dark, Solarized Light,
   Dracula, Nord, Gruvbox Dark and One Dark. The theme colours the whole window and the
   terminals, and is kept for the next start.
+- **Default AI:** `⚙` → *Default AI* picks Claude, Codex or Antigravity (only the installed
+  ones) for `Task Reminder` and `Session Manager`, made on their first send. Kept as
+  `"defaultTool"` in `Session HUD/hud-config.json`. A tab already in `agents.json` keeps its
+  tool; remove it there to have it made again with the new one. With none picked: Claude
+  Code, otherwise Codex, otherwise Antigravity.
 - **Update from GitHub:** `⚙` → *Update from GitHub* runs `git pull --ff-only` in this
   folder and shows how it went under it; restart Agent Mission Control to use new code.
   It needs git and a folder cloned with git (not a downloaded zip).
@@ -339,8 +344,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   finishing added (dated its finish day); restoring a Discarded one drops the reason.
 - **Chat box:** the box under the task list types what you enter into the `Task Reminder`
   tab and submits it (Shift+Enter for a new line). With no `Task Reminder` yet, the first
-  send adds one to `agents.json` and opens its tab: a Claude tab, or Codex or Antigravity
-  when Claude Code is not installed (the same goes for `Session Manager`, whose
+  send adds one to `agents.json` and opens its tab, with the `⚙` → *Default AI* tool (the
+  same goes for `Session Manager`, whose
   ListAgents and SendMessage exist only in Claude Code).
 
 ## Daily Summary
@@ -626,6 +631,11 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
 - **主題**：分頁列右邊的 `⚙` 列出主題：Classic（原本的黑底綠字，預設）、Dark、Light、
   Monokai、Solarized Dark、Solarized Light、Dracula、Nord、Gruvbox Dark、One Dark。
   主題會套用到整個視窗和終端機，下次啟動仍然保留。
+- **預設 AI**：`⚙` → *Default AI* 選 Claude、Codex 或 Antigravity（只能選有裝的），
+  `Task Reminder` 和 `Session Manager` 第一次送出訊息建立時就用它。存在
+  `Session HUD/hud-config.json` 的 `"defaultTool"`。已經在 `agents.json` 裡的分頁保持原本的
+  工具；想換就把它從 `agents.json` 刪掉，下次會用新的重建。沒選時依序用 Claude Code、
+  Codex、Antigravity。
 - **從 GitHub 更新**：`⚙` → *Update from GitHub* 會在這個資料夾執行 `git pull --ff-only`，
   結果顯示在按鈕下方；重開 Agent Mission Control 才會用到新程式。需要 git，且資料夾要是用
   git clone 下來的（不是下載的 zip）。
@@ -643,7 +653,7 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   的任務時，會刪掉完成當天加上的結果行；還原 Discarded 的任務時，會拿掉丟棄的原因。
 - **聊天框**：任務清單下方的輸入框會把你打的內容送進 `Task Reminder` 分頁並送出
   （Shift+Enter 換行）。還沒有 `Task Reminder` 時，第一次送出會把它加進 `agents.json`
-  並開出分頁：是 Claude 分頁；沒裝 Claude Code 時改用 Codex 或 Antigravity（`Session Manager`
+  並開出分頁，用的是 `⚙` → *Default AI* 選的工具（`Session Manager`
   也一樣，但它用的 ListAgents 和 SendMessage 只有 Claude Code 有）。
 
 ## 每日總結

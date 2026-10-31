@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – Default AI
+
+### Added
+- ⚙ → *Default AI*: Claude, Codex or Antigravity (installed ones only) for `Task Reminder`
+  and `Session Manager`, made on their first send; kept as `"defaultTool"` in
+  `hud-config.json`. Existing tabs keep their tool. With none picked, or the picked one
+  not installed: Claude Code, otherwise Codex, otherwise Antigravity.
+- README: Default AI, Chat box (both languages).
+
 ## 2026-10-31 – v3.1: Codex fork, no-Claude PCs, Update and Feedback
 
 ### Added
