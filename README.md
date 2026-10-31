@@ -356,7 +356,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   (`claude auth status`, `codex login status`). *Switch…* opens a `Claude login` / `Codex
   login` tab that runs the tool's own logout and login (the browser opens for the new
   account), then closes on Enter. Every tab of that tool uses the new account from then on.
-  Antigravity has no login command, so it is not listed.
+  *Agy · Switch…* opens an `Agy login` tab running `agy` with `/logout` typed in; type
+  `/login` there, then quit agy (Ctrl+C) to close it (agy cannot say which account it uses).
 - **Update:** `⚙` → *Update* asks first, then runs `git pull --ff-only` in this folder and
   shows how it went. With a new version, Agent Mission Control restarts itself through its
   launcher (every tab restarts, conversations go on); already up to date or an error, it
@@ -702,7 +703,8 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
 - **帳號**：`⚙` → *Accounts* 顯示每個已安裝工具登入的帳號（`claude auth status`、
   `codex login status`）。*Switch…* 會開一個 `Claude login`／`Codex login` 分頁，執行工具自己的
   登出和登入（瀏覽器會開登入頁），按 Enter 後關閉。之後這個工具的所有分頁都改用新帳號。
-  Antigravity 沒有登入指令，所以不會列出。
+  *Agy · Switch…* 會開一個 `Agy login` 分頁執行 `agy` 並自動打 `/logout`；接著在裡面打
+  `/login` 登入，再退出 agy（Ctrl+C）關閉分頁（agy 無法顯示目前登入的帳號）。
 - **更新**：`⚙` → *Update* 會先確認，再在這個資料夾執行 `git pull --ff-only` 並顯示結果。
   有新版本時，Agent Mission Control 會透過啟動程式自己重開（所有分頁跟著重開，對話會接續）；
   已是最新版或出錯時不會重開。不是 git clone 的資料夾

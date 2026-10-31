@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – Agy in Accounts
+
+### Added
+- ⚙ → Accounts lists *Agy · Switch…*: an `Agy login` tab running `agy` that types
+  `/logout` once it is up (agy logs in and out only inside itself); `/login` is typed
+  there, and quitting agy closes the tab. No account is shown: agy has no command for it.
+- README: Accounts (both languages).
+
 ## 2026-11-01 – pasting screenshots on Linux
 
 ### Fixed

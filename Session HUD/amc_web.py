@@ -613,6 +613,9 @@ class Api:
         if shutil.which('codex'):
             first = (run([shutil.which('codex'), 'login', 'status']).splitlines() or ['not logged in'])[0]
             out.append({'tool': 'codex', 'label': 'Codex', 'account': first.replace('Logged in using ', '')})
+        if shutil.which('agy'):
+            # agy has no command that says which account it uses.
+            out.append({'tool': 'agy', 'label': 'Agy', 'account': ''})
         return out
 
     def switch_account(self, tool):
@@ -620,6 +623,20 @@ class Api:
         the new account), then waits for Enter and goes away. Every tab of that tool uses
         the new account from then on. Returns {'id': ...} or {'error': ...}."""
         cmds = {'claude': ['claude auth logout', 'claude auth login'], 'codex': ['codex logout', 'codex login']}
+        if tool == 'agy' and shutil.which('agy'):
+            # agy logs out and in only inside itself (/logout, /login): it opens with /logout
+            # typed; /login is left to you, then quit agy (Ctrl+C) to close the tab.
+            r = self._run_tab('login-agy', 'Agy login', 'agy', [], [shutil.which('agy')])
+            if 'id' in r:
+                term = self._terms.get('login-agy')
+                def logout():
+                    time.sleep(5)
+                    if term and term.alive():
+                        term.write('/logout')
+                        time.sleep(0.5)
+                        term.write('\r')
+                threading.Thread(target=logout, daemon=True).start()
+            return r
         if tool not in cmds or not shutil.which(tool):
             return {'error': f'{tool} is not installed'}
         return self._run_tab(f'login-{tool}', {'claude': 'Claude login', 'codex': 'Codex login'}[tool],

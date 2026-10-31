@@ -1255,8 +1255,8 @@ $('set-btn').addEventListener('click', async e => {
   api().accounts().then(list => {
     if (!$('acct-list')) return;
     $('acct-list').innerHTML = list.length ? list.map(a =>
-      `<div data-login="${a.tool}" title="log out, then log in with another account">\u00a0 ${a.label}: ${esc(a.account)} · Switch…</div>`).join('')
-      : '<div class="disabled">\u00a0 no Claude Code or Codex</div>';
+      `<div data-login="${a.tool}" title="log out, then log in with another account">\u00a0 ${a.label}${a.account ? ': ' + esc(a.account) : ''} · Switch…</div>`).join('')
+      : '<div class="disabled">\u00a0 no AI tool installed</div>';
     showAt(m, r.right - m.offsetWidth, r.bottom);
   });
 });
