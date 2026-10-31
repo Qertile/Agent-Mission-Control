@@ -2,6 +2,20 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – v3.4: install a missing AI tool from +
+
+### Added
+- `+` marks a tool that is not installed as *New … session… (install)*; clicking it offers
+  *Download and install it*, which opens an `Install …` tab (not in `agents.json`) running
+  the maker's own installer: `claude.ai/install`, `chatgpt.com/codex/install`,
+  `antigravity.google/cli/install` (`.sh` with curl, or wget, on Linux; `.ps1` through
+  `irm | iex` on Windows). Enter closes it.
+- After such a tab, and the Accounts login tabs, Agent Mission Control adds to its own PATH
+  what the installer added (Windows' saved PATH, and `~/.local/bin`), so the new tool works
+  without a restart.
+- README: Installing a tool (both languages); Versions: `v3.4`.
+- Tagged `v3.4`.
+
 ## 2026-10-31 – v3.3: switch AI accounts
 
 ### Added

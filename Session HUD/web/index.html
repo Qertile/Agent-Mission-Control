@@ -1153,8 +1153,10 @@ function addMenuAt(html) {
 $('add-tab').addEventListener('click', async e => {
   e.stopPropagation();
   const n = (amc.stopped || []).length + (await api().discussions()).length;
-  addMenuAt('<div data-new="claude">New Claude session…</div><div data-new="codex">New Codex session…</div>' +
-    '<div data-new="agy">New Antigravity session…</div><div data-fork="1">Fork session…</div>' +
+  installed = (await api().default_tool()).installed;
+  const item = (k, label) => `<div data-new="${k}">New ${label} session…${installed.includes(k) ? '' : ' (install)'}</div>`;
+  addMenuAt(item('claude', 'Claude') + item('codex', 'Codex') + item('agy', 'Antigravity') +
+    '<div data-fork="1">Fork session…</div>' +
     '<hr><div data-xc="1">Cross-check…</div>' +
     `<hr><div data-history="1">History (${n}) ▸</div>`);
 });
@@ -1167,12 +1169,19 @@ async function showHistory() {
     (past.length ? past.map(x => `<div data-disc="${esc(x.id)}" title="${esc(x.created)}">⚖ ${esc(x.title)}</div>`).join('')
                  : '<div class="disabled">none yet</div>'));
 }
-let newTool = 'claude';
+let newTool = 'claude', installed = [];
+const TOOL_LABELS = {claude: 'Claude Code', codex: 'Codex', agy: 'Antigravity'};
 $('add-menu').addEventListener('click', e => {
   // New session: the menu turns into a name box; Enter adds it to agents.json and starts it.
   if (e.target.dataset.new) {
     e.stopPropagation();
     newTool = e.target.dataset.new;
+    if (!installed.includes(newTool)) {
+      // Not installed: offer its maker's installer in a tab; then + → New … session again.
+      $('add-menu').innerHTML = `<div class="disabled">${TOOL_LABELS[newTool]} is not installed.</div>` +
+        `<div data-install="${newTool}">Download and install it</div><div data-back="1">◂ Back</div>`;
+      return;
+    }
     $('add-menu').innerHTML = '<input id="new-name" placeholder="Session Name" spellcheck="false">' +
                               '<div class="err" id="new-err"></div>';
     $('new-name').focus();
@@ -1180,6 +1189,13 @@ $('add-menu').addEventListener('click', e => {
   }
   if (e.target.dataset.fork) { e.stopPropagation(); forkBox(''); return; }
   if (e.target.dataset.history) { e.stopPropagation(); showHistory(); return; }
+  if (e.target.dataset.install) {
+    api().install_tool(e.target.dataset.install).then(async r => {
+      if (r.error) return;
+      await amc.syncTabs();
+      amc.select(r.id);
+    });
+  }
   if (e.target.dataset.back) { e.stopPropagation(); $('add-tab').click(); return; }
   if (e.target.closest('input, .err')) { e.stopPropagation(); return; }
   hideMenus();

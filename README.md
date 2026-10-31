@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.3` (current) | `v3.2` plus ⚙ → *Accounts*: each tool's logged-in account, and *Switch…* to log out and in with another (Claude Code, Codex). See `CHANGELOG.md`. |
+| `v3.4` (current) | `v3.3` plus installing a missing AI tool from `+`: *New … session… (install)* runs Claude Code's, Codex's or Antigravity's own installer in a tab. See `CHANGELOG.md`. |
+| `v3.3` | `v3.2` plus ⚙ → *Accounts*: each tool's logged-in account, and *Switch…* to log out and in with another (Claude Code, Codex). See `CHANGELOG.md`. |
 | `v3.2` | `v3.1` plus ⚙ → *Default AI* (the tool Task Reminder and Session Manager start with) and *Update from GitHub* installing git when there is none. See `CHANGELOG.md`. |
 | `v3.1` | `v3.0` plus forking Codex sessions (`codex fork`), Session Manager and Task Reminder on Codex or Antigravity when Claude Code is not installed, *New Claude session…* in `+`, and ⚙ → *Update from GitHub* and *Send feedback…*. See `CHANGELOG.md`. |
 | `v3.0` | `v2.7` plus an installer for a new PC: `install.bat` and `install.sh` offer to install what is missing (Claude Code, Python 3 and its modules, ImportExcel, the font), and Claude Code, Codex and Antigravity are each optional as long as one is there. See `CHANGELOG.md`. |
@@ -252,6 +253,13 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   the fork as any other session. A Codex session forks the same way with
   `codex fork <its thread>` (`"tool": "codex"`, `"fork_of": "<thread>"`); its new thread is
   found as a new Codex tab's is. Antigravity sessions cannot be forked.
+- **Installing a tool:** in `+`, a tool that is not installed shows as *New … session…
+  (install)*. Clicking it offers *Download and install it*, which opens an `Install …` tab
+  running the maker's own installer into your user folder, no admin (Linux:
+  `curl -fsSL https://claude.ai/install.sh | bash`, `https://chatgpt.com/codex/install.sh | sh`,
+  `https://antigravity.google/cli/install.sh | bash`; Windows: the same with `install.ps1`
+  through `irm … | iex`). Answer its questions there; Enter closes it. PATH is read again
+  after it, so `+` → *New … session…* works without restarting. Log in at its first start.
 - **Codex tabs:** `+` → *New Codex session…* adds a session with `"tool": "codex"` and
   starts `codex` in its tab (with `prompts/<name>.md` as its first message when that file
   exists). Codex chooses the session id itself and writes its transcript
@@ -398,7 +406,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.3`（目前） | `v3.2` 再加上 ⚙ → *Accounts*：顯示各工具登入的帳號，*Switch…* 登出再登入另一個帳號（Claude Code、Codex）。詳見 `CHANGELOG.md`。 |
+| `v3.4`（目前） | `v3.3` 再加上從 `+` 安裝沒裝的 AI 工具：*New … session… (install)* 會在分頁裡執行 Claude Code、Codex 或 Antigravity 官方的安裝程式。詳見 `CHANGELOG.md`。 |
+| `v3.3` | `v3.2` 再加上 ⚙ → *Accounts*：顯示各工具登入的帳號，*Switch…* 登出再登入另一個帳號（Claude Code、Codex）。詳見 `CHANGELOG.md`。 |
 | `v3.2` | `v3.1` 再加上：⚙ → *Default AI*（Task Reminder 和 Session Manager 用哪個 AI 建立），以及 *Update from GitHub* 在沒有 git 時先幫你裝。詳見 `CHANGELOG.md`。 |
 | `v3.1` | `v3.0` 再加上：Codex session 也能 fork（`codex fork`）；沒裝 Claude Code 時，Session Manager 和 Task Reminder 改用 Codex 或 Antigravity；`+` 選單改成 *New Claude session…*；⚙ → *Update from GitHub* 和 *Send feedback…*。詳見 `CHANGELOG.md`。 |
 | `v3.0` | `v2.7` 再加上新電腦的安裝：`install.bat` 和 `install.sh` 會問要不要幫你裝缺的東西（Claude Code、Python 3 與模組、ImportExcel、字型）；Claude Code、Codex、Antigravity 都改成選用，至少裝一個即可。詳見 `CHANGELOG.md`。 |
@@ -588,6 +597,12 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   用自己的 id 繼續，來源 session 保持不變。之後再啟動就和其他 session 一樣接續 fork 這段對話。
   Codex session 也能用同樣的方式 fork，用的是 `codex fork <它的 thread>`（`"tool": "codex"`、
   `"fork_of": "<thread>"`），新的 thread 會像新開的 Codex 分頁一樣自動找到。Antigravity session 不能 fork。
+- **安裝工具**：`+` 選單裡沒裝的工具會顯示成 *New … session… (install)*。點它會出現
+  *Download and install it*，會開一個 `Install …` 分頁，執行該工具官方的安裝程式，裝在使用者
+  資料夾、不需系統管理員（Linux：`curl -fsSL https://claude.ai/install.sh | bash`、
+  `https://chatgpt.com/codex/install.sh | sh`、`https://antigravity.google/cli/install.sh | bash`；
+  Windows 用對應的 `install.ps1` 以 `irm … | iex` 執行）。安裝程式問問題就在分頁裡回答，按 Enter
+  關閉。之後會重新讀 PATH，不用重開就能 `+` → *New … session…*。第一次啟動時要登入。
 - **Codex 分頁**：`+` → *New Codex session…* 會新增一筆 `"tool": "codex"` 的 session，
   並在分頁裡啟動 `codex`（有 `prompts/<name>.md` 時會當成第一則訊息送出）。Codex 的
   session id 由它自己決定，而且要送出第一則訊息才會寫出對話紀錄

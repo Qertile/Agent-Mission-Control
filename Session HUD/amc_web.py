@@ -114,6 +114,26 @@ def first_prompt(name):
         return None
 
 
+def refresh_path():
+    """Adds to this process's PATH what an installer added since it started: Windows'
+    saved PATH (machine, then user), and on both the installers' ~/.local/bin."""
+    parts = os.environ.get('PATH', '').split(os.pathsep)
+    new = []
+    if WINDOWS:
+        import winreg
+        for root, key in ((winreg.HKEY_LOCAL_MACHINE, r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'),
+                          (winreg.HKEY_CURRENT_USER, 'Environment')):
+            try:
+                with winreg.OpenKey(root, key) as k:
+                    new += os.path.expandvars(winreg.QueryValueEx(k, 'Path')[0]).split(os.pathsep)
+            except OSError:
+                pass
+    new.append(os.path.join(os.path.expanduser('~'), '.local', 'bin'))
+    add = [d for d in new if d and d not in parts and os.path.isdir(d)]
+    if add:
+        os.environ['PATH'] = os.pathsep.join(parts + add)
+
+
 def is_codex(entry):
     return (entry or {}).get('tool') == 'codex'
 
@@ -519,16 +539,37 @@ class Api:
         cmds = {'claude': ['claude auth logout', 'claude auth login'], 'codex': ['codex logout', 'codex login']}
         if tool not in cmds or not shutil.which(tool):
             return {'error': f'{tool} is not installed'}
-        tid = f'login-{tool}'
+        return self._run_tab(f'login-{tool}', {'claude': 'Claude login', 'codex': 'Codex login'}[tool],
+                             tool, cmds[tool])
+
+    def install_tool(self, tool):
+        """`+` → New … session for a tool that is not installed: opens a tab running its maker's
+        own installer (Anthropic's, OpenAI's, Google's), into the user's folder, no admin.
+        Returns {'id': ...} or {'error': ...}."""
+        urls = {'claude': 'https://claude.ai/install', 'codex': 'https://chatgpt.com/codex/install',
+                'agy': 'https://antigravity.google/cli/install'}
+        if tool not in urls:
+            return {'error': f'unknown tool {tool}'}
+        if WINDOWS:
+            cmd = f'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm {urls[tool]}.ps1 | iex"'
+        else:
+            shell = 'sh' if tool == 'codex' else 'bash'
+            cmd = (f'(curl -fsSL {urls[tool]}.sh || wget -qO- {urls[tool]}.sh) | {shell}')
+        return self._run_tab(f'install-{tool}', 'Install ' + discuss.LABELS[tool], tool, [cmd])
+
+    def _run_tab(self, tid, name, tool, cmds):
+        """A tab not in agents.json running `cmds` one after another, then waiting for Enter
+        and going away. PATH is read again after it, for what an installer added."""
         if tid in self._terms:
             return {'id': tid}
         if WINDOWS:
-            argv = ['cmd.exe', '/c', ' & '.join(cmds[tool] + ['echo.', 'pause'])]
+            argv = ['cmd.exe', '/c', ' & '.join(cmds + ['echo.', 'pause'])]
         else:
-            argv = ['/bin/sh', '-c', '; '.join(cmds[tool] + ['echo', 'printf "Press Enter to close"', 'read x'])]
-        self._extra[tid] = {'tool': tool, 'name': {'claude': 'Claude login', 'codex': 'Codex login'}[tool]}
+            argv = ['/bin/sh', '-c', '; '.join(cmds + ['echo', 'printf "Press Enter to close"', 'read x'])]
+        self._extra[tid] = {'tool': tool, 'name': name}
         def ended(tid, term):
             self._extra.pop(tid, None)
+            refresh_path()
             self._exited(tid, term)
         try:
             with self._start_lock:
