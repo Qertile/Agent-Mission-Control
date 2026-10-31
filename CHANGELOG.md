@@ -2,13 +2,7 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-11-01 – New Agy session
-
-### Changed
-- `+` → *New Antigravity session…* is now *New Agy session…*.
-- README: Antigravity tabs (both languages).
-
-## 2026-11-01 – Remote Access AMC
+## 2026-11-01 – v3.5.2: Remote Access AMC, a shorter ⚙ menu
 
 ### Added
 - ⚙ → *Remote Access AMC ▸*: the steps in order, each ticked when done or a button for it:
@@ -17,14 +11,13 @@ All notable changes to this project are listed here, newest first.
   *Turn on remote access* (a new token and `"desktopPort": 8771` in `hud-config.json` when
   there is none, served without a restart); then the phone (8770) and remote desktop (8771)
   links with the token, copied on click. *Check again* reads it all again.
-- README: Phone (both languages).
-
-## 2026-11-01 – a shorter ⚙ menu
 
 ### Changed
 - ⚙ → *Theme ▸* and *Default AI ▸* are second-layer lists (with *◂ Back*); the first layer
   shows the current one ("Theme: Classic ▸"). The menu went from 22 lines to 10.
-- README: Theme, Default AI (both languages).
+- `+` → *New Antigravity session…* is now *New Agy session…*.
+- README: Phone, Theme, Default AI, Antigravity tabs (both languages); Versions: `v3.5.2`.
+- Tagged `v3.5.2`.
 
 ## 2026-11-01 – v3.5.1: Update restarts, non-clone folders, installing on Windows
 
