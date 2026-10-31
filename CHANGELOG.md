@@ -2,6 +2,12 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – New Agy session
+
+### Changed
+- `+` → *New Antigravity session…* is now *New Agy session…*.
+- README: Antigravity tabs (both languages).
+
 ## 2026-11-01 – Remote Access AMC
 
 ### Added

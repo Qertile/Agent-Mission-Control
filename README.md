@@ -282,7 +282,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   busy. The usage panel's CODEX line and pie are the account limits Codex wrote after its
   latest turn on this computer, one pie per limit window the plan has (the free plan has
   one, 30 days), so use elsewhere shows after the next turn here.
-- **Antigravity tabs:** `+` → *New Antigravity session…* adds a session with
+- **Antigravity tabs:** `+` → *New Agy session…* adds a session with
   `"tool": "agy"` and starts `agy` in its tab (with `prompts/<name>.md` through `-i` when
   that file exists). Like Codex, agy makes the conversation at the first message
   (`~/.gemini/antigravity-cli/conversations/<id>.db`); its id is then saved as
@@ -641,7 +641,7 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   那一行和圓餅圖，是 Codex 在這台電腦上最近一輪對話後記下的帳號額度，方案有幾個額度
   視窗就有幾個圓餅（免費方案只有一個，30 天），所以在別處的用量要等這裡下一輪對話後
   才會顯示。
-- **Antigravity 分頁**：`+` → *New Antigravity session…* 會新增一筆 `"tool": "agy"` 的
+- **Antigravity 分頁**：`+` → *New Agy session…* 會新增一筆 `"tool": "agy"` 的
   session，並在分頁裡啟動 `agy`（有 `prompts/<name>.md` 時用 `-i` 當成第一則訊息）。跟
   Codex 一樣，agy 要送出第一則訊息才會建立對話
   （`~/.gemini/antigravity-cli/conversations/<id>.db`），之後 id 存進 `"conversation"`，

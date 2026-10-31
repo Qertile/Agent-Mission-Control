@@ -1155,7 +1155,7 @@ $('add-tab').addEventListener('click', async e => {
   const n = (amc.stopped || []).length + (await api().discussions()).length;
   installed = (await api().default_tool()).installed;
   const item = (k, label) => `<div data-new="${k}">New ${label} session…${installed.includes(k) ? '' : ' (install)'}</div>`;
-  addMenuAt(item('claude', 'Claude') + item('codex', 'Codex') + item('agy', 'Antigravity') +
+  addMenuAt(item('claude', 'Claude') + item('codex', 'Codex') + item('agy', 'Agy') +
     '<div data-fork="1">Fork session…</div>' +
     '<hr><div data-xc="1">Cross-check…</div>' +
     `<hr><div data-history="1">History (${n}) ▸</div>`);
