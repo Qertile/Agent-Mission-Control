@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.5` (current) | `v3.5.4` plus replacing a session of the same name (after asking) and deleting closed sessions from `+` → *History*. See `CHANGELOG.md`. |
+| `v3.5.6` (current) | `v3.5.5` plus deleting Cross-check discussions from `+` → *History*. See `CHANGELOG.md`. |
+| `v3.5.5` | `v3.5.4` plus replacing a session of the same name (after asking) and deleting closed sessions from `+` → *History*. See `CHANGELOG.md`. |
 | `v3.5.4` | `v3.5.3` plus *Update* really restarting Agent Mission Control on Windows. See `CHANGELOG.md`. |
 | `v3.5.3` | `v3.5.2` plus *Agy · Switch…* in ⚙ → Accounts, the version at the foot of ⚙, and pasting screenshots on Linux that copy only a file link (or that GTK cannot read). See `CHANGELOG.md`. |
 | `v3.5.2` | `v3.5.1` plus ⚙ → *Remote Access AMC ▸* (a guided Tailscale setup, then the phone and remote desktop links), *Theme ▸* and *Default AI ▸* as second-layer lists, and *New Agy session…* in `+`. See `CHANGELOG.md`. |
@@ -311,7 +312,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   session list a discussion shows with `⚖` and the tokens of all its models; right-click:
   Open on start, Terminate (ends the step under way and closes the tab), Settings… (name,
   models, lead, word limit). Saved in `Session HUD/discussions/` (not in git); the latest
-  ones reopen from `+` → *History*. Codex in a discussion is not tried yet.
+  ones reopen from `+` → *History*, where `✕` deletes one for good (after asking; not while
+  it runs). Codex in a discussion is not tried yet.
 - **Usage:** one section per tool. CLAUDE: the 5-hour block, today and this week, when
   the week resets (the account's time, otherwise `weekResetWeekday` / `weekResetHour`),
   and the models used. CODEX: each limit window with its reset. ANTIGRAVITY (when
@@ -435,7 +437,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.5`（目前） | `v3.5.4` 再加上：同名 session 可確認後取代、`+` → *History* 可刪除已關閉的 session。詳見 `CHANGELOG.md`。 |
+| `v3.5.6`（目前） | `v3.5.5` 再加上：`+` → *History* 可刪除 Cross-check 討論。詳見 `CHANGELOG.md`。 |
+| `v3.5.5` | `v3.5.4` 再加上：同名 session 可確認後取代、`+` → *History* 可刪除已關閉的 session。詳見 `CHANGELOG.md`。 |
 | `v3.5.4` | `v3.5.3` 再加上：Windows 上 *Update* 後真的會自動重開。詳見 `CHANGELOG.md`。 |
 | `v3.5.3` | `v3.5.2` 再加上：⚙ → Accounts 的 *Agy · Switch…*、⚙ 最下面顯示版本，以及 Linux 上只複製檔案連結（或 GTK 讀不到）的截圖也能貼上。詳見 `CHANGELOG.md`。 |
 | `v3.5.2` | `v3.5.1` 再加上：⚙ → *Remote Access AMC ▸*（引導設定 Tailscale，最後給手機和遠端桌面的網址）、*Theme ▸* 和 *Default AI ▸* 移到第二層、`+` 選單改成 *New Agy session…*。詳見 `CHANGELOG.md`。 |
@@ -673,7 +676,8 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   *Send to…* 會把它打進某個 session 分頁，讓那個 session 去執行。session 清單裡討論以 `⚖`
   顯示，tokens 是所有模型的總和；右鍵有 Open on start、Terminate（停掉正在跑的步驟並關閉
   分頁）、Settings…（名稱、模型、lead、字數上限）。存在 `Session HUD/discussions/`（不進
-  git），可以從 `+` → *History* 再打開。Codex 參加討論還沒實測過。
+  git），可以從 `+` → *History* 再打開；旁邊的 `✕` 會先確認，再永久刪除（進行中的不能刪）。
+  Codex 參加討論還沒實測過。
 - **用量**：每個工具一段。CLAUDE：5 小時區段、今天和本週用量、本週何時重置（用帳號的
   時間，讀不到時用 `weekResetWeekday`／`weekResetHour`）、用了哪些模型。CODEX：每個額度
   視窗和重置時間。ANTIGRAVITY（`agents.json` 有 agy session 時）：每組模型的週額度，每

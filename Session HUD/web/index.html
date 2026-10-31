@@ -1177,7 +1177,8 @@ async function showHistory() {
         `<span data-del="${esc(t.id)}" title="delete it from agents.json">✕</span></div>`).join('')
                     : '<div class="disabled">every session is running</div>') +
     '<hr><div class="disabled">Cross-checks</div>' +
-    (past.length ? past.map(x => `<div data-disc="${esc(x.id)}" title="${esc(x.created)}">⚖ ${esc(x.title)}</div>`).join('')
+    (past.length ? past.map(x => `<div data-disc="${esc(x.id)}" class="hist-row" title="${esc(x.created)}">⚖ ${esc(x.title)}` +
+        `<span data-del-disc="${esc(x.id)}" data-title="${esc(x.title)}" title="delete it for good">✕</span></div>`).join('')
                  : '<div class="disabled">none yet</div>'));
 }
 let newTool = 'claude', installed = [], pendingNew = {};
@@ -1206,6 +1207,25 @@ $('add-menu').addEventListener('click', e => {
     $('add-menu').innerHTML = `<div class="disabled" style="white-space:normal;max-width:300px">Delete ` +
       `'${esc(t ? t.name : id)}'? Its conversation stays in its tool's history.</div>` +
       `<div data-del-go="${esc(id)}">Delete</div><div data-history="1">Cancel</div><div class="err" id="new-err"></div>`;
+    return;
+  }
+  if (e.target.dataset.delDisc) {
+    // A Cross-check lives only in its file, so deleting it cannot be undone: asked first.
+    e.stopPropagation();
+    $('add-menu').innerHTML = `<div class="disabled" style="white-space:normal;max-width:300px">Delete ` +
+      `'⚖ ${esc(e.target.dataset.title)}'? Its question, answers and conclusion are gone for good.</div>` +
+      `<div data-del-disc-go="${esc(e.target.dataset.delDisc)}">Delete</div><div data-history="1">Cancel</div>` +
+      '<div class="err" id="new-err"></div>';
+    return;
+  }
+  if (e.target.dataset.delDiscGo) {
+    e.stopPropagation();
+    const did = e.target.dataset.delDiscGo;
+    api().delete_discussion(did).then(err => {
+      if (err) { $('new-err').textContent = err; return; }
+      if (amc.tabs['disc-' + did]) amc.closeDiscussion('disc-' + did);
+      showHistory();
+    });
     return;
   }
   if (e.target.dataset.delGo) {

@@ -1241,6 +1241,13 @@ class Api:
     def discussions(self):
         return discuss.listing()
 
+    def delete_discussion(self, did):
+        """History → ✕ on a Cross-check: its file removed for good. Returns None or the error."""
+        err = discuss.delete(did)
+        if not err:
+            self._disc_tabs.discard(did)
+        return err
+
     def discussion_followup(self, did, text):
         return discuss.follow_up(did, text)
 

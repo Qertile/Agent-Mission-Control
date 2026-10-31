@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – v3.5.6: deleting Cross-checks
+
+### Added
+- `+` → *History*: a `✕` by each Cross-check deletes its file in `Session HUD/discussions/`
+  for good, after asking (its question, answers and conclusion live only there); its `⚖`
+  tab closes too. A running one cannot be deleted.
+- README: Cross-check (both languages); Versions: `v3.5.6`.
+- Tagged `v3.5.6`.
+
 ## 2026-11-01 – v3.5.5: same-name sessions, deleting closed ones
 
 ### Added

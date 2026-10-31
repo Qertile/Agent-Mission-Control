@@ -401,6 +401,20 @@ def configure(did, title, models, lead, words, final_words=None):
     return None
 
 
+def delete(did):
+    """History → ✕: removes the discussion's file for good. Returns None or what went wrong."""
+    d = load(did)
+    if not d:
+        return 'no such discussion'
+    if d['running']:
+        return 'still running - Terminate it or wait for it to finish'
+    try:
+        os.remove(_path(did))
+    except OSError as e:
+        return str(e)
+    return None
+
+
 def stop(did):
     """Terminate: ends the step under way (its tools' processes killed, their answers
     marked "terminated") and the rest of the discussion's work."""
