@@ -745,6 +745,8 @@ class Api:
     def enable_remote(self):
         """Turns remote access on: a new token (and the remote desktop on 8771) in
         hud-config.json's "remote" when there is none, and starts serving now."""
+        if getattr(self, '_remote_on', False):
+            return self.remote_access()        # on already: its servers keep their conf
         path = os.path.join(HERE, 'hud-config.json')
         config = load_json(path) or {}
         conf = config.get('remote') or {}
@@ -760,6 +762,23 @@ class Api:
         if not getattr(self, '_remote_on', False):
             remote.start(self, conf, os.path.join(HERE, 'web'))
             self._remote_on = True
+        return self.remote_access()
+
+    def new_token(self):
+        """⚙ → Remote Access → New token: a new one in hud-config.json, the old links stop
+        working at once (the servers read the token from the same "remote" dict)."""
+        conf = self._config.get('remote')
+        if not conf or not conf.get('token'):
+            return self.remote_access()
+        path = os.path.join(HERE, 'hud-config.json')
+        config = load_json(path) or {}
+        token = secrets.token_urlsafe(24)
+        config.setdefault('remote', {})['token'] = token
+        with open(path + '.tmp', 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+            f.write('\n')
+        os.replace(path + '.tmp', path)
+        conf['token'] = token
         return self.remote_access()
 
     def update(self):

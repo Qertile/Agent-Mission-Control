@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.6` (current) | `v3.5.5` plus deleting Cross-check discussions from `+` → *History*. See `CHANGELOG.md`. |
+| `v3.5.7` (current) | `v3.5.6` plus *New token…* in ⚙ → *Remote Access AMC ▸* (the old links stop working at once) and a warning to keep the links private. See `CHANGELOG.md`. |
+| `v3.5.6` | `v3.5.5` plus deleting Cross-check discussions from `+` → *History*. See `CHANGELOG.md`. |
 | `v3.5.5` | `v3.5.4` plus replacing a session of the same name (after asking) and deleting closed sessions from `+` → *History*. See `CHANGELOG.md`. |
 | `v3.5.4` | `v3.5.3` plus *Update* really restarting Agent Mission Control on Windows. See `CHANGELOG.md`. |
 | `v3.5.3` | `v3.5.2` plus *Agy · Switch…* in ⚙ → Accounts, the version at the foot of ⚙, and pasting screenshots on Linux that copy only a file link (or that GTK cannot read). See `CHANGELOG.md`. |
@@ -136,7 +137,9 @@ running sessions, each one's conversation or terminal, and a box to type into it
   new token and the remote desktop on 8771 in `hud-config.json`, served at once), then shows
   both links, `http://<Tailscale address>:8770/#t=<token>` (phone) and `…:8771/#t=<token>`
   (remote desktop); click one to copy it. On the other device, install Tailscale and log in
-  with the same account, then paste the link.
+  with the same account, then paste the link. Keep the links to yourself: anyone with one
+  who can reach your Tailscale network can control this computer through its AI sessions.
+  *New token…* (after asking) makes a new one; the old links stop working at once.
 - **Turn it on by hand:** add `"remote": {"token": "<a long random string>"}` to
   `Session HUD/hud-config.json` and restart Agent Mission Control. Remove the block to turn
   it off.
@@ -437,7 +440,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.6`（目前） | `v3.5.5` 再加上：`+` → *History* 可刪除 Cross-check 討論。詳見 `CHANGELOG.md`。 |
+| `v3.5.7`（目前） | `v3.5.6` 再加上：⚙ → *Remote Access AMC ▸* 的 *New token…*（舊網址立刻失效），以及不要外流網址的警告。詳見 `CHANGELOG.md`。 |
+| `v3.5.6` | `v3.5.5` 再加上：`+` → *History* 可刪除 Cross-check 討論。詳見 `CHANGELOG.md`。 |
 | `v3.5.5` | `v3.5.4` 再加上：同名 session 可確認後取代、`+` → *History* 可刪除已關閉的 session。詳見 `CHANGELOG.md`。 |
 | `v3.5.4` | `v3.5.3` 再加上：Windows 上 *Update* 後真的會自動重開。詳見 `CHANGELOG.md`。 |
 | `v3.5.3` | `v3.5.2` 再加上：⚙ → Accounts 的 *Agy · Switch…*、⚙ 最下面顯示版本，以及 Linux 上只複製檔案連結（或 GTK 讀不到）的截圖也能貼上。詳見 `CHANGELOG.md`。 |
@@ -527,7 +531,9 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   官方安裝程式）、*Log in to Tailscale*（`tailscale up`）、*Turn on remote access*（在
   `hud-config.json` 產生新 token 並開啟 8771 遠端桌面，立刻開始提供），最後顯示兩個網址：
   `http://<Tailscale 位址>:8770/#t=<token>`（手機）和 `…:8771/#t=<token>`（遠端桌面），點一下
-  就複製。在另一台裝置上裝好 Tailscale、登入同一個帳號，再貼上網址即可。
+  就複製。在另一台裝置上裝好 Tailscale、登入同一個帳號，再貼上網址即可。網址不要給別人：
+  拿到網址又連得到你 Tailscale 網路的人，就能透過 AI session 控制這台電腦。*New token…*（會先
+  確認）會換一組新的 token，舊網址立刻失效。
 - **手動開啟：** 在 `Session HUD/hud-config.json` 加上 `"remote": {"token": "<一串夠長的亂碼>"}`，
   重開 Agent Mission Control。刪掉這段就關閉。
 - **網路：** 只在這台電腦的 [Tailscale](https://tailscale.com) 位址（`tailscale ip -4`）

@@ -168,7 +168,9 @@ def start(api, conf, web_dir):
             host = conf.get('host') or tailscale_ip()
             if host:
                 try:
-                    server = ThreadingHTTPServer((host, port), make(api, conf['token'], web_dir))
+                    # The conf itself, not its token: a new token (⚙ → Remote Access → New token)
+                    # applies at once.
+                    server = ThreadingHTTPServer((host, port), make(api, conf, web_dir))
                 except OSError as e:       # the address is gone or the port taken
                     print(f'remote: {host}:{port}: {e}', file=sys.stderr)
                 else:
@@ -185,11 +187,11 @@ def start(api, conf, web_dir):
 NOT_REMOTE = {'paste_clipboard_image'}
 
 
-def desktop_handler(api, token, web_dir):
+def desktop_handler(api, conf, web_dir):
     """The remote desktop page: web/index.html with remote-desktop.js in front of its scripts,
     which turns its window.pywebview.api calls into POST /api/call/<name> and runs what the
     window here is told (POST /api/poll)."""
-    base = handler(api, token, web_dir)
+    base = handler(api, conf, web_dir)
     root = os.path.realpath(web_dir)
 
     class Desktop(base):
@@ -229,7 +231,7 @@ def desktop_handler(api, token, web_dir):
     return Desktop
 
 
-def handler(api, token, web_dir):
+def handler(api, conf, web_dir):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -245,7 +247,7 @@ def handler(api, token, web_dir):
             self.wfile.write(body)
 
         def allowed(self):
-            if hmac.compare_digest(self.headers.get('X-AMC-Token', ''), token):
+            if hmac.compare_digest(self.headers.get('X-AMC-Token', ''), conf['token']):
                 return True
             self.reply(403, {'error': 'wrong token'})
             return False

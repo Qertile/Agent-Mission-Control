@@ -1342,7 +1342,10 @@ async function remoteMenu(st) {
     html += '<hr>' +
       `<div class="disabled" ${W}>On the phone or other computer: install Tailscale, log in with the same account, then open (click to copy):</div>` +
       `<div data-copy="${esc(st.phone)}" ${W}>📱 Phone: ${esc(st.phone)}</div>` +
-      (st.desktop ? `<div data-copy="${esc(st.desktop)}" ${W}>🖥 Remote desktop: ${esc(st.desktop)}</div>` : '');
+      (st.desktop ? `<div data-copy="${esc(st.desktop)}" ${W}>🖥 Remote desktop: ${esc(st.desktop)}</div>` : '') +
+      `<div class="err" ${W}>⚠ Keep these links to yourself: anyone with one who can reach your Tailscale ` +
+      `network can control this computer through its AI sessions.</div>` +
+      '<div data-remote="newtoken" title="the old links stop working">New token…</div>';
   }
   html += '<hr><div data-remote="check">↻ Check again</div><div class="err" id="remote-msg"></div>';
   m.innerHTML = html;
@@ -1374,6 +1377,14 @@ $('set-menu').addEventListener('click', e => {
     const act = e.target.dataset.remote;
     if (act === 'check') { e.stopPropagation(); remoteMenu(); return; }
     if (act === 'on') { e.stopPropagation(); api().enable_remote().then(remoteMenu); return; }
+    if (act === 'newtoken') {
+      e.stopPropagation();
+      $('set-menu').innerHTML = '<div class="disabled" style="white-space:normal;max-width:300px">Make a new token? ' +
+        'The old links stop working at once, on every device that uses them.</div>' +
+        '<div data-remote="newtoken-go">New token</div><div data-sub="remote">Cancel</div>';
+      return;
+    }
+    if (act === 'newtoken-go') { e.stopPropagation(); api().new_token().then(remoteMenu); return; }
     // Install and login run in a tab; ⚙ → Remote Access AMC again (or Check again) after it.
     (act === 'install' ? api().install_tailscale() : api().tailscale_login()).then(async r => {
       if (r.error) { alert(r.error); return; }

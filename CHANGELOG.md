@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – v3.5.7: New token, and a warning
+
+### Added
+- ⚙ → *Remote Access AMC ▸* warns under the links: anyone with one who can reach your
+  Tailscale network can control this computer through its AI sessions.
+- *New token…* there (after asking): a new token in `hud-config.json`, in force at once.
+  The servers now read the token from the "remote" settings on every request, so the old
+  links get 403 without a restart.
+- README: Phone (both languages); Versions: `v3.5.7`.
+- Tagged `v3.5.7`.
+
 ## 2026-11-01 – v3.5.6: deleting Cross-checks
 
 ### Added
