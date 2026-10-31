@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – install and login errors shown
+
+### Changed
+- `+` → *Download and install it* keeps the menu open while it starts and shows why it
+  could not start there (in red); a tab that ended at once says so. *Switch…* (Accounts)
+  shows its error too. Both failed silently before.
+- An install or login tab's last output, how long it ran and, when it could not start, its
+  command go to stderr (`Session HUD/amc-web.log` on Windows).
+
 ## 2026-11-01 – v3.5.2: installing a tool on Windows
 
 ### Fixed

@@ -637,13 +637,19 @@ class Api:
         def ended(tid, term):
             self._extra.pop(tid, None)
             refresh_path()
+            # Its output to the log (amc-web.log on Windows), so a tab that closed is not a mystery.
+            with self._out_lock:
+                out = (self._hist.get(tid) or {}).get('buf', '')
+            print(f'--- {name} ended after {(datetime.now() - term.started).seconds} s; last output:\n'
+                  + re.sub(r'\x1b\[[0-9;?]*[A-Za-z]', '', out)[-3000:], file=sys.stderr, flush=True)
             self._exited(tid, term)
         try:
             with self._start_lock:
                 self._terms[tid] = Term(tid, argv, self._output, ended)
         except Exception as e:
             self._extra.pop(tid, None)
-            return {'error': str(e)}
+            print(f'--- {name} could not start: {e!r}  argv={argv}', file=sys.stderr, flush=True)
+            return {'error': f'could not start: {e}'}
         return {'id': tid}
 
     def update(self):

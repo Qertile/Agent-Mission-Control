@@ -1190,11 +1190,17 @@ $('add-menu').addEventListener('click', e => {
   if (e.target.dataset.fork) { e.stopPropagation(); forkBox(''); return; }
   if (e.target.dataset.history) { e.stopPropagation(); showHistory(); return; }
   if (e.target.dataset.install) {
+    // The menu stays open until the tab is there, or to show why it is not.
+    e.stopPropagation();
+    e.target.textContent = 'starting the installer…';
     api().install_tool(e.target.dataset.install).then(async r => {
-      if (r.error) return;
+      if (r.error) { $('add-menu').insertAdjacentHTML('beforeend', `<div class="err">${esc(r.error)}</div>`); return; }
+      hideMenus();
       await amc.syncTabs();
-      amc.select(r.id);
-    });
+      if (amc.tabs[r.id]) amc.select(r.id);
+      else alert('The installer tab ended at once. Its output is in Session HUD/amc-web.log.');
+    }).catch(err => $('add-menu').insertAdjacentHTML('beforeend', `<div class="err">${esc(String(err))}</div>`));
+    return;
   }
   if (e.target.dataset.back) { e.stopPropagation(); $('add-tab').click(); return; }
   if (e.target.closest('input, .err')) { e.stopPropagation(); return; }
@@ -1270,7 +1276,7 @@ $('set-menu').addEventListener('click', e => {
   if (e.target.dataset.move) api().set_default_tool(e.target.dataset.move, true);
   if (e.target.dataset.keep) api().set_default_tool(e.target.dataset.keep, false);
   if (e.target.dataset.login) api().switch_account(e.target.dataset.login).then(async r => {
-    if (r.error) return;
+    if (r.error) { alert(r.error); return; }
     await amc.syncTabs();
     amc.select(r.id);
   });

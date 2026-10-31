@@ -263,6 +263,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   `https://antigravity.google/cli/install.sh | bash`; Windows: the same with `install.ps1`
   through `irm … | iex`). Answer its questions there; Enter closes it. PATH is read again
   after it, so `+` → *New … session…* works without restarting. Log in at its first start.
+  When it cannot start, the menu says why; the tab's output also goes to
+  `Session HUD/amc-web.log` (Windows).
 - **Codex tabs:** `+` → *New Codex session…* adds a session with `"tool": "codex"` and
   starts `codex` in its tab (with `prompts/<name>.md` as its first message when that file
   exists). Codex chooses the session id itself and writes its transcript
@@ -616,6 +618,7 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   `https://chatgpt.com/codex/install.sh | sh`、`https://antigravity.google/cli/install.sh | bash`；
   Windows 用對應的 `install.ps1` 以 `irm … | iex` 執行）。安裝程式問問題就在分頁裡回答，按 Enter
   關閉。之後會重新讀 PATH，不用重開就能 `+` → *New … session…*。第一次啟動時要登入。
+  啟動失敗時選單會顯示原因；分頁的輸出也會寫進 `Session HUD/amc-web.log`（Windows）。
 - **Codex 分頁**：`+` → *New Codex session…* 會新增一筆 `"tool": "codex"` 的 session，
   並在分頁裡啟動 `codex`（有 `prompts/<name>.md` 時會當成第一則訊息送出）。Codex 的
   session id 由它自己決定，而且要送出第一則訊息才會寫出對話紀錄
