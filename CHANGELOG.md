@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – v3.5.1: Update in a folder that is not a clone
+
+### Fixed
+- ⚙ → *Update from GitHub* said "this folder is not a git clone" for a downloaded zip or a
+  copied folder. It now makes it one: `git init`, `origin` =
+  `https://github.com/Qertile/Agent-Mission-Control.git`, fetch `master`, a tools file that
+  differs from GitHub's copied to `.update-backup/<time>/` (`.gitignore`d) and then replaced;
+  your own `.gitignore`d files are left alone. Git is installed first when missing.
+- README: Update from GitHub (both languages); Versions: `v3.5.1`.
+- Tagged `v3.5.1`.
+
 ## 2026-10-31 – v3.5: move Task Reminder and Session Manager to the Default AI
 
 ### Added

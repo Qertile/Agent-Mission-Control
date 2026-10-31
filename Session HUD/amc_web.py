@@ -59,6 +59,7 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
 FEEDBACK_MAIL = 'mailto:yushunwang.wys@gmail.com?subject=AMC%20Feedback'   # ⚙ → Send feedback
+REPO_URL = 'https://github.com/Qertile/Agent-Mission-Control.git'   # ⚙ → Update from GitHub
 HANDOFF_MESSAGES = 50                      # of a conversation, for the tool it moves to
 HANDOFF_DIR = os.path.join(LAUNCHER_DIR, 'handoff')
 PIN_MAX = 20_000                           # characters kept of one pinned message
@@ -643,18 +644,17 @@ class Api:
 
     def update(self):
         """⚙ → Update: `git pull --ff-only` in this folder (a clone of the GitHub repo),
-        installing git first when there is none.
+        installing git first when there is none, and making a folder that is not a clone
+        (a downloaded zip, a copy) one first (_make_clone).
         Returns {'text': what happened} or {'error': ...}; the new code runs after a restart."""
-        if not os.path.isdir(os.path.join(core.ROOT, '.git')):
-            return {'error': 'this folder is not a git clone'}
         if not self._git():
             err = self._install_git()
             if err or not self._git():
                 return {'error': err or 'git is not installed'}
-        kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
+        if not os.path.isdir(os.path.join(core.ROOT, '.git')):
+            return self._make_clone()
         try:
-            r = subprocess.run([self._git(), '-C', core.ROOT, 'pull', '--ff-only'], capture_output=True,
-                               text=True, timeout=120, stdin=subprocess.DEVNULL, **kw)
+            r = self._run_git('pull', '--ff-only')
         except subprocess.TimeoutExpired:
             return {'error': 'git pull took over 2 minutes'}
         out = (r.stdout + r.stderr).strip()
@@ -663,6 +663,41 @@ class Api:
         if 'Already up to date' in out:
             return {'text': 'Already up to date'}
         return {'text': 'Updated: restart Agent Mission Control to use it'}
+
+    def _run_git(self, *args):
+        kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
+        return subprocess.run([self._git(), '-C', core.ROOT, *args], capture_output=True, text=True,
+                              timeout=120, stdin=subprocess.DEVNULL, **kw)
+
+    def _make_clone(self):
+        """Turns this folder into a clone of REPO_URL's master at its latest commit. Your own
+        files (agents.json, hud-config.json, tasks.md ... all in .gitignore) are left as they
+        are; a file of the tools that differs from GitHub's is copied to .update-backup/<time>/
+        first, then replaced by GitHub's."""
+        steps = [('init', '-q'), ('remote', 'add', 'origin', REPO_URL), ('fetch', '-q', 'origin', 'master'),
+                 ('reset', '-q', 'FETCH_HEAD')]
+        try:
+            for step in steps:
+                r = self._run_git(*step)
+                if r.returncode:
+                    out = (r.stdout + r.stderr).strip()
+                    return {'error': f"git {step[0]}: {out.splitlines()[-1] if out else 'failed'}"}
+            changed = [f for f in self._run_git('diff', '--name-only', '-z').stdout.split('\0') if f]
+            backup = os.path.join(core.ROOT, '.update-backup', datetime.now().strftime('%Y%m%d-%H%M%S'))
+            for f in changed:
+                src = os.path.join(core.ROOT, f)
+                if os.path.isfile(src):
+                    os.makedirs(os.path.dirname(os.path.join(backup, f)), exist_ok=True)
+                    shutil.copy2(src, os.path.join(backup, f))
+            for step in (('checkout', '-q', '--', '.'), ('branch', '-q', '-M', 'master'),
+                         ('branch', '-q', '--set-upstream-to=origin/master', 'master')):
+                r = self._run_git(*step)
+                if r.returncode:
+                    out = (r.stdout + r.stderr).strip()
+                    return {'error': f"git {step[0]}: {out.splitlines()[-1] if out else 'failed'}"}
+        except subprocess.TimeoutExpired:
+            return {'error': 'git took over 2 minutes'}
+        return {'text': 'Updated (this folder is now a git clone): restart Agent Mission Control to use it'}
 
     def send_feedback(self):
         """⚙ → Send feedback: a new email in the default mail app."""

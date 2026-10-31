@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5` (current) | `v3.4` plus moving Task Reminder and Session Manager to the new Default AI (after asking), the new tab first reading the last 50 messages, and the phone's chat view reading Codex 0.16x's rollouts. See `CHANGELOG.md`. |
+| `v3.5.1` (current) | `v3.5` plus *Update from GitHub* working in a folder that is not a git clone (a downloaded zip or a copy): it becomes one, your own files left alone. See `CHANGELOG.md`. |
+| `v3.5` | `v3.4` plus moving Task Reminder and Session Manager to the new Default AI (after asking), the new tab first reading the last 50 messages, and the phone's chat view reading Codex 0.16x's rollouts. See `CHANGELOG.md`. |
 | `v3.4` | `v3.3` plus installing a missing AI tool from `+`: *New … session… (install)* runs Claude Code's, Codex's or Antigravity's own installer in a tab. See `CHANGELOG.md`. |
 | `v3.3` | `v3.2` plus ⚙ → *Accounts*: each tool's logged-in account, and *Switch…* to log out and in with another (Claude Code, Codex). See `CHANGELOG.md`. |
 | `v3.2` | `v3.1` plus ⚙ → *Default AI* (the tool Task Reminder and Session Manager start with) and *Update from GitHub* installing git when there is none. See `CHANGELOG.md`. |
@@ -346,7 +347,10 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   Antigravity has no login command, so it is not listed.
 - **Update from GitHub:** `⚙` → *Update from GitHub* runs `git pull --ff-only` in this
   folder and shows how it went under it; restart Agent Mission Control to use new code.
-  It needs a folder cloned with git (not a downloaded zip). With no git, it installs it
+  A folder that is not a git clone (a downloaded zip, a copy) is made one first: your own
+  files (`agents.json`, `hud-config.json`, `tasks.md` ...) stay as they are, and a file of
+  the tools that differs from GitHub's is copied to `.update-backup/<time>/` before it is
+  replaced. With no git, it installs it
   first: on Windows the latest MinGit (Git for Windows' zip, no admin) into
   `%LOCALAPPDATA%\Programs\MinGit`, used by Agent Mission Control only; on Linux
   `apt-get install git` behind the system's password box.
@@ -411,7 +415,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5`（目前） | `v3.4` 再加上：換 Default AI 時可把 Task Reminder 和 Session Manager 一起換過去（會先問），新分頁先讀最近 50 則對話；手機 Chat 頁能讀 Codex 0.16x 的對話紀錄。詳見 `CHANGELOG.md`。 |
+| `v3.5.1`（目前） | `v3.5` 再加上：*Update from GitHub* 在不是 git clone 的資料夾（下載的 zip、複製來的）也能用，會把它變成 clone，不動你自己的檔案。詳見 `CHANGELOG.md`。 |
+| `v3.5` | `v3.4` 再加上：換 Default AI 時可把 Task Reminder 和 Session Manager 一起換過去（會先問），新分頁先讀最近 50 則對話；手機 Chat 頁能讀 Codex 0.16x 的對話紀錄。詳見 `CHANGELOG.md`。 |
 | `v3.4` | `v3.3` 再加上從 `+` 安裝沒裝的 AI 工具：*New … session… (install)* 會在分頁裡執行 Claude Code、Codex 或 Antigravity 官方的安裝程式。詳見 `CHANGELOG.md`。 |
 | `v3.3` | `v3.2` 再加上 ⚙ → *Accounts*：顯示各工具登入的帳號，*Switch…* 登出再登入另一個帳號（Claude Code、Codex）。詳見 `CHANGELOG.md`。 |
 | `v3.2` | `v3.1` 再加上：⚙ → *Default AI*（Task Reminder 和 Session Manager 用哪個 AI 建立），以及 *Update from GitHub* 在沒有 git 時先幫你裝。詳見 `CHANGELOG.md`。 |
@@ -676,8 +681,9 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   登出和登入（瀏覽器會開登入頁），按 Enter 後關閉。之後這個工具的所有分頁都改用新帳號。
   Antigravity 沒有登入指令，所以不會列出。
 - **從 GitHub 更新**：`⚙` → *Update from GitHub* 會在這個資料夾執行 `git pull --ff-only`，
-  結果顯示在按鈕下方；重開 Agent Mission Control 才會用到新程式。資料夾要是用 git clone
-  下來的（不是下載的 zip）。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
+  結果顯示在按鈕下方；重開 Agent Mission Control 才會用到新程式。不是 git clone 的資料夾
+  （下載的 zip、複製來的）會先變成 clone：你自己的檔案（`agents.json`、`hud-config.json`、
+  `tasks.md`…）不動，跟 GitHub 不同的程式檔會先備份到 `.update-backup/<時間>/` 再換掉。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
   官方的 zip，不需系統管理員）到 `%LOCALAPPDATA%\Programs\MinGit`，只給 Agent Mission Control
   用；Linux 會跳出系統密碼視窗執行 `apt-get install git`。
 - **意見回饋**：`⚙` → *Send feedback…* 會用預設郵件程式開一封寄給作者的新信，標題是「AMC Feedback」。
