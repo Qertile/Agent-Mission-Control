@@ -466,7 +466,7 @@ class Api:
         busy = {s['sid'] for s in self._sessions if s.get('status') == 'busy'}
         made = [{'name': e['name'], 'tool': e.get('tool') or 'claude', 'busy': e['id'] in busy}
                 for e in core.agents() if e['name'] in CREATE_ON_SEND]
-        return {'tool': tool, 'installed': installed, 'made': made}
+        return {'tool': tool, 'installed': installed, 'made': made, 'version': self._version()}
 
     def set_default_tool(self, tool, move=False):
         """Keeps `tool` as "defaultTool" in hud-config.json, the rest of the file as it was.
@@ -532,6 +532,24 @@ class Api:
             for m in msgs:
                 f.write(f"**{'使用者' if m['who'] == 'user' else label}：**\n\n{m['text']}\n\n---\n\n")
         return out
+
+    def _version(self):
+        """This copy's version for the foot of ⚙: `git describe --tags --long` (v3.5.1-3-g40c93e7:
+        the latest tag, the commits after it, g + the commit); without git, the newest "– vX"
+        heading of CHANGELOG.md."""
+        if getattr(self, '_ver', None) is None:
+            self._ver = ''
+            try:
+                if self._git() and os.path.isdir(os.path.join(core.ROOT, '.git')):
+                    # --long: the commit too when it is the tagged one (v3.5.2-0-g8a62666).
+                    self._ver = self._run_git('describe', '--tags', '--long').stdout.strip()
+                if not self._ver:
+                    with open(os.path.join(core.ROOT, 'CHANGELOG.md'), encoding='utf-8') as f:
+                        m = re.search(r'^## .*? – (v[\d.]+):', f.read(), re.M)
+                    self._ver = m[1] if m else ''
+            except Exception:
+                pass
+        return self._ver
 
     @staticmethod
     def _git():

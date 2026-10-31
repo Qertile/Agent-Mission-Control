@@ -16,6 +16,8 @@ All notable changes to this project are listed here, newest first.
 - ⚙ → *Theme ▸* and *Default AI ▸* are second-layer lists (with *◂ Back*); the first layer
   shows the current one ("Theme: Classic ▸"). The menu went from 22 lines to 10.
 - `+` → *New Antigravity session…* is now *New Agy session…*.
+- The foot of ⚙ shows the version, `git describe --tags --long` (`v3.5.2-0-g<commit>`), or
+  without git the newest version in CHANGELOG.md.
 - README: Phone, Theme, Default AI, Antigravity tabs (both languages); Versions: `v3.5.2`.
 - Tagged `v3.5.2`.
 

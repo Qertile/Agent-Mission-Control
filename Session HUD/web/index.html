@@ -1240,7 +1240,8 @@ $('set-btn').addEventListener('click', async e => {
     '<div data-sub="remote" title="open AMC from your phone or another computer">Remote Access AMC ▸</div>' +
     '<hr><div class="disabled">Accounts</div><div id="acct-list"><div class="disabled">\u00a0 reading…</div></div>' +
     '<hr><div data-update="1">Update</div>' +
-    '<div data-feedback="1">Send feedback…</div>';
+    '<div data-feedback="1">Send feedback…</div>' +
+    (def.version ? `<div class="disabled" style="font-size:10px;text-align:right">${esc(def.version)}</div>` : '');
   const r = $('set-btn').getBoundingClientRect();
   showAt(m, r.right - m.offsetWidth, r.bottom);
   // Each tool's account: its status command takes a moment, so it fills in after.
