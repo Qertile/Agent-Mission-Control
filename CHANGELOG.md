@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – v3.1: Codex fork, no-Claude PCs, Update and Feedback
+
+### Added
+- Forking a Codex session: right-click → *Fork…* or `+` → *Fork session…* adds a
+  `"tool": "codex"` session with `"fork_of": "<thread>"` and starts it with
+  `codex fork <thread>` (its model too); the new thread is found as a new Codex tab's.
+  Antigravity has no fork, so *Fork…* stays grey on its sessions.
+- ⚙ → *Update from GitHub*: `git pull --ff-only` in this folder, the result under it
+  ("Already up to date", "Updated: restart …", or git's error); needs git and a clone.
+- ⚙ → *Send feedback…*: a new email to the author, titled "AMC Feedback", in the default
+  mail app (on the remote desktop page, that computer's).
+
+### Changed
+- `Task Reminder` and `Session Manager`, made on their first send, are Claude tabs when
+  Claude Code is installed, otherwise Codex, otherwise Antigravity.
+- `+` → *New session…* is now *New Claude session…*; every new session's name box says
+  "Session Name".
+- README: Fork, Update from GitHub, Send feedback, Chat box (both languages); Versions: `v3.1`.
+- Tagged `v3.1`.
+
 ## 2026-10-31 – v3.0: installing on a new PC
 
 ### Changed

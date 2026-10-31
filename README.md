@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.0` (current) | `v2.7` plus an installer for a new PC: `install.bat` and `install.sh` offer to install what is missing (Claude Code, Python 3 and its modules, ImportExcel, the font), and Claude Code, Codex and Antigravity are each optional as long as one is there. See `CHANGELOG.md`. |
+| `v3.1` (current) | `v3.0` plus forking Codex sessions (`codex fork`), Session Manager and Task Reminder on Codex or Antigravity when Claude Code is not installed, *New Claude session…* in `+`, and ⚙ → *Update from GitHub* and *Send feedback…*. See `CHANGELOG.md`. |
+| `v3.0` | `v2.7` plus an installer for a new PC: `install.bat` and `install.sh` offer to install what is missing (Claude Code, Python 3 and its modules, ImportExcel, the font), and Claude Code, Codex and Antigravity are each optional as long as one is there. See `CHANGELOG.md`. |
 | `v2.7` | `v2.6.1` plus Relax mode: the Tasks and Sessions columns as a camp, a building per session growing with its messages, people by status, Cross-check campfires, a task board and stamina bars (⚙ → *Layout* → *Relax*). See `CHANGELOG.md`. |
 | `v2.6.1` | `v2.6` plus forking a Claude session (right-click → *Fork…*, or `+` → *Fork session…*) and clicking in a Claude or Codex tab focusing it again. See `CHANGELOG.md`. |
 | `v2.6` | `v2.5` plus pinned messages (desktop, remote desktop and phone), selecting text by dragging in Claude and Codex tabs, files uploaded from the phone, questions with options in the phone's chat view (the one waiting too, with a hook), and Markdown tables drawn as tables on the phone. See `CHANGELOG.md`. |
@@ -246,7 +247,9 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   `"fork_of": "<source id>"` to `agents.json` and starts its tab with
   `claude --resume <source id> --fork-session --session-id <new id>`: the conversation so
   far, going on under its own id, while the source stays as it was. Later starts resume
-  the fork as any other session. Codex and Antigravity sessions cannot be forked.
+  the fork as any other session. A Codex session forks the same way with
+  `codex fork <its thread>` (`"tool": "codex"`, `"fork_of": "<thread>"`); its new thread is
+  found as a new Codex tab's is. Antigravity sessions cannot be forked.
 - **Codex tabs:** `+` → *New Codex session…* adds a session with `"tool": "codex"` and
   starts `codex` in its tab (with `prompts/<name>.md` as its first message when that file
   exists). Codex chooses the session id itself and writes its transcript
@@ -316,6 +319,11 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   green on black, the default), Dark, Light, Monokai, Solarized Dark, Solarized Light,
   Dracula, Nord, Gruvbox Dark and One Dark. The theme colours the whole window and the
   terminals, and is kept for the next start.
+- **Update from GitHub:** `⚙` → *Update from GitHub* runs `git pull --ff-only` in this
+  folder and shows how it went under it; restart Agent Mission Control to use new code.
+  It needs git and a folder cloned with git (not a downloaded zip).
+- **Send feedback:** `⚙` → *Send feedback…* opens a new email to the author in the default
+  mail app, titled "AMC Feedback".
 
 - **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
   written to `tasks.md` and synced to the Excel file.
@@ -331,7 +339,9 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   finishing added (dated its finish day); restoring a Discarded one drops the reason.
 - **Chat box:** the box under the task list types what you enter into the `Task Reminder`
   tab and submits it (Shift+Enter for a new line). With no `Task Reminder` yet, the first
-  send adds one to `agents.json` and opens its tab.
+  send adds one to `agents.json` and opens its tab: a Claude tab, or Codex or Antigravity
+  when Claude Code is not installed (the same goes for `Session Manager`, whose
+  ListAgents and SendMessage exist only in Claude Code).
 
 ## Daily Summary
 
@@ -373,7 +383,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.0`（目前） | `v2.7` 再加上新電腦的安裝：`install.bat` 和 `install.sh` 會問要不要幫你裝缺的東西（Claude Code、Python 3 與模組、ImportExcel、字型）；Claude Code、Codex、Antigravity 都改成選用，至少裝一個即可。詳見 `CHANGELOG.md`。 |
+| `v3.1`（目前） | `v3.0` 再加上：Codex session 也能 fork（`codex fork`）；沒裝 Claude Code 時，Session Manager 和 Task Reminder 改用 Codex 或 Antigravity；`+` 選單改成 *New Claude session…*；⚙ → *Update from GitHub* 和 *Send feedback…*。詳見 `CHANGELOG.md`。 |
+| `v3.0` | `v2.7` 再加上新電腦的安裝：`install.bat` 和 `install.sh` 會問要不要幫你裝缺的東西（Claude Code、Python 3 與模組、ImportExcel、字型）；Claude Code、Codex、Antigravity 都改成選用，至少裝一個即可。詳見 `CHANGELOG.md`。 |
 | `v2.7` | `v2.6.1` 再加上 Relax 模式：Tasks 和 Sessions 兩欄換成營地，每個 session 一棟隨訊息數長大的建築，小人依狀態動作，Cross-check 是營火，上方有任務公告板和 Stamina（⚙ → *Layout* → *Relax*）。詳見 `CHANGELOG.md`。 |
 | `v2.6.1` | `v2.6` 再加上 fork Claude session（右鍵 → *Fork…*，或 `+` → *Fork session…*）；在 Claude 或 Codex 分頁點一下又能直接打字。詳見 `CHANGELOG.md`。 |
 | `v2.6` | `v2.5` 再加上釘選訊息（桌面版、遠端桌面、手機）；在 Claude 和 Codex 分頁拖曳選取文字；從手機上傳檔案；手機 Chat 顯示有選項的提問（加 hook 後連等待中的也會顯示）；手機上的 Markdown 表格畫成表格。詳見 `CHANGELOG.md`。 |
@@ -558,7 +569,8 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   `agents.json` 新增一筆：這個名稱、新的 id、來源的 model、`"fork_of": "<來源 id>"`，並在分頁
   啟動 `claude --resume <來源 id> --fork-session --session-id <新 id>`：帶著到目前為止的對話，
   用自己的 id 繼續，來源 session 保持不變。之後再啟動就和其他 session 一樣接續 fork 這段對話。
-  Codex 和 Antigravity session 不能 fork。
+  Codex session 也能用同樣的方式 fork，用的是 `codex fork <它的 thread>`（`"tool": "codex"`、
+  `"fork_of": "<thread>"`），新的 thread 會像新開的 Codex 分頁一樣自動找到。Antigravity session 不能 fork。
 - **Codex 分頁**：`+` → *New Codex session…* 會新增一筆 `"tool": "codex"` 的 session，
   並在分頁裡啟動 `codex`（有 `prompts/<name>.md` 時會當成第一則訊息送出）。Codex 的
   session id 由它自己決定，而且要送出第一則訊息才會寫出對話紀錄
@@ -614,6 +626,10 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
 - **主題**：分頁列右邊的 `⚙` 列出主題：Classic（原本的黑底綠字，預設）、Dark、Light、
   Monokai、Solarized Dark、Solarized Light、Dracula、Nord、Gruvbox Dark、One Dark。
   主題會套用到整個視窗和終端機，下次啟動仍然保留。
+- **從 GitHub 更新**：`⚙` → *Update from GitHub* 會在這個資料夾執行 `git pull --ff-only`，
+  結果顯示在按鈕下方；重開 Agent Mission Control 才會用到新程式。需要 git，且資料夾要是用
+  git clone 下來的（不是下載的 zip）。
+- **意見回饋**：`⚙` → *Send feedback…* 會用預設郵件程式開一封寄給作者的新信，標題是「AMC Feedback」。
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
   並同步到 Excel。
@@ -627,7 +643,8 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   的任務時，會刪掉完成當天加上的結果行；還原 Discarded 的任務時，會拿掉丟棄的原因。
 - **聊天框**：任務清單下方的輸入框會把你打的內容送進 `Task Reminder` 分頁並送出
   （Shift+Enter 換行）。還沒有 `Task Reminder` 時，第一次送出會把它加進 `agents.json`
-  並開出分頁。
+  並開出分頁：是 Claude 分頁；沒裝 Claude Code 時改用 Codex 或 Antigravity（`Session Manager`
+  也一樣，但它用的 ListAgents 和 SendMessage 只有 Claude Code 有）。
 
 ## 每日總結
 

@@ -1145,7 +1145,7 @@ function addMenuAt(html) {
 $('add-tab').addEventListener('click', async e => {
   e.stopPropagation();
   const n = (amc.stopped || []).length + (await api().discussions()).length;
-  addMenuAt('<div data-new="claude">New session…</div><div data-new="codex">New Codex session…</div>' +
+  addMenuAt('<div data-new="claude">New Claude session…</div><div data-new="codex">New Codex session…</div>' +
     '<div data-new="agy">New Antigravity session…</div><div data-fork="1">Fork session…</div>' +
     '<hr><div data-xc="1">Cross-check…</div>' +
     `<hr><div data-history="1">History (${n}) ▸</div>`);
@@ -1165,9 +1165,7 @@ $('add-menu').addEventListener('click', e => {
   if (e.target.dataset.new) {
     e.stopPropagation();
     newTool = e.target.dataset.new;
-    const hint = {codex: 'Codex session name, then Enter', agy: 'Antigravity session name, then Enter'}[newTool]
-                 || 'name, then Enter';
-    $('add-menu').innerHTML = `<input id="new-name" placeholder="${hint}" spellcheck="false">` +
+    $('add-menu').innerHTML = '<input id="new-name" placeholder="Session Name" spellcheck="false">' +
                               '<div class="err" id="new-err"></div>';
     $('new-name').focus();
     return;
@@ -1181,10 +1179,10 @@ $('add-menu').addEventListener('click', e => {
   if (e.target.dataset.xc) openCrossCheck();
   if (e.target.dataset.disc) amc.openDiscussion(e.target.dataset.disc);
 });
-// Fork: a new session that starts from another Claude session's conversation so far;
+// Fork: a new session that starts from another Claude or Codex session's conversation so far;
 // the id is filled in when it comes from a session's right-click.
 function forkBox(sid) {
-  addMenuAt(`<input id="fork-id" placeholder="Claude session id to fork" spellcheck="false" value="${esc(sid)}">` +
+  addMenuAt(`<input id="fork-id" placeholder="Claude or Codex session id to fork" spellcheck="false" value="${esc(sid)}">` +
             '<input id="new-name" placeholder="name of the fork, then Enter" spellcheck="false">' +
             '<div class="err" id="new-err"></div>');
   $(sid ? 'new-name' : 'fork-id').focus();
@@ -1208,13 +1206,27 @@ $('set-btn').addEventListener('click', e => {
     [['office', 'Office'], ['relax', 'Relax']].map(([k, label]) =>
       `<div data-mode="${k}">${(k === 'relax') === relax.on ? '✓' : '\u00a0'} ${label}</div>`).join('') +
     '<hr><div class="disabled">Theme</div>' + Object.keys(THEMES).map(n =>
-    `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('');
+    `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('') +
+    '<hr><div data-update="1">Update from GitHub</div><div class="err" id="update-msg"></div>' +
+    '<div data-feedback="1">Send feedback…</div>';
   const r = $('set-btn').getBoundingClientRect();
   showAt(m, r.right - m.offsetWidth, r.bottom);
 });
 $('set-menu').addEventListener('click', e => {
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
   if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
+  if (e.target.dataset.feedback) api().send_feedback();
+  if (e.target.dataset.update) {
+    // The menu stays open to show how it went.
+    e.stopPropagation();
+    const msg = $('update-msg');
+    msg.style.color = 'var(--grey)';
+    msg.textContent = 'pulling…';
+    api().update().then(r => {
+      msg.style.color = r.error ? '' : 'var(--grey)';
+      msg.textContent = r.error || r.text;
+    });
+  }
 });
 let resizeFrame = 0;
 new ResizeObserver(() => {
@@ -1454,8 +1466,8 @@ function rowMenu(r, e) {
   // Open on start and the model live in agents.json: a session outside it has neither.
   for (const it of m.querySelectorAll('[data-act="auto"], [data-act="model"]'))
     it.classList.toggle('disabled', !menuRow || !menuRow.listed);
-  // Only Claude Code can fork a conversation.
-  m.querySelector('[data-act="fork"]').classList.toggle('disabled', !menuRow || menuRow.tool !== 'claude');
+  // Claude Code and Codex can fork a conversation; Antigravity cannot.
+  m.querySelector('[data-act="fork"]').classList.toggle('disabled', !menuRow || !['claude', 'codex'].includes(menuRow.tool));
   showAt(m, e.clientX, e.clientY);
 }
 $('row-menu').addEventListener('click', async e => {

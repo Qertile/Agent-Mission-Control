@@ -58,6 +58,7 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
+FEEDBACK_MAIL = 'mailto:yushunwang.wys@gmail.com?subject=AMC%20Feedback'   # ⚙ → Send feedback
 PIN_MAX = 20_000                           # characters kept of one pinned message
 AGY_TURNS_PER_HOUR = 6                     # Relax mode's level for Antigravity, which has no readable turns
 # Codex makes a tab's thread as the tab starts (session_meta's time) but writes the
@@ -220,6 +221,9 @@ def agent_argv(entry):
         thread = codex_thread(entry)
         if thread:
             return argv + ['resume', thread] + model
+        if entry.get('fork_of'):
+            # A fork's first run: a new thread from the "fork_of" thread's conversation so far.
+            return argv + ['fork', entry['fork_of']] + model
         return argv + model + ([prompt] if prompt else [])
     if is_agy(entry):
         argv = [shutil.which('agy') or 'agy']
@@ -418,21 +422,56 @@ class Api:
             return {'error': str(e)}
         return {'id': entry['id']}
 
+    def update(self):
+        """⚙ → Update: `git pull --ff-only` in this folder (a clone of the GitHub repo).
+        Returns {'text': what happened} or {'error': ...}; the new code runs after a restart."""
+        if not shutil.which('git'):
+            return {'error': 'git is not installed'}
+        if not os.path.isdir(os.path.join(core.ROOT, '.git')):
+            return {'error': 'this folder is not a git clone'}
+        kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
+        try:
+            r = subprocess.run(['git', '-C', core.ROOT, 'pull', '--ff-only'], capture_output=True,
+                               text=True, timeout=120, stdin=subprocess.DEVNULL, **kw)
+        except subprocess.TimeoutExpired:
+            return {'error': 'git pull took over 2 minutes'}
+        out = (r.stdout + r.stderr).strip()
+        if r.returncode:
+            return {'error': out.splitlines()[-1] if out else 'git pull failed'}
+        if 'Already up to date' in out:
+            return {'text': 'Already up to date'}
+        return {'text': 'Updated: restart Agent Mission Control to use it'}
+
+    def send_feedback(self):
+        """⚙ → Send feedback: a new email in the default mail app."""
+        if WINDOWS:
+            os.startfile(FEEDBACK_MAIL)
+        else:
+            subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', FEEDBACK_MAIL],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
     def fork_session(self, sid, name):
-        """Adds a session named `name` to agents.json that starts from Claude session `sid`'s
-        conversation so far (claude --fork-session), with its model, and starts its tab; `sid`
-        goes on unchanged. Returns {'id': ...} or {'error': ...}."""
+        """Adds a session named `name` to agents.json that starts from session `sid`'s
+        conversation so far, with its model and tool, and starts its tab; `sid` goes on
+        unchanged. Claude: claude --fork-session; Codex: codex fork <its thread>; Antigravity
+        has no fork. Returns {'id': ...} or {'error': ...}."""
         name = ' '.join(str(name).split())
         if not name:
             return {'error': 'type a name'}
         if any(e['name'] == name for e in core.agents()):
             return {'error': f"'{name}' is already in agents.json"}
         source = next((e for e in core.agents() if e['id'] == sid), None)
-        if is_codex(source) or is_agy(source):
-            return {'error': 'only a Claude session can be forked'}
-        if not transcript_path(sid):
+        if is_agy(source):
+            return {'error': 'Antigravity cannot fork a session'}
+        if is_codex(source):
+            if not codex_thread(source):
+                return {'error': 'that session has no conversation yet'}
+            entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1, 'tool': 'codex',
+                     'fork_of': codex_thread(source)}
+        elif not transcript_path(sid):
             return {'error': 'that session has no conversation yet'}
-        entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1, 'fork_of': sid}
+        else:
+            entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1, 'fork_of': sid}
         if source and source.get('model'):
             entry['model'] = source['model']
         core.save_agents(core.agents() + [entry])
@@ -497,6 +536,10 @@ class Api:
         entry = next((e for e in core.agents() if e['name'] == name), None)
         if not entry and name in CREATE_ON_SEND:
             entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1}
+            # Claude Code when installed, otherwise Codex, otherwise Antigravity.
+            tool = next((t for t in ('claude', 'codex', 'agy') if shutil.which(t)), 'claude')
+            if tool != 'claude':
+                entry['tool'] = tool
             core.save_agents(core.agents() + [entry])
         if not entry:
             return f"no '{name}' in agents.json"

@@ -23,6 +23,8 @@
   const LOCAL = {
     resize: () => null,                    // the terminals keep this computer's size
     paste_clipboard_image: () => null,     // that clipboard is the other computer's
+    // The email is written on this computer, in its mail app.
+    send_feedback: () => { location.href = 'mailto:yushunwang.wys@gmail.com?subject=AMC%20Feedback'; },
   };
   async function call(name, args) {
     if (LOCAL[name]) return LOCAL[name]();
