@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.9` (current) | `v3.5.8` plus a taskbar pin on Windows showing Agent Mission Control's icon and starting it through its launcher (not python). See `CHANGELOG.md`. |
+| `v3.5.10` (current) | `v3.5.9` plus no Claude section (numbers and pies) in the usage panel or on the phone when Claude Code is not installed. See `CHANGELOG.md`. |
+| `v3.5.9` | `v3.5.8` plus a taskbar pin on Windows showing Agent Mission Control's icon and starting it through its launcher (not python). See `CHANGELOG.md`. |
 | `v3.5.8` | `v3.5.7` plus the phone's *Chat* button greyed on Antigravity sessions, saying why. See `CHANGELOG.md`. |
 | `v3.5.7` | `v3.5.6` plus *New token…* in ⚙ → *Remote Access AMC ▸* (the old links stop working at once) and a warning to keep the links private. See `CHANGELOG.md`. |
 | `v3.5.6` | `v3.5.5` plus deleting Cross-check discussions from `+` → *History*. See `CHANGELOG.md`. |
@@ -118,6 +119,7 @@ Differences from Windows:
 ## Settings
 
 - `Session HUD\hud-config.json`:
+  - The usage panel's CLAUDE section shows only when Claude Code is installed.
   - The two pies show the account's own 5-hour and weekly usage - the same percentages
     as the Claude app and `/usage`, covering every machine on the login - read once a
     minute from Anthropic's usage endpoint with the token Claude Code keeps in
@@ -445,7 +447,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.9`（目前） | `v3.5.8` 再加上：Windows 釘選到工作列時顯示 Agent Mission Control 的圖示，並透過啟動程式開啟（不再是 Python）。詳見 `CHANGELOG.md`。 |
+| `v3.5.10`（目前） | `v3.5.9` 再加上：沒安裝 Claude Code 時，用量面板和手機頁不顯示 Claude 的數字和圓餅圖。詳見 `CHANGELOG.md`。 |
+| `v3.5.9` | `v3.5.8` 再加上：Windows 釘選到工作列時顯示 Agent Mission Control 的圖示，並透過啟動程式開啟（不再是 Python）。詳見 `CHANGELOG.md`。 |
 | `v3.5.8` | `v3.5.7` 再加上：手機頁的 *Chat* 按鈕在 Antigravity session 上變灰，按下會說明原因。詳見 `CHANGELOG.md`。 |
 | `v3.5.7` | `v3.5.6` 再加上：⚙ → *Remote Access AMC ▸* 的 *New token…*（舊網址立刻失效），以及不要外流網址的警告。詳見 `CHANGELOG.md`。 |
 | `v3.5.6` | `v3.5.5` 再加上：`+` → *History* 可刪除 Cross-check 討論。詳見 `CHANGELOG.md`。 |
@@ -518,6 +521,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 ## 設定
 
 - `Session HUD\hud-config.json`：
+  - 用量面板的 CLAUDE 段只在有安裝 Claude Code 時顯示。
   - 兩個圓餅圖顯示的是帳號本身的 5 小時／每週用量——跟 Claude app 和 `/usage`
     同一個百分比，涵蓋所有用這個帳號登入的機器——每分鐘用 Claude Code 存在
     `%USERPROFILE%\.claude\.credentials.json` 的 token 向 Anthropic 的用量 endpoint

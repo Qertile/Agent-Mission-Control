@@ -1505,7 +1505,7 @@ function drawUsage(u) {
   const row = (k, v, cls = 'v') => `<div class="row"><span class="k">${k}</span><span class="${cls}">${esc(v)}</span></div>`;
   const limit = l => row(l.caption, l.used) + (l.note ? `<div class="row d">${esc(l.note)}</div>` : '');
   const c = u.claude;
-  let html = sec('CLAUDE',
+  let html = !c ? '' : sec('CLAUDE',
     `<div class="row"><span class="k">5H BLOCK</span><span class="big">${esc(c.total)}</span></div>` +
     `<div class="row d">${esc(c.headline)}</div>` +
     `<div class="row d">${esc(c.detail)}</div>` +
@@ -1522,7 +1522,7 @@ function drawUsage(u) {
       u.agy.groups.length ? u.agy.groups.map(limit).join('')
                           : '<div class="row s">reading agy\'s /usage...</div>',
       u.agy.groups.map(g => ({caption: g.caption, frac: g.frac})));
-  $('usage').innerHTML = html;
+  $('usage').innerHTML = html || '<div class="sec"><div class="s">USAGE  no Claude Code, Codex limits or Antigravity sessions yet</div></div>';
 }
 
 // ---------------------------------------------------------------- session list

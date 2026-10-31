@@ -1546,7 +1546,7 @@ class Api:
         """Each tool's limits in percent used, as the usage panel shows them:
         [{'tool', 'limits': [{'caption', 'pct'}]}], a tool left out until it has numbers."""
         u, out = self._usage, []
-        if u['snap']:
+        if u['snap'] and shutil.which('claude'):
             out.append({'tool': 'Claude', 'limits': [{'caption': p['caption'], 'pct': round(p['frac'] * 100)}
                                                      for p in self._claude_usage()['pies']]})
         cx = u['codex']
@@ -1671,10 +1671,12 @@ class Api:
         """The usage panel, one section per tool: Claude's, Codex's when it has written
         its limits, and Antigravity's when agents.json has an agy session."""
         u, snap = self._usage, self._usage['snap']
-        if not snap:
+        # No Claude Code here: no Claude section (its numbers and pies), and nothing to wait for.
+        has_claude = bool(shutil.which('claude'))
+        if has_claude and not snap:
             return {'message': 'USAGE  scanning...' if not u['failed'] else 'USAGE  scanner unavailable (needs python3)'}
         agy = self._agy_view() if any(is_agy(e) for e in core.agents()) else None
-        return {'claude': self._claude_usage(), 'codex': self._codex_usage(), 'agy': agy}
+        return {'claude': self._claude_usage() if has_claude else None, 'codex': self._codex_usage(), 'agy': agy}
 
     def _claude_usage(self):
         u, snap = self._usage, self._usage['snap']

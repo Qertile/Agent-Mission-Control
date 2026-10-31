@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – v3.5.10: no Claude usage without Claude Code
+
+### Changed
+- Without Claude Code installed, the usage panel has no CLAUDE section (5H BLOCK, TODAY/WEEK,
+  MODELS, the pies) and does not wait on "USAGE scanning..." for it; the phone's usage
+  leaves Claude out too. With no section at all it says so.
+- README: Settings (both languages); Versions: `v3.5.10`.
+- Tagged `v3.5.10`.
+
 ## 2026-11-01 – v3.5.9: pinning to the taskbar on Windows
 
 ### Fixed
