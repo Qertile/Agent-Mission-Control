@@ -60,6 +60,7 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
 FEEDBACK_MAIL = 'mailto:yushunwang.wys@gmail.com?subject=AMC%20Feedback'   # ⚙ → Send feedback
+APP_ID = 'AgentMissionControl'             # Windows taskbar identity (main(), _set_relaunch)
 REPO_URL = 'https://github.com/Qertile/Agent-Mission-Control.git'   # ⚙ → Update from GitHub
 HANDOFF_MESSAGES = 50                      # of a conversation, for the tool it moves to
 HANDOFF_DIR = os.path.join(LAUNCHER_DIR, 'handoff')
@@ -1765,6 +1766,66 @@ class Api:
             h = user32.LoadImageW(None, ico, 1, size, size, 0x10)   # IMAGE_ICON, LR_LOADFROMFILE
             if h:
                 user32.SendMessageW(hwnd, 0x80, which, h)            # WM_SETICON
+        try:
+            self._set_relaunch(hwnd, ico)
+        except Exception as e:
+            print(f'taskbar pin: could not set the relaunch properties: {e!r}', file=sys.stderr, flush=True)
+
+    @staticmethod
+    def _set_relaunch(hwnd, ico):
+        """Windows: what a taskbar pin of this window runs and shows. Without these, Windows
+        pins the process itself (pythonw.exe), with python's icon. The window's property
+        store gets System.AppUserModel.RelaunchCommand (the launcher), RelaunchIconResource,
+        RelaunchDisplayNameResource and the same ID the process has (main())."""
+        import ctypes
+        import uuid as _uuid
+
+        class GUID(ctypes.Structure):
+            _fields_ = [('d1', ctypes.c_ulong), ('d2', ctypes.c_ushort), ('d3', ctypes.c_ushort),
+                        ('d4', ctypes.c_ubyte * 8)]
+
+        def guid(text):
+            u, g = _uuid.UUID(text), GUID()
+            g.d1, g.d2, g.d3 = u.fields[0], u.fields[1], u.fields[2]
+            g.d4[:] = list(u.bytes[8:])
+            return g
+
+        class PROPERTYKEY(ctypes.Structure):
+            _fields_ = [('fmtid', GUID), ('pid', ctypes.c_ulong)]
+
+        class PROPVARIANT(ctypes.Structure):     # 24 bytes on 64-bit: vt, 3 reserved, the union
+            _fields_ = [('vt', ctypes.c_ushort), ('r1', ctypes.c_ushort), ('r2', ctypes.c_ushort),
+                        ('r3', ctypes.c_ushort), ('p', ctypes.c_void_p), ('p2', ctypes.c_void_p)]
+
+        shell32 = ctypes.windll.shell32
+        store = ctypes.c_void_p()
+        iid = guid('886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99')          # IID_IPropertyStore
+        hr = shell32.SHGetPropertyStoreForWindow(ctypes.c_void_p(hwnd), ctypes.byref(iid), ctypes.byref(store))
+        if hr != 0 or not store:
+            raise OSError(f'SHGetPropertyStoreForWindow: {hr & 0xFFFFFFFF:#x}')
+        vtbl = ctypes.cast(store, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+        release = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(vtbl[2])
+        set_value = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.POINTER(PROPERTYKEY),
+                                       ctypes.POINTER(PROPVARIANT))(vtbl[6])
+        commit = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p)(vtbl[7])
+        launcher = os.path.join(LAUNCHER_DIR, 'launch-agents.ps1')
+        values = [(2, f'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{launcher}"'),
+                  (3, f'{ico},0'),                       # RelaunchIconResource
+                  (4, 'Agent Mission Control'),          # RelaunchDisplayNameResource
+                  (5, APP_ID)]                           # ID, set last
+        keep = []
+        try:
+            for pid, text in values:
+                key = PROPERTYKEY(guid('9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3'), pid)
+                buf = ctypes.create_unicode_buffer(text)
+                keep.append(buf)
+                pv = PROPVARIANT(vt=31, p=ctypes.cast(buf, ctypes.c_void_p).value)   # VT_LPWSTR
+                hr = set_value(store, ctypes.byref(key), ctypes.byref(pv))
+                if hr != 0:
+                    raise OSError(f'SetValue {pid}: {hr & 0xFFFFFFFF:#x}')
+            commit(store)
+        finally:
+            release(store)
 
     def _close_all(self):
         for t in list(self._terms.values()):
@@ -1790,7 +1851,7 @@ def main():
     if WINDOWS:
         # Its own taskbar button, not grouped under python, showing _set_icon's icon.
         import ctypes
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('AgentMissionControl')
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
         window.events.shown += api._set_icon
     else:
         # Taskbar icon: the same one as the desktop shortcut, not python's.

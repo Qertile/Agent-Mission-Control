@@ -2,6 +2,18 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – v3.5.9: pinning to the taskbar on Windows
+
+### Fixed
+- A taskbar pin of Agent Mission Control showed python's icon and ran pythonw.exe: Windows
+  pins the process unless the window says otherwise. The window's property store now gets
+  System.AppUserModel.RelaunchCommand (the launcher, `launch-agents.ps1`, hidden),
+  RelaunchIconResource (`mission-control.ico`), RelaunchDisplayNameResource and the same
+  AppUserModel ID as the process. A failure is logged (`amc-web.log`). An old pin has to be
+  unpinned and pinned again.
+- README: Setup step 4 (both languages); Versions: `v3.5.9`.
+- Tagged `v3.5.9`.
+
 ## 2026-11-01 – v3.5.8: the phone's Chat button on Antigravity
 
 ### Fixed
