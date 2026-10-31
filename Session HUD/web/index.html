@@ -1235,12 +1235,8 @@ $('set-btn').addEventListener('click', async e => {
   m.innerHTML = '<div class="disabled">Layout</div>' +
     [['office', 'Office'], ['relax', 'Relax']].map(([k, label]) =>
       `<div data-mode="${k}">${(k === 'relax') === relax.on ? '✓' : '\u00a0'} ${label}</div>`).join('') +
-    '<hr><div class="disabled">Theme</div>' + Object.keys(THEMES).map(n =>
-    `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('') +
-    '<hr><div class="disabled" title="the AI that Task Reminder and Session Manager start with">Default AI</div>' +
-    [['claude', 'Claude'], ['codex', 'Codex'], ['agy', 'Antigravity']].map(([k, label]) =>
-      def.installed.includes(k) ? `<div data-tool="${k}">${k === def.tool ? '✓' : '\u00a0'} ${label}</div>`
-                                : `<div class="disabled" title="not installed">\u00a0 ${label}</div>`).join('') +
+    `<hr><div data-sub="theme">Theme: ${esc(themeName)} ▸</div>` +
+    `<div data-sub="ai" title="the AI that Task Reminder and Session Manager start with">Default AI: ${AI_LABELS[def.tool]} ▸</div>` +
     '<hr><div class="disabled">Accounts</div><div id="acct-list"><div class="disabled">\u00a0 reading…</div></div>' +
     '<hr><div data-update="1">Update</div>' +
     '<div data-feedback="1">Send feedback…</div>';
@@ -1255,13 +1251,27 @@ $('set-btn').addEventListener('click', async e => {
     showAt(m, r.right - m.offsetWidth, r.bottom);
   });
 });
+// The second layer of ⚙: Theme and Default AI, each its own list with a way back.
+const AI_LABELS = {claude: 'Claude', codex: 'Codex', agy: 'Antigravity'};
+function setSubmenu(which) {
+  const m = $('set-menu'), def = setMenuDef;
+  m.innerHTML = '<div data-back="1">◂ Back</div><hr>' + (which === 'theme'
+    ? Object.keys(THEMES).map(n => `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('')
+    : Object.entries(AI_LABELS).map(([k, label]) =>
+        def.installed.includes(k) ? `<div data-tool="${k}">${k === def.tool ? '✓' : '\u00a0'} ${label}</div>`
+                                  : `<div class="disabled" title="not installed">\u00a0 ${label}</div>`).join(''));
+  const r = $('set-btn').getBoundingClientRect();
+  showAt(m, r.right - m.offsetWidth, r.bottom);
+}
 $('set-menu').addEventListener('click', e => {
+  if (e.target.dataset.sub) { e.stopPropagation(); setSubmenu(e.target.dataset.sub); return; }
+  if (e.target.dataset.back) { e.stopPropagation(); $('set-btn').click(); return; }
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
   if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
   if (e.target.dataset.feedback) api().send_feedback();
   if (e.target.dataset.tool) {
     // Task Reminder / Session Manager on another tool: ask whether they move too.
-    const k = e.target.dataset.tool, label = {claude: 'Claude', codex: 'Codex', agy: 'Antigravity'};
+    const k = e.target.dataset.tool, label = AI_LABELS;
     const other = (setMenuDef.made || []).filter(x => x.tool !== k);
     if (k === setMenuDef.tool || !other.length) { api().set_default_tool(k, false); return; }
     e.stopPropagation();

@@ -2,6 +2,13 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – a shorter ⚙ menu
+
+### Changed
+- ⚙ → *Theme ▸* and *Default AI ▸* are second-layer lists (with *◂ Back*); the first layer
+  shows the current one ("Theme: Classic ▸"). The menu went from 22 lines to 10.
+- README: Theme, Default AI (both languages).
+
 ## 2026-11-01 – v3.5.1: Update restarts, non-clone folders, installing on Windows
 
 ### Changed

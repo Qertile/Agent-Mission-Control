@@ -329,11 +329,11 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   saved in `agents.json`, so it stays next time and the session list follows it.
 - **Full width:** `⇔` at the right of the tab bar hides the task and session columns so
   the panes get the whole window; `⇔` again brings them back.
-- **Theme:** `⚙` at the right of the tab bar lists the themes: Classic (the original
+- **Theme:** `⚙` at the right of the tab bar → *Theme ▸* lists the themes: Classic (the original
   green on black, the default), Dark, Light, Monokai, Solarized Dark, Solarized Light,
   Dracula, Nord, Gruvbox Dark and One Dark. The theme colours the whole window and the
   terminals, and is kept for the next start.
-- **Default AI:** `⚙` → *Default AI* picks Claude, Codex or Antigravity (only the installed
+- **Default AI:** `⚙` → *Default AI ▸* picks Claude, Codex or Antigravity (only the installed
   ones) for `Task Reminder` and `Session Manager`, made on their first send. Kept as
   `"defaultTool"` in `Session HUD/hud-config.json`. When those two are already on another
   tool, it asks: *Move them to …* gives each a new entry in its place (new id, the new
@@ -671,10 +671,10 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   `agents.json`，下次啟動仍然保留，session 清單也會照這個順序排。
 - **全寬**：分頁列右邊的 `⇔` 會收起任務欄和 Session Monitor，讓窗格佔滿整個視窗；
   再按一次 `⇔` 回到三欄。
-- **主題**：分頁列右邊的 `⚙` 列出主題：Classic（原本的黑底綠字，預設）、Dark、Light、
+- **主題**：分頁列右邊的 `⚙` → *Theme ▸* 列出主題：Classic（原本的黑底綠字，預設）、Dark、Light、
   Monokai、Solarized Dark、Solarized Light、Dracula、Nord、Gruvbox Dark、One Dark。
   主題會套用到整個視窗和終端機，下次啟動仍然保留。
-- **預設 AI**：`⚙` → *Default AI* 選 Claude、Codex 或 Antigravity（只能選有裝的），
+- **預設 AI**：`⚙` → *Default AI ▸* 選 Claude、Codex 或 Antigravity（只能選有裝的），
   `Task Reminder` 和 `Session Manager` 第一次送出訊息建立時就用它。存在
   `Session HUD/hud-config.json` 的 `"defaultTool"`。這兩個分頁已經用別的工具時會先問：
   *Move them to …* 會在原位置換成新的一筆（新 id、新工具、不帶 model），原本開著就重開；最近
