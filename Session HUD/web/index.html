@@ -220,6 +220,9 @@
   .menu div.disabled { color: var(--note); pointer-events: none; }
   #result-box input { width: 340px; }
   #add-menu { max-height: 70vh; overflow-y: auto; }
+  #add-menu .hist-row { display: flex; justify-content: space-between; gap: 12px; }
+  #add-menu .hist-row span { color: var(--grey); padding: 0 2px; }
+  #add-menu .hist-row span:hover { color: var(--red); }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
   .menu input { margin: 3px 8px; width: 180px; background: var(--bg); color: var(--title);
                 border: 1px solid var(--desc); font: inherit; padding: 2px 4px; outline: none; }
@@ -1170,13 +1173,14 @@ $('add-tab').addEventListener('click', async e => {
 async function showHistory() {
   const stopped = amc.stopped || [], past = await api().discussions();
   addMenuAt('<div data-back="1">◂ Back</div><hr><div class="disabled">Sessions</div>' +
-    (stopped.length ? stopped.map(t => `<div data-id="${esc(t.id)}">${esc(t.name)}</div>`).join('')
+    (stopped.length ? stopped.map(t => `<div data-id="${esc(t.id)}" class="hist-row">${esc(t.name)}` +
+        `<span data-del="${esc(t.id)}" title="delete it from agents.json">✕</span></div>`).join('')
                     : '<div class="disabled">every session is running</div>') +
     '<hr><div class="disabled">Cross-checks</div>' +
     (past.length ? past.map(x => `<div data-disc="${esc(x.id)}" title="${esc(x.created)}">⚖ ${esc(x.title)}</div>`).join('')
                  : '<div class="disabled">none yet</div>'));
 }
-let newTool = 'claude', installed = [];
+let newTool = 'claude', installed = [], pendingNew = {};
 const TOOL_LABELS = {claude: 'Claude Code', codex: 'Codex', agy: 'Antigravity'};
 $('add-menu').addEventListener('click', e => {
   // New session: the menu turns into a name box; Enter adds it to agents.json and starts it.
@@ -1195,6 +1199,36 @@ $('add-menu').addEventListener('click', e => {
     return;
   }
   if (e.target.dataset.fork) { e.stopPropagation(); forkBox(''); return; }
+  if (e.target.dataset.del) {
+    // History → ✕: asked first, then out of agents.json (the conversation stays with its tool).
+    e.stopPropagation();
+    const id = e.target.dataset.del, t = (amc.stopped || []).find(x => x.id === id);
+    $('add-menu').innerHTML = `<div class="disabled" style="white-space:normal;max-width:300px">Delete ` +
+      `'${esc(t ? t.name : id)}'? Its conversation stays in its tool's history.</div>` +
+      `<div data-del-go="${esc(id)}">Delete</div><div data-history="1">Cancel</div><div class="err" id="new-err"></div>`;
+    return;
+  }
+  if (e.target.dataset.delGo) {
+    e.stopPropagation();
+    api().delete_session(e.target.dataset.delGo).then(async err => {
+      if (err) { $('new-err').textContent = err; return; }
+      await amc.syncTabs();
+      showHistory();
+    });
+    return;
+  }
+  if (e.target.dataset.replace) {
+    // A name already there: replace it (confirmed), as the box below asked.
+    e.stopPropagation();
+    const p = pendingNew;
+    (p.fork ? api().fork_session(p.fork, p.name, true) : api().new_session(p.name, p.tool, true)).then(async res => {
+      if (res.error) { $('new-err').textContent = res.error; return; }
+      hideMenus();
+      await amc.syncTabs();
+      amc.select(res.id);
+    });
+    return;
+  }
   if (e.target.dataset.history) { e.stopPropagation(); showHistory(); return; }
   if (e.target.dataset.install) {
     // The menu stays open until the tab is there, or to show why it is not.
@@ -1227,8 +1261,18 @@ function forkBox(sid) {
 $('add-menu').addEventListener('keydown', async e => {
   if (e.key === 'Enter' && e.target.id === 'fork-id') { $('new-name').focus(); return; }
   if (e.target.id !== 'new-name' || e.key !== 'Enter') return;
-  const res = await ($('fork-id') ? api().fork_session($('fork-id').value.trim(), e.target.value)
-                                  : api().new_session(e.target.value, newTool));
+  const fork = $('fork-id') ? $('fork-id').value.trim() : '';
+  const res = await (fork ? api().fork_session(fork, e.target.value) : api().new_session(e.target.value, newTool));
+  if (res.exists) {
+    // Same name as a session in agents.json: say so, and replace it only when confirmed.
+    pendingNew = {fork, name: e.target.value, tool: newTool};
+    $('new-err').innerHTML = `${esc(res.error)}: the old one will be replaced (its conversation stays in its ` +
+      `tool's history). Sure?`;
+    Object.assign($('new-err').style, {whiteSpace: 'normal', maxWidth: '300px'});
+    if (!$('add-menu').querySelector('[data-replace]'))
+      $('new-err').insertAdjacentHTML('afterend', '<div data-replace="1">Replace it</div>');
+    return;
+  }
   if (res.error) { $('new-err').textContent = res.error; return; }
   hideMenus();
   await amc.syncTabs();

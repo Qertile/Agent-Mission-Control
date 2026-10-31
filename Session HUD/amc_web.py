@@ -429,14 +429,16 @@ class Api:
             return str(e)
         return None
 
-    def new_session(self, name, tool='claude'):
+    def new_session(self, name, tool='claude', replace=False):
         """Adds a session named `name` with a new id to agents.json and starts its tab;
-        tool 'codex' makes it a Codex session, 'agy' an Antigravity one. Returns {'id': ...} or {'error': ...}."""
+        tool 'codex' makes it a Codex session, 'agy' an Antigravity one. A name already there
+        answers {'exists': True, 'error': ...}; replace=True then takes that one's place.
+        Returns {'id': ...} or {'error': ...}."""
         name = ' '.join(str(name).split())
         if not name:
             return {'error': 'type a name'}
-        if any(e['name'] == name for e in core.agents()):
-            return {'error': f"'{name}' is already in agents.json"}
+        if any(e['name'] == name for e in core.agents()) and not replace:
+            return {'exists': True, 'error': f"'{name}' already exists"}
         entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1}
         if tool == 'codex':
             if not shutil.which('codex') and '--shell' not in sys.argv:
@@ -448,7 +450,7 @@ class Api:
             entry['tool'] = 'agy'
         elif not shutil.which('claude') and '--shell' not in sys.argv:
             return {'error': 'claude is not on PATH'}
-        core.save_agents(core.agents() + [entry])
+        self._add_entry(entry)
         try:
             self._start(entry)
         except Exception as e:
@@ -863,7 +865,7 @@ class Api:
             subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', FEEDBACK_MAIL],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
-    def fork_session(self, sid, name):
+    def fork_session(self, sid, name, replace=False):
         """Adds a session named `name` to agents.json that starts from session `sid`'s
         conversation so far, with its model and tool, and starts its tab; `sid` goes on
         unchanged. Claude: claude --fork-session; Codex: codex fork <its thread>; Antigravity
@@ -871,9 +873,11 @@ class Api:
         name = ' '.join(str(name).split())
         if not name:
             return {'error': 'type a name'}
-        if any(e['name'] == name for e in core.agents()):
-            return {'error': f"'{name}' is already in agents.json"}
         source = next((e for e in core.agents() if e['id'] == sid), None)
+        if source and source['name'] == name:
+            return {'error': 'give the fork another name than its source'}
+        if any(e['name'] == name for e in core.agents()) and not replace:
+            return {'exists': True, 'error': f"'{name}' already exists"}
         if is_agy(source):
             return {'error': 'Antigravity cannot fork a session'}
         if is_codex(source):
@@ -887,12 +891,44 @@ class Api:
             entry = {'name': name, 'id': str(uuid.uuid4()), 'window': 1, 'fork_of': sid}
         if source and source.get('model'):
             entry['model'] = source['model']
-        core.save_agents(core.agents() + [entry])
+        self._add_entry(entry)
         try:
             self._start(entry)
         except Exception as e:
             return {'error': str(e)}
         return {'id': entry['id']}
+
+    def _add_entry(self, entry):
+        """Adds `entry` to agents.json; one with the same name is replaced in its place (its
+        tab closed, its pins dropped; its conversation stays in its tool's history)."""
+        sessions = core.agents()
+        i = next((n for n, e in enumerate(sessions) if e['name'] == entry['name']), None)
+        if i is None:
+            sessions.append(entry)
+        else:
+            self._forget(sessions[i]['id'])
+            sessions[i] = entry
+        core.save_agents(sessions)
+
+    def _forget(self, sid):
+        term = self._terms.get(sid)
+        if term:
+            term.close()
+        if sid in self.pins():
+            self._edit_pins(sid, lambda ps: [])
+
+    def delete_session(self, sid):
+        """History → ✕: takes a closed session out of agents.json (and its pins). Its
+        conversation stays in its tool's history. Returns None or what went wrong."""
+        if sid in self._terms:
+            return 'close its tab first'
+        sessions = core.agents()
+        if not any(e['id'] == sid for e in sessions):
+            return 'not in agents.json'
+        self._forget(sid)
+        core.save_agents([e for e in sessions if e['id'] != sid])
+        self._js('amc.syncTabs()')
+        return None
 
     def write(self, tid, data):
         term = self._terms.get(tid)

@@ -2,6 +2,19 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – v3.5.5: same-name sessions, deleting closed ones
+
+### Added
+- `+` → *History*: a `✕` by each closed session deletes it from `agents.json` (and its pins)
+  after asking; its conversation stays in its tool's history.
+
+### Changed
+- A new session or fork with a name already in `agents.json` no longer just fails: it says
+  the old one will be replaced and offers *Replace it*, which puts the new entry in the old
+  one's place (its tab closed, its pins dropped). A fork cannot take its source's name.
+- README: Tabs (both languages); Versions: `v3.5.5`.
+- Tagged `v3.5.5`.
+
 ## 2026-11-01 – v3.5.4: Update restarts on Windows
 
 ### Fixed

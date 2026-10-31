@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.4` (current) | `v3.5.3` plus *Update* really restarting Agent Mission Control on Windows. See `CHANGELOG.md`. |
+| `v3.5.5` (current) | `v3.5.4` plus replacing a session of the same name (after asking) and deleting closed sessions from `+` → *History*. See `CHANGELOG.md`. |
+| `v3.5.4` | `v3.5.3` plus *Update* really restarting Agent Mission Control on Windows. See `CHANGELOG.md`. |
 | `v3.5.3` | `v3.5.2` plus *Agy · Switch…* in ⚙ → Accounts, the version at the foot of ⚙, and pasting screenshots on Linux that copy only a file link (or that GTK cannot read). See `CHANGELOG.md`. |
 | `v3.5.2` | `v3.5.1` plus ⚙ → *Remote Access AMC ▸* (a guided Tailscale setup, then the phone and remote desktop links), *Theme ▸* and *Default AI ▸* as second-layer lists, and *New Agy session…* in `+`. See `CHANGELOG.md`. |
 | `v3.5.1` | `v3.5` plus *Update* (asks, then restarts Agent Mission Control after a new version, also in a folder that is not a git clone), installing a tool from `+` working on Windows, and install and login errors shown. See `CHANGELOG.md`. |
@@ -232,7 +233,9 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 
 - **Tabs:** the right column has a tab per running `agents.json` session. The ones ticked
   *Open on start* (the session list's right-click menu) start with the window; `+` →
-  *History* starts any other listed one, `×` ends one. Type into a tab as into any terminal. Closing the
+  *History* starts any other listed one (its `✕` deletes a closed one from `agents.json`, after
+  asking; the conversation stays in its tool's history), `×` ends one. A new session or fork
+  with a name already there asks first, then replaces that one in its place. Type into a tab as into any terminal. Closing the
   window ends every tab; the conversations are kept and resume next time. A session
   already running in another terminal is left there and gets no tab.
 - **Session list:** double-click a session to show its tab (a session with no terminal,
@@ -432,7 +435,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.4`（目前） | `v3.5.3` 再加上：Windows 上 *Update* 後真的會自動重開。詳見 `CHANGELOG.md`。 |
+| `v3.5.5`（目前） | `v3.5.4` 再加上：同名 session 可確認後取代、`+` → *History* 可刪除已關閉的 session。詳見 `CHANGELOG.md`。 |
+| `v3.5.4` | `v3.5.3` 再加上：Windows 上 *Update* 後真的會自動重開。詳見 `CHANGELOG.md`。 |
 | `v3.5.3` | `v3.5.2` 再加上：⚙ → Accounts 的 *Agy · Switch…*、⚙ 最下面顯示版本，以及 Linux 上只複製檔案連結（或 GTK 讀不到）的截圖也能貼上。詳見 `CHANGELOG.md`。 |
 | `v3.5.2` | `v3.5.1` 再加上：⚙ → *Remote Access AMC ▸*（引導設定 Tailscale，最後給手機和遠端桌面的網址）、*Theme ▸* 和 *Default AI ▸* 移到第二層、`+` 選單改成 *New Agy session…*。詳見 `CHANGELOG.md`。 |
 | `v3.5.1` | `v3.5` 再加上：*Update*（先確認，有新版就自動重開；不是 git clone 的資料夾也能用）、Windows 上從 `+` 安裝工具能正常執行、安裝和登入失敗時顯示原因。詳見 `CHANGELOG.md`。 |
@@ -606,8 +610,9 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
 ## 在視窗裡操作
 
 - **分頁**：右欄每個執行中的 `agents.json` session 一個分頁。勾了 *Open on start*
-  （session 清單的右鍵選單）的會隨視窗啟動；`+` → *History* 可啟動清單裡其他的 session，`×` 結束
-  一個。在分頁裡打字就跟一般終端機一樣。關掉視窗會結束所有分頁；對話會保留，下次接著
+  （session 清單的右鍵選單）的會隨視窗啟動；`+` → *History* 可啟動清單裡其他的 session（旁邊的
+  `✕` 會先確認，再把已關閉的 session 從 `agents.json` 刪掉，對話仍留在原工具的紀錄裡），`×` 結束
+  一個。新增 session 或 fork 時名稱已存在，會先確認，再在原位置取代舊的。在分頁裡打字就跟一般終端機一樣。關掉視窗會結束所有分頁；對話會保留，下次接著
   繼續。已經在別的終端機執行的 session 會留在原處，不會有分頁。
 - **Session 清單**：雙擊 session 會切到它的分頁（沒有終端機的 session，例如排程跑的
   `claude -p`，會顯示它是背景工作）。右鍵有 Copy、Copy all rows、
