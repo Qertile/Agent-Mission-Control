@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – v3.3: switch AI accounts
+
+### Added
+- ⚙ → *Accounts*: the account each installed tool is logged in with (Claude's email from
+  `claude auth status --json`, Codex's `codex login status`), filled in after the menu
+  opens. *Switch…* opens a temporary `Claude login` / `Codex login` tab (not in
+  `agents.json`) running `claude auth logout` + `claude auth login` or `codex logout` +
+  `codex login`, which closes on Enter. Antigravity has no login command, so it is not listed.
+
+### Changed
+- A tab gone from the tab list (a finished login tab, a session removed from
+  `agents.json`) is now taken off the tab bar.
+- README: Accounts (both languages); Versions: `v3.3`.
+- Tagged `v3.3`.
+
 ## 2026-10-31 – v3.2: Default AI, Update installs git
 
 ### Added

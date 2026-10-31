@@ -448,6 +448,14 @@ const amc = {
       if (!running) t.el.classList.remove('active');
       $('tabs').insertBefore(t.tabEl, $('tab-tools'));
     }
+    // A tab gone from the list (a finished ⚙ → Accounts login, a session taken out of agents.json).
+    const ids = new Set(list.map(t => t.id));
+    for (const [id, t] of Object.entries(amc.tabs)) {
+      if (t.disc || ids.has(id)) continue;
+      t.tabEl.remove(); t.el.remove();
+      try { t.term.dispose(); } catch (e) {}
+      delete amc.tabs[id];
+    }
     for (const t of Object.values(amc.tabs)) if (t.disc) $('tabs').insertBefore(t.tabEl, $('tab-tools'));
     $('no-tabs').style.display = list.some(t => t.running) || Object.values(amc.tabs).some(t => t.disc) ? 'none' : '';
     amc.prune();
@@ -1211,16 +1219,30 @@ $('set-btn').addEventListener('click', async e => {
     [['claude', 'Claude'], ['codex', 'Codex'], ['agy', 'Antigravity']].map(([k, label]) =>
       def.installed.includes(k) ? `<div data-tool="${k}">${k === def.tool ? '✓' : '\u00a0'} ${label}</div>`
                                 : `<div class="disabled" title="not installed">\u00a0 ${label}</div>`).join('') +
+    '<hr><div class="disabled">Accounts</div><div id="acct-list"><div class="disabled">\u00a0 reading…</div></div>' +
     '<hr><div data-update="1">Update from GitHub</div><div class="err" id="update-msg"></div>' +
     '<div data-feedback="1">Send feedback…</div>';
   const r = $('set-btn').getBoundingClientRect();
   showAt(m, r.right - m.offsetWidth, r.bottom);
+  // Each tool's account: its status command takes a moment, so it fills in after.
+  api().accounts().then(list => {
+    if (!$('acct-list')) return;
+    $('acct-list').innerHTML = list.length ? list.map(a =>
+      `<div data-login="${a.tool}" title="log out, then log in with another account">\u00a0 ${a.label}: ${esc(a.account)} · Switch…</div>`).join('')
+      : '<div class="disabled">\u00a0 no Claude Code or Codex</div>';
+    showAt(m, r.right - m.offsetWidth, r.bottom);
+  });
 });
 $('set-menu').addEventListener('click', e => {
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
   if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
   if (e.target.dataset.feedback) api().send_feedback();
   if (e.target.dataset.tool) api().set_default_tool(e.target.dataset.tool);
+  if (e.target.dataset.login) api().switch_account(e.target.dataset.login).then(async r => {
+    if (r.error) return;
+    await amc.syncTabs();
+    amc.select(r.id);
+  });
   if (e.target.dataset.update) {
     // The menu stays open to show how it went.
     e.stopPropagation();

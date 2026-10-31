@@ -302,6 +302,7 @@ class Api:
         self._window = None
         self._drop_hooked = False
         self._terms = {}                   # agents.json id -> Term while its process runs
+        self._extra = {}                   # a tab not in agents.json (⚙ → Accounts) -> its tool and name
         self._out = {}                     # id -> output not yet handed to the page
         self._out_lock = threading.Lock()
         self._hist = {}                    # id -> {'buf': the latest output, 'end': chars ever written}
@@ -378,8 +379,10 @@ class Api:
         return self.tabs()
 
     def tabs(self):
-        return [{'id': e['id'], 'name': e['name'], 'tool': e.get('tool') or 'claude', 'running': e['id'] in self._terms}
-                for e in core.agents()]
+        return ([{'id': e['id'], 'name': e['name'], 'tool': e.get('tool') or 'claude', 'running': e['id'] in self._terms}
+                 for e in core.agents()] +
+                [{'id': tid, 'name': x['name'], 'tool': x['tool'], 'running': True}
+                 for tid, x in list(self._extra.items()) if tid in self._terms])
 
     def open_tab(self, tid):
         """Starts the tab's process when it is not running. Returns None or what went wrong."""
@@ -482,6 +485,58 @@ class Api:
         except subprocess.TimeoutExpired:
             return 'installing git took over 10 minutes'
         return None if r.returncode == 0 else 'git was not installed: sudo apt install git'
+
+    def accounts(self):
+        """⚙ → Accounts: [{'tool', 'label', 'account'}] for the installed Claude Code and Codex,
+        `account` what their own status command says (Claude's email). Antigravity has no
+        command to log in or out, so it is not listed."""
+        kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
+        def run(argv):
+            try:
+                r = subprocess.run(argv, capture_output=True, text=True, timeout=15,
+                                   stdin=subprocess.DEVNULL, cwd=WORK_DIR, **kw)
+                return (r.stdout + r.stderr).strip()   # codex says it on stderr
+            except Exception:
+                return ''
+        out = []
+        if shutil.which('claude'):
+            try:
+                text = run([shutil.which('claude'), 'auth', 'status', '--json'])
+                st = json.loads(text[text.find('{'):text.rfind('}') + 1] or '{}')
+            except ValueError:
+                st = {}
+            account = (st.get('email') or st.get('authMethod') or 'logged in') if st.get('loggedIn') else 'not logged in'
+            out.append({'tool': 'claude', 'label': 'Claude', 'account': account})
+        if shutil.which('codex'):
+            first = (run([shutil.which('codex'), 'login', 'status']).splitlines() or ['not logged in'])[0]
+            out.append({'tool': 'codex', 'label': 'Codex', 'account': first.replace('Logged in using ', '')})
+        return out
+
+    def switch_account(self, tool):
+        """Opens a tab that logs `tool` out and in again (its own commands, the browser for
+        the new account), then waits for Enter and goes away. Every tab of that tool uses
+        the new account from then on. Returns {'id': ...} or {'error': ...}."""
+        cmds = {'claude': ['claude auth logout', 'claude auth login'], 'codex': ['codex logout', 'codex login']}
+        if tool not in cmds or not shutil.which(tool):
+            return {'error': f'{tool} is not installed'}
+        tid = f'login-{tool}'
+        if tid in self._terms:
+            return {'id': tid}
+        if WINDOWS:
+            argv = ['cmd.exe', '/c', ' & '.join(cmds[tool] + ['echo.', 'pause'])]
+        else:
+            argv = ['/bin/sh', '-c', '; '.join(cmds[tool] + ['echo', 'printf "Press Enter to close"', 'read x'])]
+        self._extra[tid] = {'tool': tool, 'name': {'claude': 'Claude login', 'codex': 'Codex login'}[tool]}
+        def ended(tid, term):
+            self._extra.pop(tid, None)
+            self._exited(tid, term)
+        try:
+            with self._start_lock:
+                self._terms[tid] = Term(tid, argv, self._output, ended)
+        except Exception as e:
+            self._extra.pop(tid, None)
+            return {'error': str(e)}
+        return {'id': tid}
 
     def update(self):
         """⚙ → Update: `git pull --ff-only` in this folder (a clone of the GitHub repo),

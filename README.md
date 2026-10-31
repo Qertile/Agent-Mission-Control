@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.2` (current) | `v3.1` plus ⚙ → *Default AI* (the tool Task Reminder and Session Manager start with) and *Update from GitHub* installing git when there is none. See `CHANGELOG.md`. |
+| `v3.3` (current) | `v3.2` plus ⚙ → *Accounts*: each tool's logged-in account, and *Switch…* to log out and in with another (Claude Code, Codex). See `CHANGELOG.md`. |
+| `v3.2` | `v3.1` plus ⚙ → *Default AI* (the tool Task Reminder and Session Manager start with) and *Update from GitHub* installing git when there is none. See `CHANGELOG.md`. |
 | `v3.1` | `v3.0` plus forking Codex sessions (`codex fork`), Session Manager and Task Reminder on Codex or Antigravity when Claude Code is not installed, *New Claude session…* in `+`, and ⚙ → *Update from GitHub* and *Send feedback…*. See `CHANGELOG.md`. |
 | `v3.0` | `v2.7` plus an installer for a new PC: `install.bat` and `install.sh` offer to install what is missing (Claude Code, Python 3 and its modules, ImportExcel, the font), and Claude Code, Codex and Antigravity are each optional as long as one is there. See `CHANGELOG.md`. |
 | `v2.7` | `v2.6.1` plus Relax mode: the Tasks and Sessions columns as a camp, a building per session growing with its messages, people by status, Cross-check campfires, a task board and stamina bars (⚙ → *Layout* → *Relax*). See `CHANGELOG.md`. |
@@ -325,6 +326,11 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   `"defaultTool"` in `Session HUD/hud-config.json`. A tab already in `agents.json` keeps its
   tool; remove it there to have it made again with the new one. With none picked: Claude
   Code, otherwise Codex, otherwise Antigravity.
+- **Accounts:** `⚙` → *Accounts* shows the account each installed tool is logged in with
+  (`claude auth status`, `codex login status`). *Switch…* opens a `Claude login` / `Codex
+  login` tab that runs the tool's own logout and login (the browser opens for the new
+  account), then closes on Enter. Every tab of that tool uses the new account from then on.
+  Antigravity has no login command, so it is not listed.
 - **Update from GitHub:** `⚙` → *Update from GitHub* runs `git pull --ff-only` in this
   folder and shows how it went under it; restart Agent Mission Control to use new code.
   It needs a folder cloned with git (not a downloaded zip). With no git, it installs it
@@ -392,7 +398,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.2`（目前） | `v3.1` 再加上：⚙ → *Default AI*（Task Reminder 和 Session Manager 用哪個 AI 建立），以及 *Update from GitHub* 在沒有 git 時先幫你裝。詳見 `CHANGELOG.md`。 |
+| `v3.3`（目前） | `v3.2` 再加上 ⚙ → *Accounts*：顯示各工具登入的帳號，*Switch…* 登出再登入另一個帳號（Claude Code、Codex）。詳見 `CHANGELOG.md`。 |
+| `v3.2` | `v3.1` 再加上：⚙ → *Default AI*（Task Reminder 和 Session Manager 用哪個 AI 建立），以及 *Update from GitHub* 在沒有 git 時先幫你裝。詳見 `CHANGELOG.md`。 |
 | `v3.1` | `v3.0` 再加上：Codex session 也能 fork（`codex fork`）；沒裝 Claude Code 時，Session Manager 和 Task Reminder 改用 Codex 或 Antigravity；`+` 選單改成 *New Claude session…*；⚙ → *Update from GitHub* 和 *Send feedback…*。詳見 `CHANGELOG.md`。 |
 | `v3.0` | `v2.7` 再加上新電腦的安裝：`install.bat` 和 `install.sh` 會問要不要幫你裝缺的東西（Claude Code、Python 3 與模組、ImportExcel、字型）；Claude Code、Codex、Antigravity 都改成選用，至少裝一個即可。詳見 `CHANGELOG.md`。 |
 | `v2.7` | `v2.6.1` 再加上 Relax 模式：Tasks 和 Sessions 兩欄換成營地，每個 session 一棟隨訊息數長大的建築，小人依狀態動作，Cross-check 是營火，上方有任務公告板和 Stamina（⚙ → *Layout* → *Relax*）。詳見 `CHANGELOG.md`。 |
@@ -641,6 +648,10 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   `Session HUD/hud-config.json` 的 `"defaultTool"`。已經在 `agents.json` 裡的分頁保持原本的
   工具；想換就把它從 `agents.json` 刪掉，下次會用新的重建。沒選時依序用 Claude Code、
   Codex、Antigravity。
+- **帳號**：`⚙` → *Accounts* 顯示每個已安裝工具登入的帳號（`claude auth status`、
+  `codex login status`）。*Switch…* 會開一個 `Claude login`／`Codex login` 分頁，執行工具自己的
+  登出和登入（瀏覽器會開登入頁），按 Enter 後關閉。之後這個工具的所有分頁都改用新帳號。
+  Antigravity 沒有登入指令，所以不會列出。
 - **從 GitHub 更新**：`⚙` → *Update from GitHub* 會在這個資料夾執行 `git pull --ff-only`，
   結果顯示在按鈕下方；重開 Agent Mission Control 才會用到新程式。資料夾要是用 git clone
   下來的（不是下載的 zip）。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
