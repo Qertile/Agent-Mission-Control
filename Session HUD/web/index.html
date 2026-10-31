@@ -1226,7 +1226,7 @@ $('set-menu').addEventListener('click', e => {
     e.stopPropagation();
     const msg = $('update-msg');
     msg.style.color = 'var(--grey)';
-    msg.textContent = 'pulling…';
+    msg.textContent = 'updating…';
     api().update().then(r => {
       msg.style.color = r.error ? '' : 'var(--grey)';
       msg.textContent = r.error || r.text;

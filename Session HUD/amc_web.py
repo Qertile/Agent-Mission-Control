@@ -445,16 +445,57 @@ class Api:
         os.replace(path + '.tmp', path)
         self._config['defaultTool'] = tool
 
+    @staticmethod
+    def _git():
+        """The git to run: the one on PATH, otherwise (Windows) the MinGit _install_git put in."""
+        mingit = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs', 'MinGit', 'cmd', 'git.exe')
+        return shutil.which('git') or (mingit if WINDOWS and os.path.isfile(mingit) else None)
+
+    @staticmethod
+    def _install_git():
+        """Installs git for ⚙ → Update. Windows: the latest MinGit (Git for Windows' own
+        zip, no installer, no admin) into %LOCALAPPDATA%\\Programs\\MinGit. Linux: apt with
+        pkexec's password box. Returns None or what went wrong."""
+        if WINDOWS:
+            import urllib.request
+            import zipfile
+            try:
+                api = 'https://api.github.com/repos/git-for-windows/git/releases/latest'
+                with urllib.request.urlopen(api, timeout=30) as r:
+                    assets = json.load(r)['assets']
+                arch = 'arm64' if os.environ.get('PROCESSOR_ARCHITECTURE') == 'ARM64' else '64-bit'
+                url = next(a['browser_download_url'] for a in assets
+                           if re.fullmatch(rf'MinGit-[\d.]+-{arch}\.zip', a['name']))
+                zpath = os.path.join(tempfile.gettempdir(), 'MinGit.zip')
+                urllib.request.urlretrieve(url, zpath)
+                with zipfile.ZipFile(zpath) as z:
+                    z.extractall(os.path.join(os.environ['LOCALAPPDATA'], 'Programs', 'MinGit'))
+                os.remove(zpath)
+            except Exception as e:
+                return f'could not install git: {e}'
+            return None
+        if not (shutil.which('pkexec') and shutil.which('apt-get')):
+            return 'git is not installed: sudo apt install git'
+        try:
+            r = subprocess.run(['pkexec', 'apt-get', 'install', '-y', 'git'], capture_output=True,
+                               text=True, timeout=600, stdin=subprocess.DEVNULL)
+        except subprocess.TimeoutExpired:
+            return 'installing git took over 10 minutes'
+        return None if r.returncode == 0 else 'git was not installed: sudo apt install git'
+
     def update(self):
-        """⚙ → Update: `git pull --ff-only` in this folder (a clone of the GitHub repo).
+        """⚙ → Update: `git pull --ff-only` in this folder (a clone of the GitHub repo),
+        installing git first when there is none.
         Returns {'text': what happened} or {'error': ...}; the new code runs after a restart."""
-        if not shutil.which('git'):
-            return {'error': 'git is not installed'}
         if not os.path.isdir(os.path.join(core.ROOT, '.git')):
             return {'error': 'this folder is not a git clone'}
+        if not self._git():
+            err = self._install_git()
+            if err or not self._git():
+                return {'error': err or 'git is not installed'}
         kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
         try:
-            r = subprocess.run(['git', '-C', core.ROOT, 'pull', '--ff-only'], capture_output=True,
+            r = subprocess.run([self._git(), '-C', core.ROOT, 'pull', '--ff-only'], capture_output=True,
                                text=True, timeout=120, stdin=subprocess.DEVNULL, **kw)
         except subprocess.TimeoutExpired:
             return {'error': 'git pull took over 2 minutes'}

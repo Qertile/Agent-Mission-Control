@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-10-31 – Update installs git
+
+### Changed
+- ⚙ → *Update from GitHub* installs git when there is none: on Windows the latest MinGit
+  from Git for Windows' GitHub releases (64-bit or ARM64) into
+  `%LOCALAPPDATA%\Programs\MinGit`, no admin, used by Agent Mission Control only (not
+  added to PATH); on Linux `pkexec apt-get install -y git`.
+- README: Update from GitHub (both languages).
+
 ## 2026-10-31 – Default AI
 
 ### Added

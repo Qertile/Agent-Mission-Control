@@ -326,7 +326,10 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   Code, otherwise Codex, otherwise Antigravity.
 - **Update from GitHub:** `⚙` → *Update from GitHub* runs `git pull --ff-only` in this
   folder and shows how it went under it; restart Agent Mission Control to use new code.
-  It needs git and a folder cloned with git (not a downloaded zip).
+  It needs a folder cloned with git (not a downloaded zip). With no git, it installs it
+  first: on Windows the latest MinGit (Git for Windows' zip, no admin) into
+  `%LOCALAPPDATA%\Programs\MinGit`, used by Agent Mission Control only; on Linux
+  `apt-get install git` behind the system's password box.
 - **Send feedback:** `⚙` → *Send feedback…* opens a new email to the author in the default
   mail app, titled "AMC Feedback".
 
@@ -637,8 +640,10 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   工具；想換就把它從 `agents.json` 刪掉，下次會用新的重建。沒選時依序用 Claude Code、
   Codex、Antigravity。
 - **從 GitHub 更新**：`⚙` → *Update from GitHub* 會在這個資料夾執行 `git pull --ff-only`，
-  結果顯示在按鈕下方；重開 Agent Mission Control 才會用到新程式。需要 git，且資料夾要是用
-  git clone 下來的（不是下載的 zip）。
+  結果顯示在按鈕下方；重開 Agent Mission Control 才會用到新程式。資料夾要是用 git clone
+  下來的（不是下載的 zip）。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
+  官方的 zip，不需系統管理員）到 `%LOCALAPPDATA%\Programs\MinGit`，只給 Agent Mission Control
+  用；Linux 會跳出系統密碼視窗執行 `apt-get install git`。
 - **意見回饋**：`⚙` → *Send feedback…* 會用預設郵件程式開一封寄給作者的新信，標題是「AMC Feedback」。
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
