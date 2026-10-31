@@ -873,27 +873,55 @@ class Api:
     def paste_clipboard_image(self):
         """Linux: WebKitGTK gives the page's paste event no image, so the image on the
         clipboard is read through GTK (on its main thread) and saved like save_pasted_image.
-        Returns its path, or None when the clipboard has no image."""
+        Returns its path, or None when the clipboard has no image. When GTK finds none,
+        wl-paste (Wayland) or xclip (X11) are asked, and what the clipboard offered goes to
+        the log (amc-web.log), so a paste that does nothing can be told apart."""
         if WINDOWS:
-            return None
-        import gi
-        gi.require_version('Gtk', '3.0')
-        gi.require_version('Gdk', '3.0')
-        from gi.repository import Gdk, GLib, Gtk
-        done, got = threading.Event(), []
-
-        def read():
-            got.append(Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_for_image())
-            done.set()
-            return False
-        GLib.idle_add(read)
-        if not done.wait(5) or not got[0]:
             return None
         folder = os.path.join(tempfile.gettempdir(), 'amc-paste')
         os.makedirs(folder, exist_ok=True)
         path = os.path.join(folder, f'paste-{datetime.now():%Y%m%d-%H%M%S-%f}.png')
-        got[0].savev(path, 'png', [], [])
-        return path
+        done, got, targets = threading.Event(), [], []
+        try:
+            import gi
+            gi.require_version('Gtk', '3.0')
+            gi.require_version('Gdk', '3.0')
+            from gi.repository import Gdk, GLib, Gtk
+
+            def read():
+                try:
+                    cb = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+                    got.append(cb.wait_for_image())
+                    ok, atoms = cb.wait_for_targets()
+                    targets.extend(a.name() for a in atoms or [])
+                except Exception as e:
+                    targets.append(f'GTK error: {e!r}')
+                done.set()
+                return False
+            GLib.idle_add(read)
+            if done.wait(5) and got and got[0]:
+                got[0].savev(path, 'png', [], [])
+                return path
+        except Exception as e:
+            targets.append(f'GTK error: {e!r}')
+        # The clipboard tools, for what GTK in this window could not read.
+        for argv in (['wl-paste', '--no-newline', '--type', 'image/png'],
+                     ['xclip', '-selection', 'clipboard', '-target', 'image/png', '-out']):
+            if not shutil.which(argv[0]):
+                continue
+            try:
+                r = subprocess.run(argv, capture_output=True, timeout=5, stdin=subprocess.DEVNULL)
+            except (OSError, subprocess.SubprocessError):
+                continue
+            if r.returncode == 0 and r.stdout.startswith(b'\x89PNG'):
+                with open(path, 'wb') as f:
+                    f.write(r.stdout)
+                return path
+        print(f"paste: no image on the clipboard; session {os.environ.get('XDG_SESSION_TYPE', '?')}, "
+              f"GTK {'answered' if done.is_set() else 'did not answer'}, offered: {targets or 'nothing'}, "
+              f"wl-paste {'found' if shutil.which('wl-paste') else 'missing'}, "
+              f"xclip {'found' if shutil.which('xclip') else 'missing'}", file=sys.stderr, flush=True)
+        return None
 
     def resize(self, tid, cols, rows):
         term = self._terms.get(tid)

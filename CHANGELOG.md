@@ -2,6 +2,16 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – pasting screenshots on Linux
+
+### Fixed
+- A screenshot tool that puts only a file link on the clipboard (`file://…`, no image)
+  pasted nothing: it is read as an image, otherwise that file's path is typed.
+- On Linux, when GTK finds no image on the clipboard, `wl-paste` (Wayland) or `xclip` (X11)
+  are asked; a paste that still finds none logs the session type, what the clipboard
+  offered and which tools are there to stderr (`amc-web.log`).
+- README: Images (both languages).
+
 ## 2026-11-01 – v3.5.2: Remote Access AMC, a shorter ⚙ menu
 
 ### Added

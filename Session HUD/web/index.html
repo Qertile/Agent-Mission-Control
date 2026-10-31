@@ -627,11 +627,17 @@ const amc = {
       if (e.shiftKey && e.code === 'KeyC') { copyText(term.getSelection()); term.focus(); return false; }
       return true;
     });
-    // WebKitGTK's paste carries no image at all (no types): then Python reads the clipboard.
+    // WebKitGTK's paste carries no image at all: then Python reads the clipboard. Plain text
+    // pastes as usual; a screenshot tool that offers the image with only a file link (no
+    // text, or file://…) is read as an image too, else that file's path is typed.
     el.addEventListener('paste', async e => {
       const data = e.clipboardData;
       const item = [...(data ? data.items : [])].find(i => i.type.startsWith('image/'));
-      if (!item && data && data.types.length) return;
+      const text = data ? data.getData('text/plain') : '';
+      const files = (data ? data.getData('text/uri-list') || (/^file:\/\//.test(text.trim()) ? text : '') : '')
+        .split(/\r?\n/).filter(u => u.startsWith('file://'))
+        .map(u => decodeURIComponent(u.slice(7)).replace(/^\/([A-Za-z]:)/, '$1'));
+      if (!item && text && !files.length) return;
       e.preventDefault();
       e.stopPropagation();
       const path = item ? await api().save_pasted_image(await new Promise(done => {
@@ -640,6 +646,7 @@ const amc = {
         r.readAsDataURL(item.getAsFile());
       })) : await api().paste_clipboard_image();
       if (path) { amc.fileTarget = id; amc.typePaths([path]); }
+      else if (files.length) { amc.fileTarget = id; amc.typePaths(files); }
     }, true);
     // Right-click on selected text: Pin (to this session's pin list) or Copy. A program
     // that takes the mouse (Codex: select with Shift+drag there) gets neither that click

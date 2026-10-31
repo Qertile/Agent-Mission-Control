@@ -321,6 +321,9 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 - **Images:** Ctrl+V (or Ctrl+Shift+V) with an image on the clipboard saves it as
   `amc-paste/paste-<time>.png` in the temp folder (`/tmp` on Linux) and types its path
   into the tab; Claude reads the image when the message is sent. Text pastes as before.
+  A screenshot tool that copies only a file link pastes that file's path. On Linux, when
+  GTK finds no image, `wl-paste` or `xclip` are asked, and a paste that finds none writes
+  what the clipboard offered to `Session HUD/amc-web.log`.
   Ctrl+V is a paste now, no longer passed to the program.
 - **Tab status:** the dot in each tab is its session's status colour (busy cyan, idle
   green), and pulses while the session is busy. A tab not on screen blinks when its session finishes or waits for you.
@@ -671,7 +674,9 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
 - **檔案**：從檔案管理員把檔案拖到某一格，會把完整路徑打進那個分頁。
 - **圖片**：剪貼簿裡是圖片時按 Ctrl+V（或 Ctrl+Shift+V），會存成暫存資料夾裡的
   `amc-paste/paste-<時間>.png`（Linux 是 `/tmp`），並把路徑打進分頁；送出後 Claude 會讀那張圖。
-  文字照常貼上。Ctrl+V 現在是貼上，不再原樣送給程式。
+  文字照常貼上。Ctrl+V 現在是貼上，不再原樣送給程式。截圖工具只複製檔案連結時，會貼上那個
+  檔案的路徑。Linux 上 GTK 讀不到圖片時會改問 `wl-paste` 或 `xclip`，還是沒有圖片就把剪貼簿
+  提供的格式寫進 `Session HUD/amc-web.log`。
 - **分頁狀態**：每個分頁前的圓點是 session 狀態的顏色（busy 藍、idle 綠），busy 時圓點會閃。不在畫面上的
   分頁，session 跑完或在等你時會閃爍。
 - **窗格（跟 VS Code 一樣）**：把分頁從分頁列拖到終端機區域。放在某個窗格的左、右、
