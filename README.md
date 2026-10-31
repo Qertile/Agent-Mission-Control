@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.1` (current) | `v3.5` plus *Update from GitHub* working in a folder that is not a git clone (a downloaded zip or a copy): it becomes one, your own files left alone. See `CHANGELOG.md`. |
+| `v3.5.2` (current) | `v3.5.1` plus installing a tool from `+` on Windows actually running its installer (it only printed the command before). See `CHANGELOG.md`. |
+| `v3.5.1` | `v3.5` plus *Update from GitHub* working in a folder that is not a git clone (a downloaded zip or a copy): it becomes one, your own files left alone. See `CHANGELOG.md`. |
 | `v3.5` | `v3.4` plus moving Task Reminder and Session Manager to the new Default AI (after asking), the new tab first reading the last 50 messages, and the phone's chat view reading Codex 0.16x's rollouts. See `CHANGELOG.md`. |
 | `v3.4` | `v3.3` plus installing a missing AI tool from `+`: *New … session… (install)* runs Claude Code's, Codex's or Antigravity's own installer in a tab. See `CHANGELOG.md`. |
 | `v3.3` | `v3.2` plus ⚙ → *Accounts*: each tool's logged-in account, and *Switch…* to log out and in with another (Claude Code, Codex). See `CHANGELOG.md`. |
@@ -415,7 +416,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.1`（目前） | `v3.5` 再加上：*Update from GitHub* 在不是 git clone 的資料夾（下載的 zip、複製來的）也能用，會把它變成 clone，不動你自己的檔案。詳見 `CHANGELOG.md`。 |
+| `v3.5.2`（目前） | `v3.5.1` 再加上：Windows 上從 `+` 安裝工具會真的執行安裝程式（之前只印出指令）。詳見 `CHANGELOG.md`。 |
+| `v3.5.1` | `v3.5` 再加上：*Update from GitHub* 在不是 git clone 的資料夾（下載的 zip、複製來的）也能用，會把它變成 clone，不動你自己的檔案。詳見 `CHANGELOG.md`。 |
 | `v3.5` | `v3.4` 再加上：換 Default AI 時可把 Task Reminder 和 Session Manager 一起換過去（會先問），新分頁先讀最近 50 則對話；手機 Chat 頁能讀 Codex 0.16x 的對話紀錄。詳見 `CHANGELOG.md`。 |
 | `v3.4` | `v3.3` 再加上從 `+` 安裝沒裝的 AI 工具：*New … session… (install)* 會在分頁裡執行 Claude Code、Codex 或 Antigravity 官方的安裝程式。詳見 `CHANGELOG.md`。 |
 | `v3.3` | `v3.2` 再加上 ⚙ → *Accounts*：顯示各工具登入的帳號，*Switch…* 登出再登入另一個帳號（Claude Code、Codex）。詳見 `CHANGELOG.md`。 |

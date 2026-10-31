@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – v3.5.2: installing a tool on Windows
+
+### Fixed
+- `+` → *Download and install it* on Windows only printed `irm … | iex`: cmd.exe, which
+  runs the tab, got the inner quotes of `-Command "…"` as `\"`, so PowerShell saw a quoted
+  string. The command now goes as `-EncodedCommand` (base64), with no quotes or `|`.
+- Versions: `v3.5.2`.
+- Tagged `v3.5.2`.
+
 ## 2026-10-31 – v3.5.1: Update in a folder that is not a clone
 
 ### Fixed

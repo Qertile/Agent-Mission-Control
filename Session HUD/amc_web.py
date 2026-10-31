@@ -614,7 +614,11 @@ class Api:
         if tool not in urls:
             return {'error': f'unknown tool {tool}'}
         if WINDOWS:
-            cmd = f'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm {urls[tool]}.ps1 | iex"'
+            # Encoded: no quotes or | for cmd.exe (which runs the tab) to mangle. With -Command
+            # "…", PowerShell got the line as a quoted string and only printed it.
+            script = f'irm {urls[tool]}.ps1 | iex'
+            cmd = ('powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand '
+                   + base64.b64encode(script.encode('utf-16-le')).decode())
         else:
             shell = 'sh' if tool == 'codex' else 'bash'
             cmd = (f'(curl -fsSL {urls[tool]}.sh || wget -qO- {urls[tool]}.sh) | {shell}')
