@@ -386,8 +386,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   first: on Windows the latest MinGit (Git for Windows' zip, no admin) into
   `%LOCALAPPDATA%\Programs\MinGit`, used by Agent Mission Control only; on Linux
   `apt-get install git` behind the system's password box.
-- **Send feedback:** `⚙` → *Send feedback…* opens a new email to the author in the default
-  mail app, titled "AMC Feedback".
+- **Send feedback:** `⚙` → *Send feedback…* opens a new GitHub issue
+  (github.com/Qertile/Agent-Mission-Control/issues/new) in the default browser.
 
 - **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
   written to `tasks.md` and synced to the Excel file.
@@ -744,7 +744,7 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   `tasks.md`…）不動，跟 GitHub 不同的程式檔會先備份到 `.update-backup/<時間>/` 再換掉。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
   官方的 zip，不需系統管理員）到 `%LOCALAPPDATA%\Programs\MinGit`，只給 Agent Mission Control
   用；Linux 會跳出系統密碼視窗執行 `apt-get install git`。
-- **意見回饋**：`⚙` → *Send feedback…* 會用預設郵件程式開一封寄給作者的新信，標題是「AMC Feedback」。
+- **意見回饋**：`⚙` → *Send feedback…* 會用預設瀏覽器開 GitHub 的新 issue 頁面（github.com/Qertile/Agent-Mission-Control/issues/new）。
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
   並同步到 Excel。

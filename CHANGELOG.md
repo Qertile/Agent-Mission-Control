@@ -2,6 +2,13 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-01 – Send feedback goes to GitHub Issues
+
+### Changed
+- ⚙ → *Send feedback…* opens a new GitHub issue in the default browser instead of an email,
+  so the author's email address is no longer in the code.
+- README: Settings (both languages).
+
 ## 2026-11-01 – v3.5.10: no Claude usage without Claude Code
 
 ### Changed

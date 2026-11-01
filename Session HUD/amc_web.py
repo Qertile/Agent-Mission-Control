@@ -59,7 +59,7 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
-FEEDBACK_MAIL = 'mailto:yushunwang.wys@gmail.com?subject=AMC%20Feedback'   # ⚙ → Send feedback
+FEEDBACK_URL = 'https://github.com/Qertile/Agent-Mission-Control/issues/new'   # ⚙ → Send feedback
 APP_ID = 'AgentMissionControl'             # Windows taskbar identity (main(), _set_relaunch)
 REPO_URL = 'https://github.com/Qertile/Agent-Mission-Control.git'   # ⚙ → Update from GitHub
 HANDOFF_MESSAGES = 50                      # of a conversation, for the tool it moves to
@@ -878,11 +878,11 @@ class Api:
         threading.Thread(target=close, daemon=True).start()
 
     def send_feedback(self):
-        """⚙ → Send feedback: a new email in the default mail app."""
+        """⚙ → Send feedback: a new GitHub issue in the default browser."""
         if WINDOWS:
-            os.startfile(FEEDBACK_MAIL)
+            os.startfile(FEEDBACK_URL)
         else:
-            subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', FEEDBACK_MAIL],
+            subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', FEEDBACK_URL],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
     def fork_session(self, sid, name, replace=False):
