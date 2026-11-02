@@ -39,6 +39,7 @@
   select { flex: 1; min-width: 0; padding: 6px; appearance: none; -webkit-appearance: none; }
   button { padding: 6px 10px; flex: none; }
   button:active { background: var(--line); }
+  #head button { padding: 6px 7px; }
   #screen { flex: 1; overflow: auto; min-height: 0; -webkit-overflow-scrolling: touch; }
   #term { display: inline-block; }
   #chat { padding: 8px; }
@@ -66,6 +67,28 @@
   textarea { flex: 1; min-width: 0; padding: 6px; resize: none; height: 2.6em; }
   #msg { color: var(--red); font-size: 12px; padding: 0 8px; }
   #msg:empty { display: none; }
+  /* + : a new session, under the top bar. */
+  #new { display: none; gap: 6px; padding: 6px 8px; background: var(--bar); border-bottom: 1px solid var(--line); }
+  body.new #new { display: flex; }
+  #new select { flex: none; }
+  #new input { flex: 1; min-width: 0; }
+  input { font: inherit; padding: 6px; color: var(--title); background: var(--bg);
+          border: 1px solid var(--line); border-radius: 4px; }
+  /* Tasks: the desktop's task panel, in place of the session. */
+  #tasks { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  body.tasks #tasks { display: flex; }
+  body.tasks #tasks-btn { color: var(--accent); }
+  body.tasks #screen, body.tasks #keys, body.tasks #send, body.tasks #usage, body.tasks #pins { display: none; }
+  #tasks-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; color: var(--accent); }
+  #task-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 10px; }
+  .task { padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+  .task .d { color: var(--grey); font-size: 12px; margin-top: 3px; }
+  .task .r { color: var(--accent); font-size: 12px; margin-top: 3px; }
+  .task .row { display: flex; gap: 6px; align-items: center; margin-top: 6px; color: var(--note); font-size: 12px; }
+  .task .row input, .task .row select { flex: 1 1 0; min-width: 0; padding: 4px; }
+  #task-note { color: var(--note); font-size: 12px; padding: 2px 10px; }
+  #task-note:empty { display: none; }
+  #task-box { display: flex; gap: 6px; padding: 4px 8px 8px; }
   #login { padding: 16px; }
   #login input { font: inherit; width: 100%; box-sizing: border-box; padding: 6px; margin: 8px 0;
                  color: var(--title); background: var(--bg); border: 1px solid var(--line); }
@@ -75,12 +98,25 @@
 <div id="head">
   <span id="dot"></span>
   <select id="tabs"></select>
+  <button id="add" title="new session">+</button>
+  <button id="tasks-btn">Tasks</button>
   <button id="view">Term</button>
   <button id="smaller">A−</button><button id="bigger">A+</button>
+</div>
+<div id="new">
+  <select id="new-tool"></select>
+  <input id="new-name" placeholder="Session Name" autocomplete="off">
+  <button id="new-go">Create</button>
 </div>
 <div id="usage"></div>
 <div id="pins"></div>
 <div id="screen"><div id="term"></div><div id="chat"></div><div id="thinking">thinking…</div><div id="asking" class="m assistant"></div></div>
+<div id="tasks">
+  <div id="tasks-head"><span id="tasks-title">Tasks</span><button id="task-hist">History</button></div>
+  <div id="task-list"></div>
+  <div id="task-note"></div>
+  <div id="task-box"><textarea id="task-text" placeholder="Tell Task Reminder"></textarea><button id="task-go">Send</button></div>
+</div>
 <div id="msg"></div>
 <div id="keys">
   <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
@@ -334,6 +370,120 @@ $('go').onclick = async () => {
   if (!r.error) $('text').value = '';
   say(r.error);
 };
+
+// +: a new session on the computer, with one of the AI tools installed there.
+const TOOL_LABELS = {claude: 'Claude', codex: 'Codex', agy: 'Agy'};
+$('add').onclick = async () => {
+  if (document.body.classList.toggle('new')) {
+    const d = await call('/api/tools').catch(e => { say(e.message); return null; });
+    if (!d) return;
+    if (!d.installed.length) { document.body.classList.remove('new'); return say('no AI tool is installed on the computer'); }
+    $('new-tool').innerHTML = d.installed.map(t => `<option value="${t}">${TOOL_LABELS[t]}</option>`).join('');
+    $('new-tool').value = d.tool;
+    $('new-name').focus();
+  }
+};
+async function newSession(replace) {
+  const name = $('new-name').value;
+  const r = await call('/api/new', {name, tool: $('new-tool').value, replace}).catch(e => ({error: e.message}));
+  if (r.exists) {
+    if (confirm(`"${name.trim()}" already exists. Replace it? Its tab closes; its conversation stays in the tool's history.`)) newSession(true);
+    return;
+  }
+  if (r.error) return say(r.error);
+  say('');
+  $('new-name').value = '';
+  document.body.classList.remove('new', 'tasks');
+  await loadTabs();
+  pick(r.id);
+}
+$('new-go').onclick = () => newSession(false);
+$('new-name').onkeydown = e => { if (e.key === 'Enter') newSession(false); };
+
+// Tasks: the same list as the desktop's. A task's date and status are changed where they
+// show; Finished and Discard ask for the result or reason, as the desktop does.
+let taskHistory = false, taskRows = [], tasksJson = '';
+const STATUSES = ['Pending', 'Ongoing', 'Checking', 'Finished', 'Discard'];
+function capital(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function drawOpenTasks(d) {
+  taskRows = d.tasks;
+  $('task-list').innerHTML = taskRows.map((t, i) => {
+    const known = !t.status || STATUSES.includes(t.status);
+    return `<div class="task"><div>▸ ${esc(capital(t.text))}</div>` +
+      t.description.map(x => `<div class="d">▸ ${esc(x)}</div>`).join('') +
+      `<div class="row"><input type="date" data-due="${i}" value="${/^\d{4}-\d{2}-\d{2}$/.test(t.due) ? esc(t.due) : ''}">` +
+      `<select data-status="${i}">${t.status ? '' : '<option value="">-</option>'}${known ? '' : `<option>${esc(t.status)}</option>`}` +
+      STATUSES.map(s => `<option${s === t.status ? ' selected' : ''}>${s}</option>`).join('') + '</select></div></div>';
+  }).join('') || '<div class="task d">No open tasks</div>';
+}
+function drawDoneTasks(done) {
+  taskRows = done;
+  $('task-list').innerHTML = done.map((t, i) => `<div class="task"><div>${t.discarded ? '✗' : '✓'} ${esc(capital(t.text))}</div>` +
+    t.results.map(r => (r.subitem ? `<div class="d">▸ ${esc(r.subitem)}</div>` : '') +
+                       (r.result ? `<div class="r">→ ${esc(r.result)}</div>` : '')).join('') +
+    `<div class="row"><span style="flex:1">${esc(t.added || '?')} → ${esc(t.done || '?')}</span>` +
+    `<button data-restore="${i}">Restore</button></div></div>`).join('') || '<div class="task d">No finished or discarded tasks</div>';
+}
+// Drawn again only when something changed, so the 10 seconds' refresh leaves an open picker alone.
+async function loadTasks() {
+  const was = taskHistory, d = await call(was ? '/api/task-history' : '/api/tasks');
+  const j = was + JSON.stringify(d);
+  if (was !== taskHistory || j === tasksJson) return;
+  tasksJson = j;
+  was ? drawDoneTasks(d) : drawOpenTasks(d);
+}
+async function taskChange(path, body) {
+  const r = await call(path, body).catch(e => ({note: e.message}));
+  $('task-note').textContent = r.note || '';
+  tasksJson = '';
+  await loadTasks().catch(e => say(e.message));
+}
+$('tasks-btn').onclick = () => {
+  const on = document.body.classList.toggle('tasks');
+  if (on) { tasksJson = ''; loadTasks().catch(e => say(e.message)); }
+};
+$('task-hist').onclick = () => {
+  taskHistory = !taskHistory;
+  $('task-hist').textContent = taskHistory ? 'Open' : 'History';
+  $('tasks-title').textContent = taskHistory ? 'Tasks · history' : 'Tasks';
+  $('task-note').textContent = '';
+  tasksJson = '';
+  $('task-list').scrollTop = 0;
+  loadTasks().catch(e => say(e.message));
+};
+let dueTimer = null;
+$('task-list').addEventListener('change', e => {
+  const {due, status} = e.target.dataset;
+  if (due !== undefined && e.target.value) {
+    // iOS reports each turn of the date wheel: only the last one counts.
+    clearTimeout(dueTimer);
+    const title = taskRows[+due].text, day = e.target.value;
+    dueTimer = setTimeout(() => taskChange('/api/task-due', {title, due: day}), 800);
+  } else if (status !== undefined) {
+    const t = taskRows[+status], s = e.target.value;
+    let result = '';
+    if (s === 'Finished' || s === 'Discard') {
+      result = prompt(s === 'Finished' ? 'The result (empty = finished):' : 'Why discard it (empty = discarded):', '');
+      if (result === null) { e.target.value = t.status || ''; return; }
+    }
+    taskChange('/api/task-status', {title: t.text, status: s, result});
+  }
+});
+$('task-list').addEventListener('click', e => {
+  if (e.target.dataset.restore === undefined) return;
+  const t = taskRows[+e.target.dataset.restore];
+  taskChange('/api/task-restore', {title: t.text, discarded: !!t.discarded});
+});
+$('task-go').onclick = async () => {
+  const text = $('task-text').value;
+  if (!text.trim()) return;
+  $('task-go').disabled = true;
+  const r = await call('/api/task-send', {text}).catch(e => ({error: e.message}));
+  $('task-go').disabled = false;
+  if (!r.error) $('task-text').value = '';
+  $('task-note').textContent = r.error || 'sent: the reply is in the Task Reminder session';
+};
+setInterval(() => { if (document.body.classList.contains('tasks')) loadTasks().catch(() => {}); }, 10000);
 
 // Each tool's limits in percent used, the same numbers as the desktop's usage panel.
 async function loadUsage() {

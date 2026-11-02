@@ -1565,6 +1565,20 @@ class Api:
             self._js('amc.syncTabs()')
         return err
 
+    def _remote_new(self, name, tool, replace):
+        """The phone's +: a new session, its tab in this window too."""
+        res = self.new_session(name, tool, replace)
+        if res.get('id'):
+            self._js('amc.syncTabs()')
+        return res
+
+    def _remote_task(self, change, *args):
+        """The phone's task panel: a change to a task (what it says back is the note under
+        the list), shown in this window's list at once too."""
+        note = change(*args)
+        self._js('refreshTasks()')
+        return note
+
     def _remote_send(self, tid, text):
         entry = next((e for e in core.agents() if e['id'] == tid), None)
         return self.send(entry['name'], text) if entry else 'no such session'

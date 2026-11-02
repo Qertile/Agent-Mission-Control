@@ -271,6 +271,12 @@ def handler(api, conf, web_dir):
                 return self.reply(200, api._remote_usage())
             if url.path == '/api/chat':
                 return self.reply(200, api._remote_chat(q.get('id', ''), int(q.get('since') or 0)))
+            if url.path == '/api/tools':
+                return self.reply(200, api.default_tool())
+            if url.path == '/api/tasks':
+                return self.reply(200, api.task_list())
+            if url.path == '/api/task-history':
+                return self.reply(200, api.task_history())
             self.reply(404, {'error': 'not found'})
 
         def upload(self):
@@ -301,6 +307,20 @@ def handler(api, conf, web_dir):
             except ValueError:
                 return self.reply(400, {'error': 'bad json'})
             tid = str(body.get('id', ''))
+            title = str(body.get('title', ''))
+            if self.path == '/api/new':
+                return self.reply(200, api._remote_new(str(body.get('name', '')), str(body.get('tool', 'claude')),
+                                                       bool(body.get('replace'))))
+            if self.path == '/api/task-status':
+                return self.reply(200, {'note': api._remote_task(api.set_task_status, title, str(body.get('status', '')),
+                                                                 str(body.get('result', '')))})
+            if self.path == '/api/task-due':
+                return self.reply(200, {'note': api._remote_task(api.set_task_due, title, str(body.get('due', '')))})
+            if self.path == '/api/task-restore':
+                return self.reply(200, {'note': api._remote_task(api.restore_task, title, bool(body.get('discarded')))})
+            if self.path == '/api/task-send':
+                text = str(body.get('text', '')).strip()
+                return self.reply(200, {'error': api.send('Task Reminder', text) if text else 'empty'})
             if self.path == '/api/send':
                 text = str(body.get('text', '')).strip()
                 err = api._remote_send(tid, text) if text else 'empty'

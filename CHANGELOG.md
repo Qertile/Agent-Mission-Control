@@ -2,6 +2,20 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-02 – v3.5.12: tasks and new sessions on the phone, ⚙ → Restart
+
+### Added
+- Phone page, *Tasks*: the desktop's task list. A task's due date and status change where
+  they show (*Finished* and *Discard* ask for the result or reason), *History* has the
+  finished and discarded tasks with *Restore*, and a box writes to Task Reminder. The
+  desktop's list updates at once (`/api/tasks`, `/api/task-history`, `/api/task-status`,
+  `/api/task-due`, `/api/task-restore`, `/api/task-send`).
+- Phone page, *+*: a new session with an AI tool installed on the computer, the Default AI
+  first; a name already there asks before replacing (`/api/tools`, `/api/new`).
+- ⚙ → *Restart*, above *Update*: asks, then restarts AMC the way *Update* does.
+- README: Phone, Settings (both languages); Versions: `v3.5.12`.
+- Tagged `v3.5.12`.
+
 ## 2026-11-02 – v3.5.11: the remote links as QR codes
 
 ### Added

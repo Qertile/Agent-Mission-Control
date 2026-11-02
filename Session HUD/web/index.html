@@ -1311,7 +1311,8 @@ $('set-btn').addEventListener('click', async e => {
     `<div data-sub="ai" title="the AI that Task Reminder and Session Manager start with">Default AI: ${AI_LABELS[def.tool]} ▸</div>` +
     '<div data-sub="remote" title="open AMC from your phone or another computer">Remote Access AMC ▸</div>' +
     '<hr><div class="disabled">Accounts</div><div id="acct-list"><div class="disabled">\u00a0 reading…</div></div>' +
-    '<hr><div data-update="1">Update</div>' +
+    '<hr><div data-restart="1">Restart</div>' +
+    '<div data-update="1">Update</div>' +
     '<div data-feedback="1">Send feedback…</div>' +
     (def.version ? `<div class="disabled" style="font-size:10px;text-align:right">${esc(def.version)}</div>` : '');
   const r = $('set-btn').getBoundingClientRect();
@@ -1435,6 +1436,20 @@ $('set-menu').addEventListener('click', e => {
     await amc.syncTabs();
     amc.select(r.id);
   });
+  if (e.target.dataset.restart) {
+    // Asked first: every tab restarts with it.
+    e.stopPropagation();
+    $('set-menu').innerHTML =
+      '<div class="disabled">AMC will restart. Sure?</div>' +
+      '<div data-restart-go="1">Restart</div><div data-cancel="1">Cancel</div>';
+    return;
+  }
+  if (e.target.dataset.restartGo) {
+    e.stopPropagation();
+    e.target.textContent = 'restarting…';
+    api().restart();
+    return;
+  }
   if (e.target.dataset.update) {
     // Asked first: a new version means a restart, which restarts every tab.
     e.stopPropagation();

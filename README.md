@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.11` (current) | `v3.5.10` plus *▦ Show as QR code* under each link in ⚙ → *Remote Access AMC ▸*, and ⚙ → *Send feedback…* opening a new GitHub issue instead of an email. See `CHANGELOG.md`. |
+| `v3.5.12` (current) | `v3.5.11` plus *Tasks* and *+* (a new session) on the phone page, and ⚙ → *Restart*. See `CHANGELOG.md`. |
+| `v3.5.11` | `v3.5.10` plus *▦ Show as QR code* under each link in ⚙ → *Remote Access AMC ▸*, and ⚙ → *Send feedback…* opening a new GitHub issue instead of an email. See `CHANGELOG.md`. |
 | `v3.5.10` | `v3.5.9` plus no Claude section (numbers and pies) in the usage panel or on the phone when Claude Code is not installed. See `CHANGELOG.md`. |
 | `v3.5.9` | `v3.5.8` plus a taskbar pin on Windows showing Agent Mission Control's icon and starting it through its launcher (not python). See `CHANGELOG.md`. |
 | `v3.5.8` | `v3.5.7` plus the phone's *Chat* button greyed on Antigravity sessions, saying why. See `CHANGELOG.md`. |
@@ -195,6 +196,13 @@ running sessions, each one's conversation or terminal, and a box to type into it
 - **📌 Pins:** tap a message in *Chat*, then *📌 Pin*. The session's pins show in a line
   above the chat (`📌 2 · <the latest>`); tap it for the list, `×` unpins. They are the
   same pins as the desktop's.
+- **+ New session:** pick one of the AI tools installed on the computer (the Default AI
+  first), type a name, *Create*; the page moves to it. A name already there asks before
+  replacing. A missing tool is installed from the desktop's `+`.
+- **Tasks:** the desktop's task list in place of the session. Change a task's date and
+  status where they show (*Finished* and *Discard* ask for the result or reason), *History*
+  has the finished and discarded ones with *Restore*, and the box at the bottom writes to
+  Task Reminder (its reply is in its session). The desktop's list follows at once.
 
 ## Remote desktop
 
@@ -388,6 +396,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   first: on Windows the latest MinGit (Git for Windows' zip, no admin) into
   `%LOCALAPPDATA%\Programs\MinGit`, used by Agent Mission Control only; on Linux
   `apt-get install git` behind the system's password box.
+- **Restart:** `⚙` → *Restart* (after asking) closes the window and opens a new one; the
+  tabs end and resume with their conversations.
 - **Send feedback:** `⚙` → *Send feedback…* opens a new GitHub issue
   (github.com/Qertile/Agent-Mission-Control/issues/new) in the default browser.
 
@@ -449,7 +459,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.11`（目前） | `v3.5.10` 再加上：⚙ → *Remote Access AMC ▸* 每個網址下面有 *▦ Show as QR code*；⚙ → *Send feedback…* 改成開 GitHub 的新 issue，不再寄信。詳見 `CHANGELOG.md`。 |
+| `v3.5.12`（目前） | `v3.5.11` 再加上：手機頁的 *Tasks* 和 *+*（開新 session），以及 ⚙ → *Restart*。詳見 `CHANGELOG.md`。 |
+| `v3.5.11` | `v3.5.10` 再加上：⚙ → *Remote Access AMC ▸* 每個網址下面有 *▦ Show as QR code*；⚙ → *Send feedback…* 改成開 GitHub 的新 issue，不再寄信。詳見 `CHANGELOG.md`。 |
 | `v3.5.10` | `v3.5.9` 再加上：沒安裝 Claude Code 時，用量面板和手機頁不顯示 Claude 的數字和圓餅圖。詳見 `CHANGELOG.md`。 |
 | `v3.5.9` | `v3.5.8` 再加上：Windows 釘選到工作列時顯示 Agent Mission Control 的圖示，並透過啟動程式開啟（不再是 Python）。詳見 `CHANGELOG.md`。 |
 | `v3.5.8` | `v3.5.7` 再加上：手機頁的 *Chat* 按鈕在 Antigravity session 上變灰，按下會說明原因。詳見 `CHANGELOG.md`。 |
@@ -586,6 +597,11 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   `<temp>/amc-paste/phone-<時間>-<檔名>`，路徑會加進輸入框，讓 Claude 或 Codex 讀取。
 - **📌 釘選：** 在 *Chat* 點一則訊息，再按 *📌 Pin*。這個 session 的釘選顯示在對話上方
   一行（`📌 2 · <最新一則>`），點它展開清單，`×` 取消釘選。和桌面版是同一份。
+- **+ 新 session：** 選電腦上有裝的 AI 工具（預設選 Default AI），輸入名稱後按 *Create*，
+  頁面會切過去。名稱重複時會先問要不要取代。沒裝的工具要從桌面版的 `+` 安裝。
+- **Tasks：** 用桌面版的任務清單取代 session 畫面。到期日和狀態可以直接改（*Finished* 和
+  *Discard* 會先問結果或原因），*History* 列出已完成和已捨棄的任務，可按 *Restore* 還原，
+  最下面的輸入框會送給 Task Reminder（回覆在它的 session 裡）。桌面版的清單會立刻更新。
 
 ## 遠端桌面
 
@@ -747,6 +763,7 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   `tasks.md`…）不動，跟 GitHub 不同的程式檔會先備份到 `.update-backup/<時間>/` 再換掉。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
   官方的 zip，不需系統管理員）到 `%LOCALAPPDATA%\Programs\MinGit`，只給 Agent Mission Control
   用；Linux 會跳出系統密碼視窗執行 `apt-get install git`。
+- **重新啟動**：`⚙` → *Restart*（會先確認）會關掉視窗再開新的；分頁會結束，再接續原本的對話。
 - **意見回饋**：`⚙` → *Send feedback…* 會用預設瀏覽器開 GitHub 的新 issue 頁面（github.com/Qertile/Agent-Mission-Control/issues/new）。
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
