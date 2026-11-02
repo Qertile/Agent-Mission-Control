@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.10` (current) | `v3.5.9` plus no Claude section (numbers and pies) in the usage panel or on the phone when Claude Code is not installed. See `CHANGELOG.md`. |
+| `v3.5.11` (current) | `v3.5.10` plus *▦ Show as QR code* under each link in ⚙ → *Remote Access AMC ▸*, and ⚙ → *Send feedback…* opening a new GitHub issue instead of an email. See `CHANGELOG.md`. |
+| `v3.5.10` | `v3.5.9` plus no Claude section (numbers and pies) in the usage panel or on the phone when Claude Code is not installed. See `CHANGELOG.md`. |
 | `v3.5.9` | `v3.5.8` plus a taskbar pin on Windows showing Agent Mission Control's icon and starting it through its launcher (not python). See `CHANGELOG.md`. |
 | `v3.5.8` | `v3.5.7` plus the phone's *Chat* button greyed on Antigravity sessions, saying why. See `CHANGELOG.md`. |
 | `v3.5.7` | `v3.5.6` plus *New token…* in ⚙ → *Remote Access AMC ▸* (the old links stop working at once) and a warning to keep the links private. See `CHANGELOG.md`. |
@@ -143,7 +144,8 @@ running sessions, each one's conversation or terminal, and a box to type into it
   installer in a tab), *Log in to Tailscale* (`tailscale up`), *Turn on remote access* (a
   new token and the remote desktop on 8771 in `hud-config.json`, served at once), then shows
   both links, `http://<Tailscale address>:8770/#t=<token>` (phone) and `…:8771/#t=<token>`
-  (remote desktop); click one to copy it. On the other device, install Tailscale and log in
+  (remote desktop); click one to copy it, or *▦ Show as QR code* under it to scan it with the
+  phone's camera (the same row again hides it). On the other device, install Tailscale and log in
   with the same account, then paste the link. Keep the links to yourself: anyone with one
   who can reach your Tailscale network can control this computer through its AI sessions.
   *New token…* (after asking) makes a new one; the old links stop working at once.
@@ -447,7 +449,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.10`（目前） | `v3.5.9` 再加上：沒安裝 Claude Code 時，用量面板和手機頁不顯示 Claude 的數字和圓餅圖。詳見 `CHANGELOG.md`。 |
+| `v3.5.11`（目前） | `v3.5.10` 再加上：⚙ → *Remote Access AMC ▸* 每個網址下面有 *▦ Show as QR code*；⚙ → *Send feedback…* 改成開 GitHub 的新 issue，不再寄信。詳見 `CHANGELOG.md`。 |
+| `v3.5.10` | `v3.5.9` 再加上：沒安裝 Claude Code 時，用量面板和手機頁不顯示 Claude 的數字和圓餅圖。詳見 `CHANGELOG.md`。 |
 | `v3.5.9` | `v3.5.8` 再加上：Windows 釘選到工作列時顯示 Agent Mission Control 的圖示，並透過啟動程式開啟（不再是 Python）。詳見 `CHANGELOG.md`。 |
 | `v3.5.8` | `v3.5.7` 再加上：手機頁的 *Chat* 按鈕在 Antigravity session 上變灰，按下會說明原因。詳見 `CHANGELOG.md`。 |
 | `v3.5.7` | `v3.5.6` 再加上：⚙ → *Remote Access AMC ▸* 的 *New token…*（舊網址立刻失效），以及不要外流網址的警告。詳見 `CHANGELOG.md`。 |
@@ -544,7 +547,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   官方安裝程式）、*Log in to Tailscale*（`tailscale up`）、*Turn on remote access*（在
   `hud-config.json` 產生新 token 並開啟 8771 遠端桌面，立刻開始提供），最後顯示兩個網址：
   `http://<Tailscale 位址>:8770/#t=<token>`（手機）和 `…:8771/#t=<token>`（遠端桌面），點一下
-  就複製。在另一台裝置上裝好 Tailscale、登入同一個帳號，再貼上網址即可。網址不要給別人：
+  就複製，或按網址下面的 *▦ Show as QR code* 顯示 QR code 給手機相機掃（再按一次收起來）。在另一台裝置上裝好 Tailscale、登入同一個帳號，再貼上網址即可。網址不要給別人：
   拿到網址又連得到你 Tailscale 網路的人，就能透過 AI session 控制這台電腦。*New token…*（會先
   確認）會換一組新的 token，舊網址立刻失效。
 - **手動開啟：** 在 `Session HUD/hud-config.json` 加上 `"remote": {"token": "<一串夠長的亂碼>"}`，

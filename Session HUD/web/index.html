@@ -316,6 +316,7 @@
 
 <script src="vendor/xterm.js"></script>
 <script src="vendor/addon-fit.js"></script>
+<script src="vendor/qrcode.js"></script>
 <script src="relax.js"></script>
 <script>
 const api = () => window.pywebview.api;
@@ -1342,7 +1343,10 @@ async function remoteMenu(st) {
     html += '<hr>' +
       `<div class="disabled" ${W}>On the phone or other computer: install Tailscale, log in with the same account, then open (click to copy):</div>` +
       `<div data-copy="${esc(st.phone)}" ${W}>📱 Phone: ${esc(st.phone)}</div>` +
-      (st.desktop ? `<div data-copy="${esc(st.desktop)}" ${W}>🖥 Remote desktop: ${esc(st.desktop)}</div>` : '') +
+      `<div data-qr="${esc(st.phone)}">   ▦ Show as QR code</div>` +
+      (st.desktop ? `<div data-copy="${esc(st.desktop)}" ${W}>🖥 Remote desktop: ${esc(st.desktop)}</div>` +
+                    `<div data-qr="${esc(st.desktop)}">   ▦ Show as QR code</div>` : '') +
+      '<div id="remote-qr" class="disabled" style="display:none;text-align:center"></div>' +
       `<div class="err" ${W}>⚠ Keep these links to yourself: anyone with one who can reach your Tailscale ` +
       `network can control this computer through its AI sessions.</div>` +
       '<div data-remote="newtoken" title="the old links stop working">New token…</div>';
@@ -1371,6 +1375,20 @@ $('set-menu').addEventListener('click', e => {
     copyText(e.target.dataset.copy);
     $('remote-msg').style.color = 'var(--grey)';
     $('remote-msg').textContent = 'copied';
+    return;
+  }
+  if (e.target.dataset.qr) {
+    // The link as a QR code under the links, to scan with the phone's camera; the same row
+    // again hides it. Black on white whatever the theme, so cameras read it.
+    e.stopPropagation();
+    const box = $('remote-qr'), url = e.target.dataset.qr;
+    if (box.dataset.url === url && box.style.display !== 'none') { box.style.display = 'none'; return; }
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    box.innerHTML = `<span style="display:inline-block;background:#fff;line-height:0">${qr.createSvgTag(4, 4)}</span>`;
+    box.dataset.url = url;
+    box.style.display = '';
     return;
   }
   if (e.target.dataset.remote) {

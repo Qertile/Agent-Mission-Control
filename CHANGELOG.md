@@ -2,6 +2,16 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-02 – v3.5.11: the remote links as QR codes
+
+### Added
+- ⚙ → *Remote Access AMC ▸*: *▦ Show as QR code* under the phone link and the remote desktop
+  link shows that link as a QR code below them, black on white in any theme, to scan with
+  the phone's camera; the same row again hides it. Drawn by `web/vendor/qrcode.js`
+  (qrcode-generator 1.4.4, Kazuhiko Arase, MIT), so it works offline.
+- README: Remote access (both languages); Versions: `v3.5.11`.
+- Tagged `v3.5.11`.
+
 ## 2026-11-01 – Send feedback goes to GitHub Issues
 
 ### Changed
