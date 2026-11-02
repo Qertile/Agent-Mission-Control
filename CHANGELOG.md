@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-02 – v3.5.13: Accounts as a second-layer list
+
+### Changed
+- ⚙ → *Accounts ▸* is its own list with a way back, like *Theme ▸* and *Default AI ▸*. The
+  accounts are read when it opens, so ⚙ no longer asks each tool for its account.
+- README: Settings (both languages); Versions: `v3.5.13`.
+- Tagged `v3.5.13`.
+
 ## 2026-11-02 – v3.5.12: tasks and new sessions on the phone, ⚙ → Restart
 
 ### Added

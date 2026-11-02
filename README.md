@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.12` (current) | `v3.5.11` plus *Tasks* and *+* (a new session) on the phone page, and ⚙ → *Restart*. See `CHANGELOG.md`. |
+| `v3.5.13` (current) | `v3.5.12` plus ⚙ → *Accounts ▸* as a second-layer list. See `CHANGELOG.md`. |
+| `v3.5.12` | `v3.5.11` plus *Tasks* and *+* (a new session) on the phone page, and ⚙ → *Restart*. See `CHANGELOG.md`. |
 | `v3.5.11` | `v3.5.10` plus *▦ Show as QR code* under each link in ⚙ → *Remote Access AMC ▸*, and ⚙ → *Send feedback…* opening a new GitHub issue instead of an email. See `CHANGELOG.md`. |
 | `v3.5.10` | `v3.5.9` plus no Claude section (numbers and pies) in the usage panel or on the phone when Claude Code is not installed. See `CHANGELOG.md`. |
 | `v3.5.9` | `v3.5.8` plus a taskbar pin on Windows showing Agent Mission Control's icon and starting it through its launcher (not python). See `CHANGELOG.md`. |
@@ -379,7 +380,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   conversation stays in the old tool; Antigravity's cannot be read, so it starts fresh.
   *Only for new ones* leaves them as they are. With none picked: Claude Code, otherwise
   Codex, otherwise Antigravity.
-- **Accounts:** `⚙` → *Accounts* shows the account each installed tool is logged in with
+- **Accounts:** `⚙` → *Accounts ▸* shows the account each installed tool is logged in with
   (`claude auth status`, `codex login status`). *Switch…* opens a `Claude login` / `Codex
   login` tab that runs the tool's own logout and login (the browser opens for the new
   account), then closes on Enter. Every tab of that tool uses the new account from then on.
@@ -459,7 +460,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.12`（目前） | `v3.5.11` 再加上：手機頁的 *Tasks* 和 *+*（開新 session），以及 ⚙ → *Restart*。詳見 `CHANGELOG.md`。 |
+| `v3.5.13`（目前） | `v3.5.12` 再加上：⚙ → *Accounts ▸* 移到第二層。詳見 `CHANGELOG.md`。 |
+| `v3.5.12` | `v3.5.11` 再加上：手機頁的 *Tasks* 和 *+*（開新 session），以及 ⚙ → *Restart*。詳見 `CHANGELOG.md`。 |
 | `v3.5.11` | `v3.5.10` 再加上：⚙ → *Remote Access AMC ▸* 每個網址下面有 *▦ Show as QR code*；⚙ → *Send feedback…* 改成開 GitHub 的新 issue，不再寄信。詳見 `CHANGELOG.md`。 |
 | `v3.5.10` | `v3.5.9` 再加上：沒安裝 Claude Code 時，用量面板和手機頁不顯示 Claude 的數字和圓餅圖。詳見 `CHANGELOG.md`。 |
 | `v3.5.9` | `v3.5.8` 再加上：Windows 釘選到工作列時顯示 Agent Mission Control 的圖示，並透過啟動程式開啟（不再是 Python）。詳見 `CHANGELOG.md`。 |
@@ -751,7 +753,7 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   50 則對話寫進 `Agents Launcher/handoff/<名稱>.md`（不進 git），新分頁會先讀它。舊對話留在
   原工具裡；Antigravity 的讀不到，所以從頭開始。*Only for new ones* 則不動它們。沒選時依序用
   Claude Code、Codex、Antigravity。
-- **帳號**：`⚙` → *Accounts* 顯示每個已安裝工具登入的帳號（`claude auth status`、
+- **帳號**：`⚙` → *Accounts ▸* 顯示每個已安裝工具登入的帳號（`claude auth status`、
   `codex login status`）。*Switch…* 會開一個 `Claude login`／`Codex login` 分頁，執行工具自己的
   登出和登入（瀏覽器會開登入頁），按 Enter 後關閉。之後這個工具的所有分頁都改用新帳號。
   *Agy · Switch…* 會開一個 `Agy login` 分頁執行 `agy` 並自動打 `/logout`；接著在裡面打

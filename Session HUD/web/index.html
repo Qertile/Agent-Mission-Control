@@ -1310,23 +1310,15 @@ $('set-btn').addEventListener('click', async e => {
     `<hr><div data-sub="theme">Theme: ${esc(themeName)} ▸</div>` +
     `<div data-sub="ai" title="the AI that Task Reminder and Session Manager start with">Default AI: ${AI_LABELS[def.tool]} ▸</div>` +
     '<div data-sub="remote" title="open AMC from your phone or another computer">Remote Access AMC ▸</div>' +
-    '<hr><div class="disabled">Accounts</div><div id="acct-list"><div class="disabled">\u00a0 reading…</div></div>' +
+    '<div data-sub="accounts" title="the account each AI tool is logged in with">Accounts ▸</div>' +
     '<hr><div data-restart="1">Restart</div>' +
     '<div data-update="1">Update</div>' +
     '<div data-feedback="1">Send feedback…</div>' +
     (def.version ? `<div class="disabled" style="font-size:10px;text-align:right">${esc(def.version)}</div>` : '');
   const r = $('set-btn').getBoundingClientRect();
   showAt(m, r.right - m.offsetWidth, r.bottom);
-  // Each tool's account: its status command takes a moment, so it fills in after.
-  api().accounts().then(list => {
-    if (!$('acct-list')) return;
-    $('acct-list').innerHTML = list.length ? list.map(a =>
-      `<div data-login="${a.tool}" title="log out, then log in with another account">\u00a0 ${a.label}${a.account ? ': ' + esc(a.account) : ''} · Switch…</div>`).join('')
-      : '<div class="disabled">\u00a0 no AI tool installed</div>';
-    showAt(m, r.right - m.offsetWidth, r.bottom);
-  });
 });
-// The second layer of ⚙: Theme and Default AI, each its own list with a way back.
+// The second layer of ⚙: Theme, Default AI and Accounts, each its own list with a way back.
 const AI_LABELS = {claude: 'Claude', codex: 'Codex', agy: 'Antigravity'};
 // Remote Access: the steps in order (Tailscale installed, logged in, AMC serving), each one
 // done ticked or a button for it, then the two links to paste on the other device.
@@ -1357,8 +1349,22 @@ async function remoteMenu(st) {
   const r = $('set-btn').getBoundingClientRect();
   showAt(m, r.right - m.offsetWidth, r.bottom);
 }
+function accountsMenu() {
+  const m = $('set-menu'), r = $('set-btn').getBoundingClientRect();
+  m.innerHTML = '<div data-back="1">◂ Back</div><hr><div id="acct-list"><div class="disabled">reading…</div></div>';
+  showAt(m, r.right - m.offsetWidth, r.bottom);
+  // Each tool's account: its status command takes a moment, so it fills in after.
+  api().accounts().then(list => {
+    if (!$('acct-list')) return;
+    $('acct-list').innerHTML = list.length ? list.map(a =>
+      `<div data-login="${a.tool}" title="log out, then log in with another account">${a.label}${a.account ? ': ' + esc(a.account) : ''} · Switch…</div>`).join('')
+      : '<div class="disabled">no AI tool installed</div>';
+    showAt(m, r.right - m.offsetWidth, r.bottom);
+  });
+}
 function setSubmenu(which) {
   if (which === 'remote') return remoteMenu();
+  if (which === 'accounts') return accountsMenu();
   const m = $('set-menu'), def = setMenuDef;
   m.innerHTML = '<div data-back="1">◂ Back</div><hr>' + (which === 'theme'
     ? Object.keys(THEMES).map(n => `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('')
