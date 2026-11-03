@@ -1903,6 +1903,15 @@ $('term-menu').addEventListener('click', e => {
   if (act === 'copy') copyText(m.text);
 });
 function hideMenus() { for (const id of ['term-menu', 'row-menu', 'status-menu', 'result-box', 'restore-menu', 'add-menu', 'set-menu', 'send-menu', 'cal']) $(id).style.display = 'none'; }
+// This window and the remote desktop type into the same terminals, which have one size: the
+// window used last sets it. A click or a key here gives the shown terminals this window's size
+// again (the remote desktop's resize does nothing there; remote-desktop.js claims its own).
+function claimSize() {
+  for (const [id, t] of Object.entries(amc.tabs))
+    if (t.term && t.term.cols && t.el && t.el.classList.contains('active')) api().resize(id, t.term.cols, t.term.rows);
+}
+document.addEventListener('mousedown', claimSize, true);
+document.addEventListener('keydown', claimSize, true);
 document.addEventListener('click', hideMenus);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenus(); });
 

@@ -1023,7 +1023,8 @@ class Api:
 
     def resize(self, tid, cols, rows):
         term = self._terms.get(tid)
-        if term and cols > 0 and rows > 0:
+        # Asked on every click and key (claimSize in the page): only a change goes to the terminal.
+        if term and cols > 0 and rows > 0 and term.size != (int(cols), int(rows)):
             term.resize(int(cols), int(rows))
 
     def send(self, name, text):

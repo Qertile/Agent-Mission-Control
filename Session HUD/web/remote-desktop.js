@@ -4,9 +4,8 @@
 // - what the window here is told (amc.syncTabs() ...) comes back from POST /api/poll and
 //   runs here too, with each terminal's output after the part already shown.
 // The terminals keep this computer's size (both pages type into the same terminals, which
-// have one size), so resizing here does nothing, and one larger than its pane here gets a
-// smaller font; pasting an image from this computer's clipboard and dropping files are not
-// available.
+// have one size), so the window used last sets it (claim below); pasting an image from this
+// computer's clipboard and dropping files are not available.
 (() => {
   function store(k, v) { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch (e) {} return v; }
   const fromLink = new URLSearchParams(location.hash.slice(1)).get('t');
@@ -42,35 +41,40 @@
   Object.defineProperty(window, 'pywebview', {configurable: false, get: () => pv,
     set: v => { for (const k of Object.keys(v || {})) if (k !== 'api') pv[k] = v[k]; }});
 
-  // Each terminal tab: no fitting to this window, and what it had written before it opened
-  // here, then the rest as it comes.
+  // Each terminal tab: fitted to this window only while it is the one in use, and what it
+  // had written before it opened here, then the rest as it comes.
   const shown = {};                         // tab id -> characters of its output shown
   function hook() {
     const add = amc.addTab;
     amc.addTab = function (id, name) {
       const r = add.apply(this, arguments);
       const t = amc.tabs[id];
-      if (t && t.fit) t.fit.fit = () => {};
+      if (t && t.fit) {
+        t.propose = t.fit.proposeDimensions.bind(t.fit);
+        t.fit.fit = () => { if (using) claim(); };
+      }
       shown[id] = 0;
       return r;
     };
     poll();
   }
-  // A terminal larger than its pane here gets a smaller font until all of it shows, or its
-  // bottom (the message box of Claude Code and Codex) and right edge would be cut off. One
-  // step on each poll, starting again from the full size when the pane or the terminal changes.
-  const FULL_FONT = 14, MIN_FONT = 6, SCROLLBAR = 14;
-  function shrinkToPane(t) {
-    const box = t.el, screen = box && box.querySelector('.xterm-screen');
-    if (!screen || !box.classList.contains('active')) return;
-    const key = [box.clientWidth, box.clientHeight, t.term.cols, t.term.rows].join();
-    if (t.paneKey !== key) {
-      t.paneKey = key;
-      if (t.term.options.fontSize !== FULL_FONT) { t.term.options.fontSize = FULL_FONT; return; }
+  // The terminals have one size, set by the window used last. A click or a key here gives
+  // the shown ones this window's size, and so does resizing here while this window is the one
+  // in use; the computer's window taking it back (a click or a key there) ends that.
+  let using = false;
+  function claim() {
+    using = true;
+    for (const [id, t] of Object.entries(amc.tabs)) {
+      if (!t.propose || !t.el.classList.contains('active')) continue;
+      const d = t.propose();
+      if (!d || !(d.cols > 0 && d.rows > 0) || (d.cols === t.term.cols && d.rows === t.term.rows)) continue;
+      t.claimed = d.cols + ',' + d.rows;
+      t.claimedAt = Date.now();
+      post('/api/call/resize', {args: [id, d.cols, d.rows]}).catch(() => {});
     }
-    const tooBig = screen.offsetWidth > box.clientWidth - SCROLLBAR || screen.offsetHeight > box.clientHeight;
-    if (tooBig && t.term.options.fontSize > MIN_FONT) t.term.options.fontSize -= 1;
   }
+  document.addEventListener('mousedown', claim, true);
+  document.addEventListener('keydown', claim, true);
   let since = -1;
   async function poll() {
     try {
@@ -83,11 +87,14 @@
       for (const [id, o] of Object.entries(r.out)) {
         const t = amc.tabs[id];
         if (!t) continue;
-        if (o.size && (t.term.cols !== o.size[0] || t.term.rows !== o.size[1])) t.term.resize(o.size[0], o.size[1]);
+        if (o.size && (t.term.cols !== o.size[0] || t.term.rows !== o.size[1])) {
+          // Another size than the one asked for here, a moment later: the computer took it back.
+          if (t.claimed && o.size.join() !== t.claimed && Date.now() - t.claimedAt > 1500) { using = false; t.claimed = null; }
+          t.term.resize(o.size[0], o.size[1]);
+        }
         if (o.reset) t.term.reset();
         if (o.data) t.term.write(o.data);
         shown[id] = o.end;
-        shrinkToPane(t);
       }
     } catch (e) {}
     setTimeout(poll, 300);
