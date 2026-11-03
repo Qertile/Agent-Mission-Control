@@ -2,7 +2,7 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-11-03 – files dropped on the remote desktop, uploads up to 500 MB
+## 2026-11-03 – v3.5.15: files dropped on the remote desktop, uploads up to 500 MB
 
 ### Added
 - Remote desktop: files dropped on a terminal are uploaded to the computer running AMC
@@ -13,7 +13,8 @@ All notable changes to this project are listed here, newest first.
 ### Changed
 - Uploads (phone 📎 and remote desktop) go up to 500 MB, from 20 MB, and are written to
   disk 1 MB at a time instead of held in memory; one cut short is removed.
-- README: Phone, Remote desktop (both languages).
+- README: Phone, Remote desktop (both languages); Versions: `v3.5.15`.
+- Tagged `v3.5.15`.
 
 ## 2026-11-03 – v3.5.14: the remote desktop's terminals take its size when used
 

@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.14` (current) | `v3.5.13` plus the remote desktop's terminals taking the size of the window used last (a click or a key there). See `CHANGELOG.md`. |
+| `v3.5.15` (current) | `v3.5.14` plus files dropped on the remote desktop's terminals uploaded to the computer running AMC (with progress), and uploads up to 500 MB (phone and remote desktop). See `CHANGELOG.md`. |
+| `v3.5.14` | `v3.5.13` plus the remote desktop's terminals taking the size of the window used last (a click or a key there). See `CHANGELOG.md`. |
 | `v3.5.13` | `v3.5.12` plus ⚙ → *Accounts ▸* as a second-layer list. See `CHANGELOG.md`. |
 | `v3.5.12` | `v3.5.11` plus *Tasks* and *+* (a new session) on the phone page, and ⚙ → *Restart*. See `CHANGELOG.md`. |
 | `v3.5.11` | `v3.5.10` plus *▦ Show as QR code* under each link in ⚙ → *Remote Access AMC ▸*, and ⚙ → *Send feedback…* opening a new GitHub issue instead of an email. See `CHANGELOG.md`. |
@@ -467,7 +468,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.14`（目前） | `v3.5.13` 再加上：遠端桌面的終端機大小改由最後操作（點一下或按鍵）的視窗決定。詳見 `CHANGELOG.md`。 |
+| `v3.5.15`（目前） | `v3.5.14` 再加上：拖進遠端桌面終端機的檔案會上傳到跑 AMC 的電腦（顯示進度），上傳上限改為 500 MB（手機和遠端桌面）。詳見 `CHANGELOG.md`。 |
+| `v3.5.14` | `v3.5.13` 再加上：遠端桌面的終端機大小改由最後操作（點一下或按鍵）的視窗決定。詳見 `CHANGELOG.md`。 |
 | `v3.5.13` | `v3.5.12` 再加上：⚙ → *Accounts ▸* 移到第二層。詳見 `CHANGELOG.md`。 |
 | `v3.5.12` | `v3.5.11` 再加上：手機頁的 *Tasks* 和 *+*（開新 session），以及 ⚙ → *Restart*。詳見 `CHANGELOG.md`。 |
 | `v3.5.11` | `v3.5.10` 再加上：⚙ → *Remote Access AMC ▸* 每個網址下面有 *▦ Show as QR code*；⚙ → *Send feedback…* 改成開 GitHub 的新 issue，不再寄信。詳見 `CHANGELOG.md`。 |
