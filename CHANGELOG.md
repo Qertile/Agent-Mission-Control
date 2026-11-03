@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-03 – v3.5.16: the remote desktop's 📎 in the tab bar's colors
+
+### Changed
+- Remote desktop: *📎* is drawn as a line icon in the tab bar's color (it follows the theme
+  and lights up under the mouse like `+ ⇔ ⚙`); the emoji kept its own grey colors.
+- Versions: `v3.5.16`.
+- Tagged `v3.5.16`.
+
 ## 2026-11-03 – remote desktop: 📎 upload, paths broken across lines
 
 ### Added

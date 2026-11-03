@@ -152,9 +152,11 @@
     if (!tools || document.getElementById('attach-btn')) return;
     const btn = document.createElement('div'), pick = document.createElement('input');
     btn.id = 'attach-btn';
-    btn.textContent = '📎';
+    // Drawn in the tab bar's own color (an emoji keeps its own colors), like the others there.
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px">' +
+      '<path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>';
     btn.title = 'upload files from this computer to the active tab (their paths there are typed in)';
-    btn.style.fontSize = '20px';
     pick.type = 'file';
     pick.multiple = true;
     pick.hidden = true;
