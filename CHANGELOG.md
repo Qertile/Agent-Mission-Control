@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-03 – getting files back on the phone and the remote desktop
+
+### Added
+- `/api/download?path=<full path>` (phone page and remote desktop, with the token): any
+  file of the computer, up to 500 MB, sent 1 MB at a time.
+- Phone page: full paths in *Chat* messages are links that download the file; *⬇* next
+  to 📎 takes a path typed in. Progress under the screen, what went wrong in a box.
+- Remote desktop: full paths in a terminal are links (wrapped rows and wide characters
+  before them included) that download the file; progress at the bottom right.
+- README: Phone, Remote desktop (both languages).
+
 ## 2026-11-03 – v3.5.15: files dropped on the remote desktop, uploads up to 500 MB
 
 ### Added

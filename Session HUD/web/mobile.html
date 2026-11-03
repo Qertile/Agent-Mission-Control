@@ -32,6 +32,7 @@
   #pins .pin small { color: var(--note); display: block; }
   #pins .pin button { align-self: flex-start; padding: 2px 8px; }
   .m.picked { outline: 1px solid var(--note); }
+  .m a.dl { color: var(--busy); text-decoration: underline; cursor: pointer; }
   .m .pin-it { display: block; margin-top: 6px; }
   #dot { width: 10px; height: 10px; border-radius: 50%; background: var(--grey); flex: none; }
   select, button, textarea { font: inherit; color: var(--title); background: var(--bg);
@@ -126,6 +127,7 @@
 </div>
 <div id="send">
   <button id="attach" title="send a photo or a file">📎</button>
+  <button id="get" title="get a file from the computer, by its full path">⬇</button>
   <input id="file" type="file" multiple hidden>
   <textarea id="text" placeholder="Message"></textarea>
   <button id="go">Send</button>
@@ -153,11 +155,66 @@ async function call(path, body) {
   if (r.status === 403) { store('amc-token', ''); throw new Error('wrong token: open the link with the token again'); }
   return r.json();
 }
+// Full paths in a text, of this computer's files or the other's: C:\..., /a/b... (two
+// parts at least, so "/config" is not one), ~/...; one in backticks may have spaces.
+// [{start, end, path}], end not included, trailing punctuation left out.
+const PATH_RE = /`((?:[A-Za-z]:\\|~\/|\/)[^`\n]+)`|(^|[\s(\[{"'“「：:,，])((?:[A-Za-z]:\\|~\/|\/[\w.@-]+\/)[^\s"'`<>|*?)\]}」，。；]+)/g;
+function findPaths(text) {
+  const out = [];
+  for (const m of text.matchAll(PATH_RE)) {
+    let path = m[1] || m[3], start = m.index + (m[1] ? 1 : m[2].length);
+    if (!m[1]) path = path.replace(/[.,;:!?]+$/, '');
+    if (path.length > 2) out.push({start, end: start + path.length, path});
+  }
+  return out;
+}
+// A file of the computer (GET /api/download, the token in its header) saved on this device,
+// with its progress shown by show(text). Returns null or what went wrong.
+async function downloadFile(path, show) {
+  const name = path.split(/[\\/]/).pop() || 'file', mb = b => (b / 1024 / 1024).toFixed(1);
+  show(`downloading ${name}…`);
+  try {
+    const r = await fetch('/api/download?path=' + encodeURIComponent(path), {headers: {'X-AMC-Token': token}});
+    if (!r.ok) {
+      let err = `download failed (${r.status})`;
+      try { err = (await r.json()).error || err; } catch (e) {}
+      show('');
+      return err;
+    }
+    const total = +r.headers.get('Content-Length') || 0, reader = r.body.getReader(), parts = [];
+    for (let got = 0; ;) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      parts.push(value);
+      got += value.length;
+      show(`downloading ${name} ${total ? Math.round(got / total * 100) + '% ' : ''}(${mb(got)} / ${mb(total)} MB)`);
+    }
+    const url = URL.createObjectURL(new Blob(parts, {type: r.headers.get('Content-Type') || 'application/octet-stream'}));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    show('');
+    return null;
+  } catch (e) {
+    show('');
+    return `${name}: download failed: ${e.message}`;
+  }
+}
+// Text with its full paths as links: tapped, the file comes to this phone.
+function linkPaths(text) {
+  let html = '', at = 0;
+  for (const p of findPaths(text)) {
+    html += esc(text.slice(at, p.start)) + `<a class="dl" data-path="${esc(p.path)}">${esc(p.path)}</a>`;
+    at = p.end;
+  }
+  return html + esc(text.slice(at));
+}
 // A message's text, with its Markdown tables as tables (the rest stays as written).
 // A table is two or more lines starting with "|" whose second line is the |---| row.
 function render(text) {
   const lines = text.split('\n'), out = [];
-  const cells = l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => esc(c.trim().replace(/\*\*/g, '')));
+  const cells = l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => linkPaths(c.trim().replace(/\*\*/g, '')));
   for (let i = 0; i < lines.length;) {
     if (/^\s*\|/.test(lines[i]) && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1] || '') && (lines[i + 1] || '').includes('-')) {
       let j = i + 2;
@@ -175,7 +232,7 @@ function render(text) {
   let html = '', prev = null;
   for (const p of out) {
     if (p.table) { html += p.table; prev = 'table'; continue; }
-    html += (prev === 'text' ? '\n' : '') + esc(p.text);
+    html += (prev === 'text' ? '\n' : '') + linkPaths(p.text);
     prev = 'text';
   }
   return html;
@@ -236,6 +293,9 @@ let shownMsgs = [], pinsJson = '', pinsOpen = false;
 
 // Pinning: tap a message, then its 📌 Pin. The pins are the session's on the desktop too.
 $('chat').addEventListener('click', async e => {
+  const link = e.target.closest('a.dl');
+  // What went wrong in a box: the line under the screen is cleared by the next refresh.
+  if (link) { const err = await downloadFile(link.dataset.path, say); if (err) alert(err); return; }
   const m = e.target.closest('.m[data-i]');
   if (!m || getSelection().toString()) return;
   if (e.target.classList.contains('pin-it')) {
@@ -349,6 +409,12 @@ function upload(file) {
   });
 }
 $('attach').onclick = () => $('file').click();
+// ⬇: a file of the computer by its full path, for one the Term view shows (not a link there).
+$('get').onclick = async () => {
+  const path = (prompt('Full path of the file on the computer:', '') || '').trim();
+  const err = path && await downloadFile(path, say);
+  if (err) alert(err);
+};
 $('file').onchange = async e => {
   const files = [...e.target.files];
   e.target.value = '';

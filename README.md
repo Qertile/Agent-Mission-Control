@@ -196,6 +196,11 @@ running sessions, each one's conversation or terminal, and a box to type into it
 - **📎 Files:** pick photos or files (up to 500 MB each); each one is saved on this
   computer as `<temp>/amc-paste/phone-<time>-<name>` and its path added to the message
   box, so Claude or Codex can read it.
+- **⬇ Getting files back:** a full path of this computer in a *Chat* message (`C:\...`,
+  `/a/b/...`, `~/...`, or one in backticks with spaces) is a link: tap it and the file comes
+  to the phone (up to 500 MB, its progress under the screen). *⬇* next to 📎 takes a path
+  typed in, for one the *Term* view shows. Any file Agent Mission Control can read here can
+  be fetched this way, so keep the link and token to yourself.
 - **📌 Pins:** tap a message in *Chat*, then *📌 Pin*. The session's pins show in a line
   above the chat (`📌 2 · <the latest>`); tap it for the list, `×` unpins. They are the
   same pins as the desktop's.
@@ -227,6 +232,9 @@ Tailscale network and token as the phone page.
 - **Files:** drop files from that computer on a terminal: each one is uploaded here (up
   to 500 MB, its progress at the bottom right) as `<temp>/amc-paste/phone-<time>-<name>`,
   and its path here is typed into that pane.
+- **Getting files back:** a full path of this computer in a terminal is a link (underlined
+  under the mouse, also when it wraps onto the next row): click it and the file downloads
+  to that computer (up to 500 MB, its progress at the bottom right).
 - **Not available there:** pasting an image from this computer's clipboard (the button
   path; Ctrl+V of an image in that browser saves it here).
 
@@ -607,6 +615,10 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **輸入框：** *Send* 把文字打進 session 並送出，和在桌面版打字一樣。
 - **📎 檔案：** 選照片或檔案（每個最多 500 MB），存到這台電腦的
   `<temp>/amc-paste/phone-<時間>-<檔名>`，路徑會加進輸入框，讓 Claude 或 Codex 讀取。
+- **⬇ 取回檔案：** *Chat* 訊息裡這台電腦的完整路徑（`C:\...`、`/a/b/...`、`~/...`，或用反引號包住、
+  含空格的路徑）會變成連結，點一下檔案就下載到手機（每個最多 500 MB，下方顯示進度）。📎 旁邊的 *⬇*
+  可以直接輸入路徑，給 *Term* 畫面裡看到的路徑用。Agent Mission Control 在這台讀得到的檔案都能這樣取得，
+  所以網址和 token 不要給別人。
 - **📌 釘選：** 在 *Chat* 點一則訊息，再按 *📌 Pin*。這個 session 的釘選顯示在對話上方
   一行（`📌 2 · <最新一則>`），點它展開清單，`×` 取消釘選。和桌面版是同一份。
 - **+ 新 session：** 選電腦上有裝的 AI 工具（預設選 Default AI），輸入名稱後按 *Create*，
@@ -632,6 +644,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   沒在用的那一邊，排版會暫時不對，點一下就恢復。
 - **檔案：** 把那台電腦的檔案拖進終端機，會上傳到這台電腦（每個最多 500 MB，右下角顯示進度），
   存成 `<temp>/amc-paste/phone-<時間>-<檔名>`，並把它在這台的路徑打進那個窗格。
+- **取回檔案：** 終端機裡這台電腦的完整路徑是連結（滑鼠移上去出現底線，換行成兩列也認得），
+  點一下檔案就下載到那台電腦（每個最多 500 MB，右下角顯示進度）。
 - **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦）。
 
 ## Relax 模式

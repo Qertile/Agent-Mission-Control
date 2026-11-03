@@ -5,7 +5,8 @@
 //   runs here too, with each terminal's output after the part already shown.
 // The terminals keep this computer's size (both pages type into the same terminals, which
 // have one size), so the window used last sets it (claim below); a file dropped on a
-// terminal is uploaded there first (drop below); pasting an image from this computer's
+// terminal is uploaded there first (drop below), and a full path in a terminal is a link
+// that downloads that file here (links below); pasting an image from this computer's
 // clipboard is not available.
 (() => {
   function store(k, v) { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch (e) {} return v; }
@@ -50,6 +51,8 @@
     amc.addTab = function (id, name) {
       const r = add.apply(this, arguments);
       const t = amc.tabs[id];
+      if (t && t.term && t.term.registerLinkProvider)
+        t.term.registerLinkProvider({provideLinks: (y, done) => done(pathLinks(t.term, y))});
       if (t && t.fit) {
         t.propose = t.fit.proposeDimensions.bind(t.fit);
         t.fit.fit = () => { if (using) claim(); };
@@ -133,6 +136,77 @@
       : p.includes('\\') ? `"${p}"` : `'${p.replace(/'/g, `'\\''`)}'`;
     if (paths.length) call('write', [id, paths.map(quote).join(' ') + ' ']);
   }, true);
+  // Full paths in a text, of this computer's files or the other's: C:\..., /a/b... (two
+  // parts at least, so "/config" is not one), ~/...; one in backticks may have spaces.
+  // [{start, end, path}], end not included, trailing punctuation left out.
+  const PATH_RE = /`((?:[A-Za-z]:\\|~\/|\/)[^`\n]+)`|(^|[\s(\[{"'“「：:,，])((?:[A-Za-z]:\\|~\/|\/[\w.@-]+\/)[^\s"'`<>|*?)\]}」，。；]+)/g;
+  function findPaths(text) {
+    const out = [];
+    for (const m of text.matchAll(PATH_RE)) {
+      let path = m[1] || m[3], start = m.index + (m[1] ? 1 : m[2].length);
+      if (!m[1]) path = path.replace(/[.,;:!?]+$/, '');
+      if (path.length > 2) out.push({start, end: start + path.length, path});
+    }
+    return out;
+  }
+  // A file of the computer (GET /api/download, the token in its header) saved on this device,
+  // with its progress shown by show(text). Returns null or what went wrong.
+  async function downloadFile(path, show) {
+    const name = path.split(/[\\/]/).pop() || 'file', mb = b => (b / 1024 / 1024).toFixed(1);
+    show(`downloading ${name}…`);
+    try {
+      const r = await fetch('/api/download?path=' + encodeURIComponent(path), {headers: {'X-AMC-Token': token}});
+      if (!r.ok) {
+        let err = `download failed (${r.status})`;
+        try { err = (await r.json()).error || err; } catch (e) {}
+        show('');
+        return err;
+      }
+      const total = +r.headers.get('Content-Length') || 0, reader = r.body.getReader(), parts = [];
+      for (let got = 0; ;) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        parts.push(value);
+        got += value.length;
+        show(`downloading ${name} ${total ? Math.round(got / total * 100) + '% ' : ''}(${mb(got)} / ${mb(total)} MB)`);
+      }
+      const url = URL.createObjectURL(new Blob(parts, {type: r.headers.get('Content-Type') || 'application/octet-stream'}));
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      show('');
+      return null;
+    } catch (e) {
+      show('');
+      return `${name}: download failed: ${e.message}`;
+    }
+  }
+  // The links of terminal row y (1-based): its whole line, wrapped rows included, read cell
+  // by cell, so a path's place is right with wide (Chinese) characters before it.
+  function pathLinks(term, y) {
+    const buf = term.buffer.active;
+    let top = y - 1;
+    while (top > 0 && buf.getLine(top) && buf.getLine(top).isWrapped) top--;
+    let text = '';
+    const cell = [];                         // cell[i]: [x, y] of text[i]
+    for (let row = top; row < buf.length; row++) {
+      const line = buf.getLine(row);
+      if (!line || (row > top && !line.isWrapped)) break;
+      for (let x = 0; x < line.length; x++) {
+        const c = line.getCell(x);
+        if (!c || c.getWidth() === 0) continue;
+        const ch = c.getChars() || ' ';
+        text += ch;
+        for (let k = 0; k < ch.length; k++) cell.push([x + 1, row + 1]);
+      }
+    }
+    return findPaths(text).filter(p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y).map(p => ({
+      text: p.path,
+      range: {start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}},
+      activate: async () => { const err = await downloadFile(p.path, progress); if (err) alert(err); },
+    }));
+  }
   let since = -1;
   async function poll() {
     try {

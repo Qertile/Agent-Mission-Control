@@ -16,7 +16,7 @@ import os
 import re
 import tempfile
 from datetime import datetime
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 import subprocess
 import sys
 import threading
@@ -197,6 +197,8 @@ def desktop_handler(api, conf, web_dir):
     class Desktop(base):
         def do_GET(self):
             path = urlparse(self.path).path
+            if path.startswith('/api/'):             # /api/download, as on the phone page
+                return super().do_GET()
             if path == '/':
                 with open(os.path.join(web_dir, 'index.html'), encoding='utf-8') as f:
                     page = f.read().replace('<meta charset="utf-8">',
@@ -273,6 +275,8 @@ def handler(api, conf, web_dir):
                 return self.reply(200, api._remote_usage())
             if url.path == '/api/chat':
                 return self.reply(200, api._remote_chat(q.get('id', ''), int(q.get('since') or 0)))
+            if url.path == '/api/download':
+                return self.download(q.get('path', ''))
             if url.path == '/api/tools':
                 return self.reply(200, api.default_tool())
             if url.path == '/api/tasks':
@@ -321,6 +325,34 @@ def handler(api, conf, web_dir):
                     pass                           # the page that sent it is gone
                 return
             self.reply(200, {'path': path})
+
+        def download(self, path):
+            """Any file on this computer by its full path (a result the AI made, say), at most
+            UPLOAD_MAX, sent as it is read, 1 MB at a time."""
+            path = os.path.expanduser(path.strip().strip('`"\''))
+            if not os.path.isabs(path):
+                return self.reply(400, {'error': f'not a full path: {path}'})
+            if not os.path.isfile(path):
+                return self.reply(404, {'error': f'no such file: {path}'})
+            size = os.path.getsize(path)
+            if size > UPLOAD_MAX:
+                return self.reply(413, {'error': f'over {UPLOAD_MAX // 1024 // 1024} MB'})
+            try:
+                f = open(path, 'rb')
+            except OSError as e:
+                return self.reply(403, {'error': str(e)})
+            with f:
+                self.send_response(200)
+                self.send_header('Content-Type', mimetypes.guess_type(path)[0] or 'application/octet-stream')
+                self.send_header('Content-Length', str(size))
+                self.send_header('Content-Disposition', "attachment; filename*=UTF-8''" + quote(os.path.basename(path)))
+                self.send_header('Cache-Control', 'no-store')
+                self.end_headers()
+                try:
+                    while chunk := f.read(1024 * 1024):
+                        self.wfile.write(chunk)
+                except OSError:
+                    pass                           # the page that asked is gone
 
         def do_POST(self):
             if not self.allowed():
