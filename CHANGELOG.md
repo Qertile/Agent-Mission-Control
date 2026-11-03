@@ -2,7 +2,7 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-11-03 – the remote desktop's terminals take its size when used
+## 2026-11-03 – v3.5.14: the remote desktop's terminals take its size when used
 
 ### Changed
 - Remote desktop: the smaller font for a terminal larger than its pane (just below) made
@@ -10,7 +10,8 @@ All notable changes to this project are listed here, newest first.
   a key in the browser gives the shown terminals the browser's pane size (and resizing the
   browser follows while it is in use), a click or a key in the window on the computer takes
   them back. The font stays 14. `Api.resize` passes on only a change of size.
-- README: Remote desktop (both languages).
+- README: Remote desktop (both languages); Versions: `v3.5.14`.
+- Tagged `v3.5.14`.
 
 ## 2026-11-03 – the remote desktop's terminals fit its window
 
