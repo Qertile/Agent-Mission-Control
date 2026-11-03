@@ -4,8 +4,9 @@
 // - what the window here is told (amc.syncTabs() ...) comes back from POST /api/poll and
 //   runs here too, with each terminal's output after the part already shown.
 // The terminals keep this computer's size (both pages type into the same terminals, which
-// have one size), so resizing here does nothing; pasting an image from this computer's
-// clipboard and dropping files are not available.
+// have one size), so resizing here does nothing, and one larger than its pane here gets a
+// smaller font; pasting an image from this computer's clipboard and dropping files are not
+// available.
 (() => {
   function store(k, v) { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch (e) {} return v; }
   const fromLink = new URLSearchParams(location.hash.slice(1)).get('t');
@@ -55,6 +56,21 @@
     };
     poll();
   }
+  // A terminal larger than its pane here gets a smaller font until all of it shows, or its
+  // bottom (the message box of Claude Code and Codex) and right edge would be cut off. One
+  // step on each poll, starting again from the full size when the pane or the terminal changes.
+  const FULL_FONT = 14, MIN_FONT = 6, SCROLLBAR = 14;
+  function shrinkToPane(t) {
+    const box = t.el, screen = box && box.querySelector('.xterm-screen');
+    if (!screen || !box.classList.contains('active')) return;
+    const key = [box.clientWidth, box.clientHeight, t.term.cols, t.term.rows].join();
+    if (t.paneKey !== key) {
+      t.paneKey = key;
+      if (t.term.options.fontSize !== FULL_FONT) { t.term.options.fontSize = FULL_FONT; return; }
+    }
+    const tooBig = screen.offsetWidth > box.clientWidth - SCROLLBAR || screen.offsetHeight > box.clientHeight;
+    if (tooBig && t.term.options.fontSize > MIN_FONT) t.term.options.fontSize -= 1;
+  }
   let since = -1;
   async function poll() {
     try {
@@ -71,6 +87,7 @@
         if (o.reset) t.term.reset();
         if (o.data) t.term.write(o.data);
         shown[id] = o.end;
+        shrinkToPane(t);
       }
     } catch (e) {}
     setTimeout(poll, 300);

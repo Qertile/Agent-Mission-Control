@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-03 – the remote desktop's terminals fit its window
+
+### Fixed
+- Remote desktop: a terminal larger than its pane in the browser lost its bottom rows, with
+  the message box of Claude Code and Codex, and its right edge. It now gets a smaller font
+  (down to 6) until all of it shows, and 14 again when it fits. The terminals keep their size.
+- README: Remote desktop (both languages).
+
 ## 2026-11-02 – v3.5.13: Accounts as a second-layer list
 
 ### Changed

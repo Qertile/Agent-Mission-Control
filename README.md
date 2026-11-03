@@ -218,7 +218,8 @@ Tailscale network and token as the phone page.
 - **What works:** everything the window here does: the tasks, the session list, usage,
   the tabs and typing into them, the menus. Both pages work on the same sessions at once.
 - **Terminal size:** the terminals keep this computer's size; resizing the browser does
-  not change them (in a smaller browser window their right and bottom edges are cut off).
+  not change them. One larger than its pane in the browser gets a smaller font (down to 6)
+  until all of it shows, the message box at the bottom included.
 - **Not available there:** pasting an image from this computer's clipboard (the button
   path; Ctrl+V of an image in that browser saves it here) and dropping files on a terminal.
 
@@ -617,8 +618,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   不保存資料的瀏覽器（無痕模式）重新整理後會再問一次 token。
 - **能做什麼：** 這裡的視窗能做的都可以：任務、session 清單、用量、分頁和在裡面打字、
   各個選單。兩邊可以同時操作同一批 session。
-- **終端機大小：** 以這台電腦為準，調整瀏覽器大小不會改變終端機（瀏覽器視窗比較小時，
-  終端機右邊和下面會被切掉）。
+- **終端機大小：** 終端機維持這台電腦的大小，調整瀏覽器視窗不會改變它。比瀏覽器裡的窗格大時，字體會自動縮小
+  （最小 6 號），直到全部放得下，包括最下面的輸入框。
 - **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦），
   以及把檔案拖進終端機。
 
