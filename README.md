@@ -192,7 +192,7 @@ running sessions, each one's conversation or terminal, and a box to type into it
   answer a permission prompt. Permission prompts still show in the desktop tab too.
 - **Message box:** *Send* types the text into the session and submits it, as if typed
   at the desktop.
-- **📎 Files:** pick photos or files (up to 20 MB each); each one is saved on this
+- **📎 Files:** pick photos or files (up to 500 MB each); each one is saved on this
   computer as `<temp>/amc-paste/phone-<time>-<name>` and its path added to the message
   box, so Claude or Codex can read it.
 - **📌 Pins:** tap a message in *Chat*, then *📌 Pin*. The session's pins show in a line
@@ -223,8 +223,11 @@ Tailscale network and token as the phone page.
   browser's pane size (and resizing the browser follows while it is the one in use); a
   click or a key in the window on this computer takes them back. Meanwhile the other
   window's copy is drawn at a size that is not its own until it is clicked.
+- **Files:** drop files from that computer on a terminal: each one is uploaded here (up
+  to 500 MB, its progress at the bottom right) as `<temp>/amc-paste/phone-<time>-<name>`,
+  and its path here is typed into that pane.
 - **Not available there:** pasting an image from this computer's clipboard (the button
-  path; Ctrl+V of an image in that browser saves it here) and dropping files on a terminal.
+  path; Ctrl+V of an image in that browser saves it here).
 
 ## Relax mode
 
@@ -600,7 +603,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **按鍵：** `1 2 3 ↑ ↓ ⌫ Enter Esc ⇧Tab` 直接打進 session，足夠回答權限詢問。
   權限詢問在桌面版的分頁上也照常顯示。
 - **輸入框：** *Send* 把文字打進 session 並送出，和在桌面版打字一樣。
-- **📎 檔案：** 選照片或檔案（每個最多 20 MB），存到這台電腦的
+- **📎 檔案：** 選照片或檔案（每個最多 500 MB），存到這台電腦的
   `<temp>/amc-paste/phone-<時間>-<檔名>`，路徑會加進輸入框，讓 Claude 或 Codex 讀取。
 - **📌 釘選：** 在 *Chat* 點一則訊息，再按 *📌 Pin*。這個 session 的釘選顯示在對話上方
   一行（`📌 2 · <最新一則>`），點它展開清單，`×` 取消釘選。和桌面版是同一份。
@@ -625,8 +628,9 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **終端機大小：** 兩邊打字進的是同一組終端機，大小只有一個，由最後操作的那一邊決定。在瀏覽器點一下或按鍵，
   畫面上的終端機就改成瀏覽器窗格的大小（之後在瀏覽器調整視窗也會跟著變）；在這台電腦的視窗點一下或按鍵，就改回來。
   沒在用的那一邊，排版會暫時不對，點一下就恢復。
-- **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦），
-  以及把檔案拖進終端機。
+- **檔案：** 把那台電腦的檔案拖進終端機，會上傳到這台電腦（每個最多 500 MB，右下角顯示進度），
+  存成 `<temp>/amc-paste/phone-<時間>-<檔名>`，並把它在這台的路徑打進那個窗格。
+- **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦）。
 
 ## Relax 模式
 

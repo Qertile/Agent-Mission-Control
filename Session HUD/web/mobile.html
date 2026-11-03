@@ -332,12 +332,12 @@ document.querySelectorAll('#keys button').forEach(b => b.onclick = async () => {
   const r = await call('/api/key', {id: current, key: b.dataset.key}).catch(e => ({error: e.message}));
   say(r.error);
 });
-// 📎: each file chosen goes to the computer (POST /api/upload, at most 20 MB) and its path
+// 📎: each file chosen goes to the computer (POST /api/upload, at most 500 MB) and its path
 // is added to the message box, to send with a few words ("look at this").
-const UPLOAD_MAX = 20 * 1024 * 1024;
+const UPLOAD_MAX = 500 * 1024 * 1024;
 function upload(file) {
   return new Promise(ok => {
-    if (file.size > UPLOAD_MAX) return ok({error: `${file.name}: over 20 MB`});
+    if (file.size > UPLOAD_MAX) return ok({error: `${file.name}: over 500 MB`});
     const x = new XMLHttpRequest();
     x.open('POST', '/api/upload');
     x.setRequestHeader('X-AMC-Token', token);

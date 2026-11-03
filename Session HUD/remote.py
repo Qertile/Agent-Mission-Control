@@ -31,7 +31,7 @@ STATIC = {'/': ('mobile.html', 'text/html; charset=utf-8'),
 # The keys the page's buttons send: enough to answer a permission prompt.
 KEYS = {'1': '1', '2': '2', '3': '3', 'enter': '\r', 'esc': '\x1b', 'up': '\x1b[A',
         'down': '\x1b[B', 'backspace': '\x7f', 'tab': '\t', 'shift-tab': '\x1b[Z'}
-UPLOAD_MAX = 20 * 1024 * 1024             # bytes: one file sent from the phone
+UPLOAD_MAX = 500 * 1024 * 1024            # bytes: one file sent from the phone or the remote desktop
 CHAT_MAX = 60                              # the latest messages the chat view gets
 _chats = {}                                # transcript path -> (bytes read, [messages]), read on as it grows
 _chats_lock = threading.Lock()
@@ -212,11 +212,13 @@ def desktop_handler(api, conf, web_dir):
         def do_POST(self):
             if not self.allowed():
                 return
+            path = urlparse(self.path).path
+            if path == '/api/upload':              # a file dropped on a terminal there
+                return self.upload()
             try:
                 body = json.loads(self.rfile.read(int(self.headers.get('Content-Length') or 0)) or b'{}')
             except ValueError:
                 return self.reply(400, {'error': 'bad json'})
-            path = urlparse(self.path).path
             if path == '/api/poll':
                 return self.reply(200, api._remote_poll(int(body.get('since', -1)), body.get('out') or {}))
             name = path[len('/api/call/'):] if path.startswith('/api/call/') else ''
@@ -285,7 +287,6 @@ def handler(api, conf, web_dir):
             size = int(self.headers.get('Content-Length') or 0)
             if size > UPLOAD_MAX:
                 return self.reply(413, {'error': f'over {UPLOAD_MAX // 1024 // 1024} MB'})
-            data = self.rfile.read(size)
             name = os.path.basename(unquote(self.headers.get('X-File-Name') or 'file'))
             stem, ext = os.path.splitext(name)
             stem = re.sub(r'[^\w.-]+', '_', stem, flags=re.ASCII).strip('_.')[:60] or 'file'
@@ -293,8 +294,32 @@ def handler(api, conf, web_dir):
             folder = os.path.join(tempfile.gettempdir(), 'amc-paste')
             os.makedirs(folder, exist_ok=True)
             path = os.path.join(folder, f'phone-{datetime.now():%Y%m%d-%H%M%S-%f}-{stem}{ext}')
-            with open(path, 'wb') as f:
-                f.write(data)
+            # Written as it comes, 1 MB at a time, so a large file is never all in memory;
+            # one cut short (the connection lost) is removed.
+            left = size
+            try:
+                with open(path, 'wb') as f:
+                    while left > 0:
+                        chunk = self.rfile.read(min(left, 1024 * 1024))
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        left -= len(chunk)
+            except OSError as e:
+                left = left or 1
+                err = str(e)
+            else:
+                err = 'upload cut short'
+            if left > 0:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+                try:
+                    self.reply(400, {'error': err})
+                except OSError:
+                    pass                           # the page that sent it is gone
+                return
             self.reply(200, {'path': path})
 
         def do_POST(self):

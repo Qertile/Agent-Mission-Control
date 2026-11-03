@@ -4,8 +4,9 @@
 // - what the window here is told (amc.syncTabs() ...) comes back from POST /api/poll and
 //   runs here too, with each terminal's output after the part already shown.
 // The terminals keep this computer's size (both pages type into the same terminals, which
-// have one size), so the window used last sets it (claim below); pasting an image from this
-// computer's clipboard and dropping files are not available.
+// have one size), so the window used last sets it (claim below); a file dropped on a
+// terminal is uploaded there first (drop below); pasting an image from this computer's
+// clipboard is not available.
 (() => {
   function store(k, v) { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch (e) {} return v; }
   const fromLink = new URLSearchParams(location.hash.slice(1)).get('t');
@@ -75,6 +76,63 @@
   }
   document.addEventListener('mousedown', claim, true);
   document.addEventListener('keydown', claim, true);
+  // Files dropped on a terminal here: each one goes to that computer (POST /api/upload, as
+  // the phone's 📎 does, at most 500 MB) and its path there is typed into the pane it was
+  // dropped on. Ahead of the page's own drop, which would type this computer's paths.
+  // How far it is shows at the bottom right until it is done.
+  const UPLOAD_MAX = 500 * 1024 * 1024;
+  function progress(text) {
+    let el = document.getElementById('upload-progress');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'upload-progress';
+      Object.assign(el.style, {position: 'fixed', right: '12px', bottom: '12px', zIndex: 30, padding: '6px 10px',
+        background: 'var(--bar)', color: 'var(--title)', border: '1px solid var(--desc)', fontSize: '13px'});
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.style.display = text ? '' : 'none';
+  }
+  function upload(file, n, of) {
+    return new Promise(ok => {
+      if (file.size > UPLOAD_MAX) return ok({error: `${file.name}: over 500 MB`});
+      const x = new XMLHttpRequest(), mb = b => (b / 1024 / 1024).toFixed(1);
+      x.open('POST', '/api/upload');
+      x.setRequestHeader('X-AMC-Token', token);
+      x.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
+      x.upload.onprogress = e => {
+        if (e.lengthComputable) progress(`uploading ${of > 1 ? `${n}/${of} ` : ''}${file.name} ` +
+          `${Math.round(e.loaded / e.total * 100)}% (${mb(e.loaded)} / ${mb(e.total)} MB)`);
+      };
+      x.onload = () => { try { ok(JSON.parse(x.responseText)); } catch (e) { ok({error: `${file.name}: upload failed (${x.status})`}); } };
+      x.onerror = () => ok({error: `${file.name}: upload failed: no connection`});
+      x.send(file);
+    });
+  }
+  window.addEventListener('drop', async e => {
+    const files = [...(e.dataTransfer && e.dataTransfer.files || [])];
+    if (!files.length || !document.getElementById('terms').contains(e.target)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('drop').style.display = 'none';
+    const b = document.getElementById('terms').getBoundingClientRect();
+    const at = amc.dropAt(e.clientX - b.left, e.clientY - b.top);
+    const id = at && at.leaf.id ? at.leaf.id : amc.active;
+    if (!id) return;
+    amc.select(id);
+    const paths = [];
+    for (const [i, f] of files.entries()) {
+      progress(`uploading ${f.name}…`);
+      const r = await upload(f, i + 1, files.length);
+      if (r.error) { progress(''); alert(r.error); break; }
+      paths.push(r.path);
+    }
+    progress('');
+    // Quoted the way that computer's shell reads them (a backslash: Windows).
+    const quote = p => !/[^\w@%+=:,./\\-]/.test(p) ? p
+      : p.includes('\\') ? `"${p}"` : `'${p.replace(/'/g, `'\\''`)}'`;
+    if (paths.length) call('write', [id, paths.map(quote).join(' ') + ' ']);
+  }, true);
   let since = -1;
   async function poll() {
     try {
