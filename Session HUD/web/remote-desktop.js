@@ -4,10 +4,10 @@
 // - what the window here is told (amc.syncTabs() ...) comes back from POST /api/poll and
 //   runs here too, with each terminal's output after the part already shown.
 // The terminals keep this computer's size (both pages type into the same terminals, which
-// have one size), so the window used last sets it (claim below); a file dropped on a
-// terminal is uploaded there first (drop below), and a full path in a terminal is a link
-// that downloads that file here (links below); pasting an image from this computer's
-// clipboard is not available.
+// have one size), so the window used last sets it (claim below); a file dropped on the page
+// or picked with the 📎 by + is uploaded there first (sendFiles below), and a full path in a
+// terminal is a link that downloads that file here (links below); pasting an image from
+// this computer's clipboard is not available.
 (() => {
   function store(k, v) { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch (e) {} return v; }
   const fromLink = new URLSearchParams(location.hash.slice(1)).get('t');
@@ -60,6 +60,7 @@
       shown[id] = 0;
       return r;
     };
+    addAttach();
     poll();
   }
   // The terminals have one size, set by the window used last. A click or a key here gives
@@ -112,16 +113,10 @@
       x.send(file);
     });
   }
-  window.addEventListener('drop', async e => {
-    const files = [...(e.dataTransfer && e.dataTransfer.files || [])];
-    if (!files.length || !document.getElementById('terms').contains(e.target)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('drop').style.display = 'none';
-    const b = document.getElementById('terms').getBoundingClientRect();
-    const at = amc.dropAt(e.clientX - b.left, e.clientY - b.top);
-    const id = at && at.leaf.id ? at.leaf.id : amc.active;
-    if (!id) return;
+  // Uploads the files, then types their paths there into tab id, quoted the way that
+  // computer's shell reads them (a backslash: Windows).
+  async function sendFiles(files, id) {
+    if (!id || !files.length) return;
     amc.select(id);
     const paths = [];
     for (const [i, f] of files.entries()) {
@@ -131,15 +126,51 @@
       paths.push(r.path);
     }
     progress('');
-    // Quoted the way that computer's shell reads them (a backslash: Windows).
     const quote = p => !/[^\w@%+=:,./\\-]/.test(p) ? p
       : p.includes('\\') ? `"${p}"` : `'${p.replace(/'/g, `'\\''`)}'`;
     if (paths.length) call('write', [id, paths.map(quote).join(' ') + ' ']);
+  }
+  // A file dragged anywhere over the page can be dropped (some app windows do not drop
+  // otherwise); over a pane it goes to that pane's tab, elsewhere to the active one.
+  const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  window.addEventListener('dragover', e => {
+    if (hasFiles(e) && !amc.dragging) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
   }, true);
+  window.addEventListener('drop', e => {
+    const files = [...(e.dataTransfer && e.dataTransfer.files || [])];
+    if (!files.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('drop').style.display = 'none';
+    const terms = document.getElementById('terms'), b = terms.getBoundingClientRect();
+    const at = terms.contains(e.target) && amc.dropAt(e.clientX - b.left, e.clientY - b.top);
+    sendFiles(files, at && at.leaf.id ? at.leaf.id : amc.active);
+  }, true);
+  // 📎 by the tab bar's + : files picked here go to the active tab the same way.
+  function addAttach() {
+    const tools = document.getElementById('tab-tools');
+    if (!tools || document.getElementById('attach-btn')) return;
+    const btn = document.createElement('div'), pick = document.createElement('input');
+    btn.id = 'attach-btn';
+    btn.textContent = '📎';
+    btn.title = 'upload files from this computer to the active tab (their paths there are typed in)';
+    btn.style.fontSize = '20px';
+    pick.type = 'file';
+    pick.multiple = true;
+    pick.hidden = true;
+    btn.onclick = () => {
+      if (!amc.active || !amc.tabs[amc.active] || !amc.tabs[amc.active].term) return alert('open a session tab first');
+      pick.click();
+    };
+    pick.onchange = () => { const files = [...pick.files]; pick.value = ''; sendFiles(files, amc.active); };
+    tools.insertBefore(btn, tools.firstChild);
+    document.body.appendChild(pick);
+  }
   // Full paths in a text, of this computer's files or the other's: C:\..., /a/b... (two
   // parts at least, so "/config" is not one), ~/...; one in backticks may have spaces.
   // [{start, end, path}], end not included, trailing punctuation left out.
-  const PATH_RE = /`((?:[A-Za-z]:\\|~\/|\/)[^`\n]+)`|(^|[\s(\[{"'“「：:,，])((?:[A-Za-z]:\\|~\/|\/[\w.@-]+\/)[^\s"'`<>|*?)\]}」，。；]+)/g;
+  // (Here \u0001 marks where the AI broke a long line itself; see pathLinks.)
+  const PATH_RE = /`((?:[A-Za-z]:\\|~\/|\/)[^`\n]+)`|(^|[\s\u0001(\[{"'“「：:,，])((?:[A-Za-z]:\\|~\/|\/[\w.@-]+\/)[^\s"'`<>|*?)\]}」，。；]+)/g;
   function findPaths(text) {
     const out = [];
     for (const m of text.matchAll(PATH_RE)) {
@@ -182,18 +213,41 @@
       return `${name}: download failed: ${e.message}`;
     }
   }
-  // The links of terminal row y (1-based): its whole line, wrapped rows included, read cell
-  // by cell, so a path's place is right with wide (Chinese) characters before it.
+  // The links of terminal row y (1-based). A path can go on past its row two ways: the
+  // terminal wrapped it (the next row isWrapped), or the AI broke the line itself (Claude
+  // Code does, at about the width): a row that ends at the right edge goes on in the next one,
+  // after its indent, marked \u0001. Read cell by cell, so a path's place is right with wide
+  // (Chinese) characters before it.
+  const MARK = '\u0001';
+  // (A row can be longer than the terminal is wide, after it was made narrower: cols counts.)
+  function full(line, cols) {
+    for (let x = Math.min(line.length, cols) - 1; x >= 0; x--) {
+      const ch = line.getCell(x) && line.getCell(x).getChars();
+      if (ch && ch !== ' ') return x >= cols - 4;
+    }
+    return false;
+  }
+  function goesOn(buf, row, cols) {         // row + 1 continues row
+    const line = buf.getLine(row), next = buf.getLine(row + 1);
+    return !!(line && next && (next.isWrapped || full(line, cols)));
+  }
   function pathLinks(term, y) {
     const buf = term.buffer.active;
-    let top = y - 1;
-    while (top > 0 && buf.getLine(top) && buf.getLine(top).isWrapped) top--;
+    let top = y - 1, bottom = y - 1;
+    while (top > 0 && y - 1 - top < 10 && goesOn(buf, top - 1, term.cols)) top--;
+    while (bottom < buf.length - 1 && bottom - (y - 1) < 10 && goesOn(buf, bottom, term.cols)) bottom++;
     let text = '';
     const cell = [];                         // cell[i]: [x, y] of text[i]
-    for (let row = top; row < buf.length; row++) {
+    for (let row = top; row <= bottom; row++) {
       const line = buf.getLine(row);
-      if (!line || (row > top && !line.isWrapped)) break;
-      for (let x = 0; x < line.length; x++) {
+      let x = 0;
+      if (row > top && !line.isWrapped) {    // the AI's own line break: its indent left out
+        while (x < term.cols && (line.getCell(x).getChars() || ' ') === ' ') x++;
+        while (text.endsWith(' ')) { text = text.slice(0, -1); cell.pop(); }   // the empty cells at its end too
+        text += MARK;
+        cell.push(cell.length ? cell[cell.length - 1] : [1, row + 1]);
+      }
+      for (; x < Math.min(line.length, term.cols); x++) {
         const c = line.getCell(x);
         if (!c || c.getWidth() === 0) continue;
         const ch = c.getChars() || ' ';
@@ -201,11 +255,24 @@
         for (let k = 0; k < ch.length; k++) cell.push([x + 1, row + 1]);
       }
     }
-    return findPaths(text).filter(p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y).map(p => ({
-      text: p.path,
-      range: {start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}},
-      activate: async () => { const err = await downloadFile(p.path, progress); if (err) alert(err); },
-    }));
+    return findPaths(text).filter(p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y).map(p => {
+      // Tried whole first; if there is no such file, up to each break the AI made, last first
+      // (the text after a break can be words, not the rest of the path).
+      const parts = p.path.split(MARK), tries = [];
+      for (let n = parts.length; n > 0; n--) tries.push(parts.slice(0, n).join('').replace(/[.,;:!?]+$/, ''));
+      return {
+        text: tries[0],
+        range: {start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}},
+        activate: async () => {
+          let err = null;
+          for (const path of tries) {
+            err = await downloadFile(path, progress);
+            if (!err || !err.startsWith('no such file')) break;
+          }
+          if (err) alert(err);
+        },
+      };
+    });
   }
   let since = -1;
   async function poll() {

@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-03 – remote desktop: 📎 upload, paths broken across lines
+
+### Added
+- Remote desktop: *📎* left of `+` uploads files picked from that computer to the active
+  tab, the same way as a drop. A Vivaldi app window did nothing on a drop.
+- Remote desktop: files can be dropped anywhere on the page (over a pane: that tab,
+  elsewhere: the active tab).
+
+### Fixed
+- Remote desktop: a path the AI broke onto the next line itself (Claude Code does at about
+  the width) was cut at the break, so its download said "no such file". A row that ends at
+  the right edge now goes on in the next one, after its indent; the file is tried whole,
+  then up to each break, in case the next line was words.
+- README: Remote desktop (both languages).
+
 ## 2026-11-03 – getting files back on the phone and the remote desktop
 
 ### Added

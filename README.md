@@ -229,11 +229,13 @@ Tailscale network and token as the phone page.
   browser's pane size (and resizing the browser follows while it is the one in use); a
   click or a key in the window on this computer takes them back. Meanwhile the other
   window's copy is drawn at a size that is not its own until it is clicked.
-- **Files:** drop files from that computer on a terminal: each one is uploaded here (up
-  to 500 MB, its progress at the bottom right) as `<temp>/amc-paste/phone-<time>-<name>`,
-  and its path here is typed into that pane.
+- **Files:** drop files from that computer on the page, or pick them with the *📎* left of
+  `+` (for an app window that does not take drops): each one is uploaded here (up to 500
+  MB, its progress at the bottom right) as `<temp>/amc-paste/phone-<time>-<name>`, and its
+  path here is typed into the pane it was dropped on, otherwise the active tab.
 - **Getting files back:** a full path of this computer in a terminal is a link (underlined
-  under the mouse, also when it wraps onto the next row): click it and the file downloads
+  under the mouse, also when it goes on in the next row, wrapped by the terminal or broken
+  by the AI): click it and the file downloads
   to that computer (up to 500 MB, its progress at the bottom right).
 - **Not available there:** pasting an image from this computer's clipboard (the button
   path; Ctrl+V of an image in that browser saves it here).
@@ -642,9 +644,10 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **終端機大小：** 兩邊打字進的是同一組終端機，大小只有一個，由最後操作的那一邊決定。在瀏覽器點一下或按鍵，
   畫面上的終端機就改成瀏覽器窗格的大小（之後在瀏覽器調整視窗也會跟著變）；在這台電腦的視窗點一下或按鍵，就改回來。
   沒在用的那一邊，排版會暫時不對，點一下就恢復。
-- **檔案：** 把那台電腦的檔案拖進終端機，會上傳到這台電腦（每個最多 500 MB，右下角顯示進度），
-  存成 `<temp>/amc-paste/phone-<時間>-<檔名>`，並把它在這台的路徑打進那個窗格。
-- **取回檔案：** 終端機裡這台電腦的完整路徑是連結（滑鼠移上去出現底線，換行成兩列也認得），
+- **檔案：** 把那台電腦的檔案拖到頁面上，或按 `+` 左邊的 *📎* 選檔（給不接受拖放的 App 視窗用），
+  會上傳到這台電腦（每個最多 500 MB，右下角顯示進度），存成 `<temp>/amc-paste/phone-<時間>-<檔名>`，
+  並把它在這台的路徑打進放開位置的窗格，不在窗格上就打進目前的分頁。
+- **取回檔案：** 終端機裡這台電腦的完整路徑是連結（滑鼠移上去出現底線，被終端機換行或被 AI 自己斷成兩列也認得），
   點一下檔案就下載到那台電腦（每個最多 500 MB，右下角顯示進度）。
 - **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦）。
 
