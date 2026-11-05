@@ -9,7 +9,8 @@
 // The pictures are PNGs made once by tools/relax_art.py from Kenney's kits (CC0).
 const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
-  const PICS = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people'];
+  const PICS = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people',
+                'fence', 'signpost', 'lantern', 'stall', 'stall-green', 'fountain', 'tree-city'];
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
   // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
@@ -24,11 +25,22 @@ const relax = (() => {
   // The building grows with the messages typed into the session (agy: its hours open):
   // a campfire at 0, then a tent, a cabin, a house, a tower.
   const LEVELS = [[200, 'level4'], [50, 'level3'], [10, 'level2'], [1, 'level1'], [0, 'level0']];
+  // The whole camp grows with the messages typed into all agents.json sessions, ended
+  // ones too (snapshot's 'camp'): a tribe on grass, a village with dirt paths, a town
+  // with stone roads, lanterns, a fountain and stalls, a city with wide brick roads inside a wall.
+  // [from, name, ground, road colour (null: none), road width (building widths), edge,
+  //  the trees kept, the props it puts in the free spots, how much its roads bend]
+  const ERAS = [
+    [1500, 'City', '#4f7d44', '#8f8b80', 0.17, '#5f5c57', 0.25, ['fountain', 'stall', 'stall-green', 'stall'], 0.1],
+    [500, 'Town', '#4f7d44', '#a8a497', 0.13, '#7d796e', 0.5, ['fountain', 'stall', 'stall-green', 'fence'], 0.16],
+    [100, 'Village', '#4b7a46', '#8a6d45', 0.1, null, 0.8, ['signpost', 'fence', 'fence'], 0.24],
+    [0, 'Tribe', '#4b7a46', null, 0, null, 1, [], 0]];
+  const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏙'};
   const BOARD_MAX = 8;                     // tasks on the board; the rest are counted
   const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
   const img = {};
   let on = false, sig = '', spots = [], hover = null, msgTimer = 0;
-  let bg = null, dpr = 1, plot = 150, timer = 0;
+  let bg = null, dpr = 1, plot = 150, timer = 0, camp = 0;
   const people = new Map();                // session id (a participant: discussion id#i) -> its person
   let fires = [];                          // the discussions under way: {x, y} of their fire
 
@@ -61,6 +73,7 @@ const relax = (() => {
   }
 
   function level(turns) { return LEVELS.find(([n]) => turns >= n)[1]; }
+  function era(turns) { return ERAS.find(([n]) => turns >= n); }
 
   // A random number source that gives the same numbers for the same seed.
   function rng(seed) {
@@ -77,11 +90,13 @@ const relax = (() => {
   // (from its id), so it keeps its place from one draw to the next. Sessions are placed in
   // agents.json order, so a new one does not push the older ones around. A spot must be
   // clear of the buildings placed before it; after 80 tries the clearest one is taken.
-  function place(list, w, h, plot) {
+  function place(list, w, h, plot, props = []) {
     const order = amc.order || [];
     const rank = b => { const i = order.indexOf(b.id); return i < 0 ? order.length : i; };
     const placed = [];
-    for (const b of [...list].sort((a, c) => rank(a) - rank(c))) {
+    // The era's props come after the sessions, so they never move a building; one with
+    // no clear spot left is left out.
+    for (const b of [...[...list].sort((a, c) => rank(a) - rank(c)), ...props]) {
       const rnd = rng(hash(b.id));
       let best = null, bestGap = -1;
       for (let t = 0; t < 80; t++) {
@@ -90,19 +105,26 @@ const relax = (() => {
         if (gap > bestGap) { best = {x, y}; bestGap = gap; }
         if (gap >= 1) break;
       }
+      if (b.prop && bestGap < 0.75) continue;
       placed.push({...best, b});
     }
     return placed;
   }
 
   // Trees and rocks, the same ones every time (a fixed seed), not on a building's ground.
-  function scenery(g, w, h, placed, plot) {
+  // The more the camp has grown, the fewer are left; a city keeps a few planted ones.
+  function scenery(g, w, h, placed, plot, e, edges) {
     const rnd = rng(7);
+    // Points along the roads, so nothing grows on one.
+    const road = roadPoints(edges);
+    const clear = plot * (e[4] / 2 + 0.12);
     const n = Math.max(6, Math.round(w * h / 22000));
     for (let i = 0; i < n; i++) {
-      const pic = img[['tree', 'tree', 'tree-autumn', 'rock'][Math.floor(rnd() * 4)]];
-      const x = rnd() * w, y = 30 + rnd() * (h - 30), s = 70 + rnd() * 30;
-      if (!pic || placed.some(p => Math.abs(p.x - x) < plot * 0.6 && y > p.y - plot * 0.9 && y < p.y + plot * 0.45 + s * 0.8)) continue;
+      const kind = ['tree', 'tree', 'tree-autumn', 'rock'][Math.floor(rnd() * 4)];
+      const x = rnd() * w, y = 30 + rnd() * (h - 30), s = 70 + rnd() * 30, keep = rnd() < e[6];
+      const pic = img[e[1] === 'City' ? (kind === 'rock' ? 'rock' : 'tree-city') : kind];
+      if (road.some(p => Math.hypot(p.x - x, p.y - y) < clear)) continue;
+      if (!keep || !pic || placed.some(p => Math.abs(p.x - x) < plot * 0.6 && y > p.y - plot * 0.9 && y < p.y + plot * 0.45 + s * 0.8)) continue;
       g.drawImage(pic, x - s / 2, y - s * ANCHOR, s, s);
     }
   }
@@ -113,7 +135,8 @@ const relax = (() => {
     plot = w / cols;
     // Room for every building with space around it; past that, the camp scrolls.
     const h = Math.max(box.clientHeight - $('relax-top').offsetHeight, Math.ceil(list.length / cols) * plot * 1.6 + 60);
-    const placed = place(list, w, h, plot);
+    const e = era(camp);
+    const placed = place(list, w, h, plot, e[7].map((kind, i) => ({id: '~' + kind + i, kind, prop: true})));
     dpr = window.devicePixelRatio || 1;
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     cv.style.width = w + 'px'; cv.style.height = h + 'px';
@@ -121,13 +144,22 @@ const relax = (() => {
     bg.width = cv.width; bg.height = cv.height;
     const g = bg.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.fillStyle = '#4b7a46';
+    g.fillStyle = e[2];
     g.fillRect(0, 0, w, h);
-    scenery(g, w, h, placed, plot);
+    const {lamps, edges} = roads(g, placed, e);
+    const trees = e[1] === 'City' ? streetTrees(edges, placed, lamps, e, w, h) : [];
+    scenery(g, w, h, placed, plot, e, edges);
+    if (e[1] === 'City') wall(g, w, h);
     spots = [];
+    const labels = [];
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
-    for (const {x: cx, y: ground, b} of [...placed].sort((a, c) => a.y - c.y)) {
+    for (const {x: cx, y: ground, b} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
+      if (b.prop) {
+        const s = plot * 1.5 * (b.scale || 1);
+        if (img[b.kind]) g.drawImage(img[b.kind], cx - s / 2, ground - s * ANCHOR, s, s);
+        continue;
+      }
       // An ended session is a wreck.
       const level = b.status === 'ended' ? 'ruin' : b.level;
       const s = plot * 1.5, pic = img[level];
@@ -136,6 +168,7 @@ const relax = (() => {
       g.beginPath(); g.ellipse(cx, ground - 4, plot * 0.4, plot * 0.14, 0, 0, Math.PI * 2); g.fill();
       if (pic) g.drawImage(pic, cx - s / 2, ground - s * ANCHOR, s, s);
       const top = ground - s * (ANCHOR - TOP[level]);
+      labels.push(() => {
       // Status: busy a tool sign, waiting a "!" flag; ended is the wreck.
       if ((b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting') badge(g, cx + plot * 0.18, top - 4, '⚒', STATUS_COLORS.busy);
       if (b.status === 'waiting') badge(g, cx + plot * 0.18, top - 4, '!', STATUS_COLORS.waiting);
@@ -159,14 +192,149 @@ const relax = (() => {
         g.fillText(b.status || '-', cx, ly + 26);
       }
       spots.unshift({x: cx - plot / 2, y: ground - plot * 0.9, w: plot, h: ly + 32 - (ground - plot * 0.9), b});
+      });
     }
-    settle(placed);
+    // The names and status badges go over everything, so no building or lantern hides one.
+    for (const f of labels) f();
+    eraLabel(g, e);
+    settle(placed.filter(p => !p.b.prop));
     const out = cv.getContext('2d');
     out.setTransform(1, 0, 0, 1, 0, 0);
     out.drawImage(bg, 0, 0);
     out.setTransform(dpr, 0, 0, dpr, 0, 0);
     for (const f of fires) flames(out, f);
     for (const p of [...people.values()].sort((a, c) => a.y - c.y)) person(out, p);
+  }
+
+  // The roads: the shortest set of winding roads that joins every building and prop but
+  // the fences (each joins the nearest one not yet joined). From a town on, a lantern stands beside
+  // each road's middle, unless a building is there. Returns the lanterns, drawn with the
+  // buildings so they stand in front of or behind them, and the roads, which trees avoid.
+  function roads(g, placed, e) {
+    const joins = placed.filter(p => p.b.kind !== 'fence');
+    if (!e[3] || joins.length < 2) return {lamps: [], edges: []};
+    // Each road ends in front of the door (on the lower left), outside the footprint.
+    const pts = joins.map(p => ({x: p.x - plot * 0.18, y: p.y + plot * 0.16, id: p.b.id}));
+    const joined = [0], edges = [];
+    while (joined.length < pts.length) {
+      let best = null;
+      for (const i of joined) for (let j = 0; j < pts.length; j++) {
+        if (joined.includes(j)) continue;
+        const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
+        if (!best || d < best[2]) best = [i, j, d];
+      }
+      joined.push(best[1]);
+      edges.push(route(curve(pts[best[0]], pts[best[1]], e[8]), placed));
+    }
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const [color, extra] of [[e[5], plot * 0.035], [e[3], 0]]) {
+      if (!color) continue;
+      g.strokeStyle = color; g.lineWidth = plot * e[4] + extra;
+      g.beginPath();
+      for (const {line} of edges) { g.moveTo(line[0].x, line[0].y); for (const q of line) g.lineTo(q.x, q.y); }
+      g.stroke();
+    }
+    if (e[1] === 'City') {                 // a city's roads are brick: joints across them
+      g.lineCap = 'butt'; g.strokeStyle = 'rgba(0, 0, 0, 0.22)'; g.lineWidth = plot * e[4];
+      g.setLineDash([1.5, 11]);
+      g.beginPath();
+      for (const {line} of edges) { g.moveTo(line[0].x, line[0].y); for (const q of line) g.lineTo(q.x, q.y); }
+      g.stroke();
+      g.setLineDash([]);
+    }
+    if (e[1] !== 'Town' && e[1] !== 'City') return {lamps: [], edges};
+    const lamps = [];
+    for (const r of edges) {
+      // Beside the road's middle.
+      const m = along(r, 0.5), t = Math.hypot(m.dx, m.dy) || 1, a = r.line[0], b = r.line[r.line.length - 1];
+      const d = Math.hypot(b.x - a.x, b.y - a.y), side = plot * (e[4] / 2 + 0.08);
+      const x = m.x - m.dy / t * side, y = m.y + m.dx / t * side;
+      if (d > plot * 0.9 && !placed.some(p => Math.abs(p.x - x) < plot * 0.45 && y > p.y - plot * 0.2 && y < p.y + plot * 0.5))
+        lamps.push({x, y, b: {prop: true, kind: 'lantern'}});
+    }
+    return {lamps, edges};
+  }
+  // The point at t (0 to 1) along a road, and its direction there.
+  function along({line}, t) {
+    const i = Math.round(t * (line.length - 1)), p = line[Math.max(0, i - 1)], n = line[Math.min(line.length - 1, i + 1)];
+    return {x: line[i].x, y: line[i].y, dx: n.x - p.x, dy: n.y - p.y};
+  }
+  function roadPoints(edges) {
+    return edges.flatMap(r => r.line);
+  }
+  // A city's street trees: beside its roads, a third of the way along each, where there is
+  // room: clear of every road, building and lantern, and of each other.
+  function streetTrees(edges, placed, lamps, e, w, h) {
+    const road = roadPoints(edges), trees = [], side = plot * (e[4] / 2 + 0.17), most = Math.ceil(edges.length * 0.4);
+    for (const r of edges) for (const [t, way] of [[0.33, 1], [0.67, -1], [0.33, -1], [0.67, 1]]) {
+      if (trees.length >= most) return trees;
+      const p = along(r, t), d = Math.hypot(p.dx, p.dy) || 1;
+      const x = p.x - p.dy / d * side * way, y = p.y + p.dx / d * side * way;
+      const near = (list, gap) => list.some(q => Math.hypot(q.x - x, q.y - y) < gap);
+      if (x < plot * 0.3 || x > w - plot * 0.3 || y < plot * 0.7 || y > h - 30) continue;
+      if (near(road, plot * (e[4] / 2 + 0.12)) || near(lamps, plot * 0.25) || near(trees, plot * 0.9)) continue;
+      if (placed.some(q => Math.abs(q.x - x) < plot * 0.5 && y > q.y - plot * 0.25 && y < q.y + plot * 0.8)) continue;
+      trees.push({x, y, b: {prop: true, kind: 'tree-city', scale: 0.6}});
+    }
+    return trees;
+  }
+  // A road as a line of points that goes round every building and prop on its way: a point
+  // inside a footprint moves out to its edge, then the line is smoothed, a few times over.
+  function route({a, c1, c2, b}, placed) {
+    const line = Array.from({length: 41}, (_, i) => {
+      const t = i / 40, u = 1 - t;
+      return {x: u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x,
+              y: u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y};
+    });
+    const rx = plot * 0.36, ry = plot * 0.2, inner = line.slice(1, -1);
+    const out = () => {
+      for (const q of inner) for (const f of placed) {
+        const dx = (q.x - f.x) / rx, dy = (q.y - f.y + plot * 0.03) / ry, k = Math.hypot(dx, dy);
+        if (k > 0 && k < 1) { q.x = f.x + dx / k * rx; q.y = f.y - plot * 0.03 + dy / k * ry; }
+      }
+    };
+    for (let n = 0; n < 6; n++) {
+      out();
+      for (let i = 1; i < line.length - 1; i++) {
+        line[i].x = (line[i - 1].x + line[i].x * 2 + line[i + 1].x) / 4;
+        line[i].y = (line[i - 1].y + line[i].y * 2 + line[i + 1].y) / 4;
+      }
+    }
+    out();
+    return {line};
+  }
+  // One road from a to b. Its bends come from the two ends' ids, so a road keeps its shape
+  // from one draw to the next; some roads curve one way, some swing both ways (an S).
+  function curve(a, b, bend) {
+    const rnd = rng(hash([a.id, b.id].sort().join()));
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d;
+    const most = Math.min(d * bend * 2, plot * 0.55);    // a long road does not swing further out
+    const k1 = (rnd() < 0.5 ? -1 : 1) * most * (0.6 + rnd() * 0.4);
+    const k2 = (rnd() < 0.5 ? -1 : 1) * most * (0.6 + rnd() * 0.4);
+    return {a, b, c1: {x: a.x + dx / 3 + nx * k1, y: a.y + dy / 3 + ny * k1},
+            c2: {x: a.x + dx * 2 / 3 + nx * k2, y: a.y + dy * 2 / 3 + ny * k2}};
+  }
+  // A city's wall: stone along the sides and the bottom, battlements on top.
+  function wall(g, w, h) {
+    const t = 9;
+    g.fillStyle = '#6e6a62';
+    g.fillRect(0, 0, t, h); g.fillRect(w - t, 0, t, h); g.fillRect(0, h - t, w, t);
+    g.fillStyle = '#57534c';
+    for (let y = 4; y < h - t; y += 16) { g.fillRect(0, y, t + 3, 8); g.fillRect(w - t - 3, y, t + 3, 8); }
+    for (let x = 4; x < w; x += 16) g.fillRect(x, h - t - 3, 8, t + 3);
+  }
+  // Top left: what the camp is now, and how far the next one is.
+  function eraLabel(g, e) {
+    const next = ERAS[ERAS.indexOf(e) - 1];
+    const text = `${ICON[e[1]]} ${e[1]} · ${camp} messages` + (next ? ` · ${next[1]} at ${next[0]}` : '');
+    g.font = "11px 'DejaVu Sans Mono', Consolas, monospace";
+    g.textAlign = 'left';
+    const tw = g.measureText(text).width;
+    g.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    g.fillRect(14, 6, tw + 12, 18);
+    g.fillStyle = '#ffffff';
+    g.fillText(text, 20, 19);
+    g.textAlign = 'center';
   }
 
   // --- the people: one per building that is not ended, and one per participant around
@@ -342,10 +510,11 @@ const relax = (() => {
   }
 
   // Redraws when the buildings, their status or the size changed; otherwise nothing.
-  function update(force) {
+  function update(force, turns) {
+    if (turns !== undefined) camp = turns;
     if (!on || document.hidden) return;
     const list = buildings(), box = $('relax');
-    const now = JSON.stringify([box.clientWidth, box.clientHeight, $('relax-top').offsetHeight,
+    const now = JSON.stringify([camp, box.clientWidth, box.clientHeight, $('relax-top').offsetHeight,
                                 list.map(b => [b.id, b.name, b.tool, b.status, b.level, b.people])]);
     if (now === sig && !force) return;
     sig = now;
@@ -433,5 +602,5 @@ const relax = (() => {
   }
 
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
-          _people: () => people, _fires: () => fires.length};   // for tests
+          _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1]};   // for tests
 })();

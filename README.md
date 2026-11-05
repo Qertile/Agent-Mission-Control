@@ -250,6 +250,12 @@ The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *L
   the messages typed into the session: a campfire at 0, a tent from 1, a cabin from 10, a
   house from 50, a tower from 200 (Antigravity, whose conversations cannot be read: 6 per
   hour open). An ended session is a wreck with its name in dark grey.
+- **The whole camp grows too**, with the messages of all the sessions in `agents.json`,
+  ended ones included: a tribe on grass from 0, a village with dirt paths from 100, a town
+  with stone roads, lanterns, a fountain and stalls from 500, and a city with wide brick
+  roads, street trees and a wall from 1500. The top left of the camp shows what it is now
+  and when the next one comes. Deleting a session from `agents.json` takes its messages
+  off the count, so the camp can shrink back.
 - **Its person**, near it: working while the session is busy, waving while it waits for
   you, sitting or strolling about while idle.
 - **A Cross-check discussion** is a campfire with its models on the logs around it; the one
@@ -662,6 +668,10 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   越大：0 則是營火、1 則起是帳篷、10 則起是小木屋、50 則起是房子、200 則起是高塔
   （Antigravity 的對話讀不到，改用開著的時間，每小時算 6 則）。結束的 session 變成廢墟，
   名字是深灰色。
+- **整個營地也會成長**，依 `agents.json` 裡所有 session 的訊息總數計算，已結束的也算：
+  0 則起是草地上的部落，100 則起是有泥土路的村莊，500 則起是有石板路、路燈、噴泉和攤位的
+  小鎮，1500 則起是有寬磚路、行道樹和城牆的城市。營地左上角會顯示目前的階段和下一階段的
+  門檻。從 `agents.json` 刪除 session 會扣掉它的訊息數，所以營地可能退回前一階段。
 - **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒著時坐著或四處走走。
 - **Cross-check 討論**是一堆營火，參與的模型坐在周圍的木頭上；正在回答的站著，步驟進行
   中時有火焰。

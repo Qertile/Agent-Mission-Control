@@ -317,7 +317,11 @@
 <script src="vendor/xterm.js"></script>
 <script src="vendor/addon-fit.js"></script>
 <script src="vendor/qrcode.js"></script>
-<script src="relax.js"></script>
+<script>
+  // The browser cache outlives the window: the version main() puts in this page's URL makes
+  // an edited relax.js load fresh too. (The remote desktop page has none; it is not cached.)
+  document.write('<script src="relax.js' + location.search + '"><\/script>');
+</script>
 <script>
 const api = () => window.pywebview.api;
 const $ = id => document.getElementById(id);
@@ -1944,7 +1948,7 @@ async function refresh() {
   drawUsage(s.usage);
   $('grid-note').textContent = s.note;
   relax.stamina(s.usage);
-  relax.update();
+  relax.update(false, s.camp);
 }
 async function init() {
   await api().init();

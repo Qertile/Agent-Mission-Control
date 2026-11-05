@@ -2,6 +2,28 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – Relax mode: from a tribe to a city
+
+### Added
+- Relax mode: the whole camp grows with the messages of all the `agents.json` sessions,
+  ended ones included: a tribe from 0, a village from 100 (dirt paths, a signpost, fences),
+  a town from 500 (stone roads, lanterns, a fountain, stalls), a city from 1500 (wide brick
+  roads, street trees, a wall). The top left of the camp shows what it is now and when the
+  next one comes.
+- Roads wind, end in front of a building's door, and go round buildings and props; trees
+  keep off them.
+- New pictures from Kenney's kits: fence, signpost, lantern, stalls, fountain, street tree.
+
+### Changed
+- Relax mode: names and status badges are drawn over everything, so a building no longer
+  hides the name of the one behind it.
+
+### Fixed
+- An edited `relax.js` did not load: the browser cache kept the old one, since only the
+  page's URL had a version. It now has one too, from the newer of the two files.
+- `relax_art.py` uses its own port, so it no longer loads a running AMC's page.
+- README: Relax mode (both languages).
+
 ## 2026-11-03 – v3.5.16: the remote desktop's 📎 in the tab bar's colors
 
 ### Changed

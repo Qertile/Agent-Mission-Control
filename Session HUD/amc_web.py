@@ -346,6 +346,7 @@ class Api:
                        'agy': None, 'agy_at': None}
         self._samples, self._transcripts, self._last_len = {}, {}, {}
         self._turns = {}                   # transcript path -> (bytes read, turns counted)
+        self._ended_turns = {}             # an ended session's id -> its turns, counted once
         self._sessions = []
         self._codex_models = []
         self._disc_tabs = set()            # the discussions with a tab open on the page
@@ -1089,6 +1090,7 @@ class Api:
                          'headless': s['sid'] not in self._terms and headless(s['pid']),
                          'samples': list(self._samples.get(s['sid'], [])),
                          'turns': self._turn_count(s, (entry or {}).get('tool') or 'claude')})
+        camp = sum(r['turns'] for r in rows) + self._ended_turn_total(listed.values(), {s['sid'] for s in self._sessions})
         rows += self._discussion_rows()
         note = f"{len(rows)} active · sessions {datetime.now():%H:%M:%S}"
         if u['fetched']:
@@ -1097,7 +1099,23 @@ class Api:
                 note += f" · account {u['account_at']:%H:%M:%S}"
             elif u['account_error']:
                 note += f" · account: {u['account_error']}"
-        return {'rows': rows, 'usage': self._usage_view(), 'note': note}
+        return {'rows': rows, 'usage': self._usage_view(), 'note': note, 'camp': camp}
+
+    def _ended_turn_total(self, entries, running):
+        """The turns of the agents.json sessions not running now (Relax mode's camp grows
+        with all of them). An ended session's transcript does not grow, so each is counted
+        once; one that runs again is counted live, and afresh when it ends."""
+        total = 0
+        for e in entries:
+            sid, tool = e['id'], e.get('tool') or 'claude'
+            if sid in running:
+                self._ended_turns.pop(sid, None)
+                continue
+            if sid not in self._ended_turns:
+                path = '' if tool == 'agy' else core.codex_rollout(sid) if tool == 'codex' else transcript_path(sid)
+                self._ended_turns[sid] = self._turn_count({'sid': sid, 'transcript': path}, tool) if path else 0
+            total += self._ended_turns[sid]
+        return total
 
     def _turn_count(self, s, tool):
         """How many messages were typed into the session (Relax mode's building level), read
@@ -1856,10 +1874,11 @@ def main():
         from single_instance import replace_previous
         replace_previous('mission-control-web')
     api = Api()
-    # The browser cache outlives the window (private_mode=False), so the page's
-    # modified time in its URL makes an edited page load fresh.
+    # The browser cache outlives the window (private_mode=False), so the latest modified
+    # time of the page and relax.js in its URL makes either load fresh when edited.
     page = os.path.join(HERE, 'web', 'index.html')
-    window = webview.create_window('Agent Mission Control', f'{page}?v={int(os.path.getmtime(page))}',
+    version = int(max(os.path.getmtime(page), os.path.getmtime(os.path.join(HERE, 'web', 'relax.js'))))
+    window = webview.create_window('Agent Mission Control', f'{page}?v={version}',
                                    js_api=api, width=1880, height=1000, min_size=(1100, 600),
                                    maximized=True, background_color='#060a06')
     api._window = window

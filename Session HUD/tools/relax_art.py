@@ -50,7 +50,9 @@ def main():
     kits = {'sk': zipfile.ZipFile(sys.argv[1]), 'ftk': zipfile.ZipFile(sys.argv[2]), 'mc': zipfile.ZipFile(sys.argv[3])}
     webview.create_window('Relax art', os.path.join(HERE, 'relax_art.html'), js_api=Api(kits),
                           width=600, height=600)
-    webview.start()
+    # Not pywebview's usual port (42001): a running Agent Mission Control has it, and this
+    # window would load that page instead.
+    webview.start(http_port=42041)
 
 
 if __name__ == '__main__':
