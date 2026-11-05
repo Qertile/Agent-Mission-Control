@@ -998,24 +998,31 @@ const relax = (() => {
     skySig = sig;
     nightOn = sig !== '255,255,255';
     if (nightOn) {
-      nightColor = `rgb(${c})`;
+      // A plain see-through colour over the camp, not CSS's multiply, which this window's
+      // WebKit can show as a solid colour hiding everything under it. dark is how much of the
+      // daylight goes; the colour is what makes white come out near the sky's colour.
+      const dark = 1 - Math.min(...c) / 255;
+      const tint = c.map(v => Math.round((v - (1 - dark) * 255) / dark * 0.6));   // less: dark things stay dark
+      nightColor = `rgba(${tint}, ${dark})`;
       nightMap = nightMap || document.createElement('canvas');
       nightMap.width = MAP_W; nightMap.height = MAP_H;
-      const g = nightMap.getContext('2d'), dark = 1 - Math.min(...c) / 255;
+      const g = nightMap.getContext('2d');
+      g.globalCompositeOperation = 'source-over';
       g.fillStyle = nightColor;
       g.fillRect(0, 0, MAP_W, MAP_H);
-      // The lights come on as it gets dark.
+      // The lights come on as it gets dark: each lets the daylight through around it.
+      g.globalCompositeOperation = 'destination-out';
       for (const {x, y, r} of lights) {
         const glow = g.createRadialGradient(x, y, 0, x, y, r);
-        glow.addColorStop(0, `rgba(255, 228, 180, ${Math.min(0.85, dark * 1.3)})`);
-        glow.addColorStop(0.4, `rgba(255, 222, 170, ${Math.min(0.5, dark * 0.75)})`);
-        glow.addColorStop(0.75, `rgba(255, 215, 160, ${Math.min(0.14, dark * 0.2)})`);
-        glow.addColorStop(1, 'rgba(255, 210, 150, 0)');
+        glow.addColorStop(0, `rgba(0, 0, 0, ${Math.min(0.85, dark * 1.3)})`);
+        glow.addColorStop(0.4, `rgba(0, 0, 0, ${Math.min(0.5, dark * 0.75)})`);
+        glow.addColorStop(0.75, `rgba(0, 0, 0, ${Math.min(0.14, dark * 0.2)})`);
+        glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         g.fillStyle = glow;
         g.fillRect(x - r, y - r, r * 2, r * 2);
       }
     }
-    // A metropolis's windows, warm, on a canvas of their own over the multiply: each building
+    // A metropolis's windows, warm, on a canvas of their own over the dark: each building
     // first wipes out what it stands in front of. Only while it is dark at all.
     litOn = false;
     if (nightOn && litList.length) {
@@ -1043,8 +1050,10 @@ const relax = (() => {
     }
     cv.style.display = 'block';
     const g = cv.getContext('2d');
-    g.fillStyle = nightColor;
+    g.clearRect(0, 0, viewW, viewH);
+    g.fillStyle = nightColor;              // the strip around a map that does not fill the window
     g.fillRect(0, 0, viewW, viewH);
+    g.clearRect(-ox * zoom, -oy * zoom, MAP_W * zoom, MAP_H * zoom);
     g.drawImage(nightMap, -ox * zoom, -oy * zoom, MAP_W * zoom, MAP_H * zoom);
     if (!litOn) return;
     if (lit.width !== viewW || lit.height !== viewH) {

@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – Relax mode: the camp shows after dark
+
+### Fixed
+- Relax mode: from dusk to dawn the camp was hidden under one solid colour. WebKitGTK showed
+  the night canvas's `mix-blend-mode: multiply` as an ordinary opaque canvas. The dark is now
+  a see-through colour with the lights cut out of it, so it needs no blending. It also covers
+  the strip around a map that does not fill the window.
+
 ## 2026-11-05 – Relax mode: six eras, a camp that fills up, old and new side by side
 
 ### Added
