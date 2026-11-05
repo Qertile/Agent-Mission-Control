@@ -17,7 +17,9 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.16` (current) | `v3.5.15` plus getting files back (a full path in a phone *Chat* message or a remote desktop terminal is a download link, and *⬇* on the phone), and *📎* on the remote desktop. See `CHANGELOG.md`. |
+| `v3.5.18` (current) | `v3.5.17` plus a popup once after *Update*'s restart, listing what the update brought. See `CHANGELOG.md`. |
+| `v3.5.17` | `v3.5.16` plus the Relax mode camp growing from a tribe to a city, due dates and history on its board, day and night; Cross-check follow-ups showing what was asked; paths and web links in terminals opening on a click; and *Update* going only to tagged versions. See `CHANGELOG.md`. |
+| `v3.5.16` | `v3.5.15` plus getting files back (a full path in a phone *Chat* message or a remote desktop terminal is a download link, and *⬇* on the phone), and *📎* on the remote desktop. See `CHANGELOG.md`. |
 | `v3.5.15` | `v3.5.14` plus files dropped on the remote desktop's terminals uploaded to the computer running AMC (with progress), and uploads up to 500 MB (phone and remote desktop). See `CHANGELOG.md`. |
 | `v3.5.14` | `v3.5.13` plus the remote desktop's terminals taking the size of the window used last (a click or a key there). See `CHANGELOG.md`. |
 | `v3.5.13` | `v3.5.12` plus ⚙ → *Accounts ▸* as a second-layer list. See `CHANGELOG.md`. |
@@ -202,6 +204,8 @@ running sessions, each one's conversation or terminal, and a box to type into it
   to the phone (up to 500 MB, its progress under the screen). *⬇* next to 📎 takes a path
   typed in, for one the *Term* view shows. Any file Agent Mission Control can read here can
   be fetched this way, so keep the link and token to yourself.
+- **Web links:** an `http://` or `https://` address in a *Chat* message is a link that opens
+  in the phone's browser. In the *Term* view it is not a link.
 - **📌 Pins:** tap a message in *Chat*, then *📌 Pin*. The session's pins show in a line
   above the chat (`📌 2 · <the latest>`); tap it for the list, `×` unpins. They are the
   same pins as the desktop's.
@@ -234,6 +238,13 @@ Tailscale network and token as the phone page.
   `+` (for an app window that does not take drops): each one is uploaded here (up to 500
   MB, its progress at the bottom right) as `<temp>/amc-paste/phone-<time>-<name>`, and its
   path here is typed into the pane it was dropped on, otherwise the active tab.
+- **Paths in terminals:** a full path in a terminal of the window on this computer is a link
+  too: click it and the file opens with its default app (a program or a script: its folder,
+  so a click starts nothing). A path with spaces works without backticks too: the words
+  after it are tried, longest first, until a file is there.
+- **Web links in terminals:** an `http://` or `https://` address in a terminal is a link
+  (also when it goes on in the next row). Click it and it opens in the default browser of
+  the computer you are at: this one in the AMC window, the other one on the remote desktop.
 - **Getting files back:** a full path of this computer in a terminal is a link (underlined
   under the mouse, also when it goes on in the next row, wrapped by the terminal or broken
   by the AI): click it and the file downloads
@@ -427,11 +438,12 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   account), then closes on Enter. Every tab of that tool uses the new account from then on.
   *Agy · Switch…* opens an `Agy login` tab running `agy` with `/logout` typed in; type
   `/login` there, then quit agy (Ctrl+C) to close it (agy cannot say which account it uses).
-- **Update:** `⚙` → *Update* asks first, then runs `git pull --ff-only` in this folder and
-  shows how it went. With a new version, Agent Mission Control restarts itself through its
-  launcher (every tab restarts, conversations go on); already up to date or an error, it
-  does not.
-  A folder that is not a git clone (a downloaded zip, a copy) is made one first: your own
+- **Update:** `⚙` → *Update* asks first, then moves this folder forward to the newest version
+  tag on GitHub's `master` and shows how it went. Commits after that tag are not taken, as
+  they may still have bugs, and a copy already past it stays where it is. With a new version, Agent Mission Control restarts itself through its
+  launcher (every tab restarts, conversations go on) and shows once what the update brought
+  (the titles from `CHANGELOG.md`); already up to date or an error, it does not.
+  A folder that is not a git clone (a downloaded zip, a copy) is made one at that tag: your own
   files (`agents.json`, `hud-config.json`, `tasks.md` ...) stay as they are, and a file of
   the tools that differs from GitHub's is copied to `.update-backup/<time>/` before it is
   replaced. With no git, it installs it
@@ -501,7 +513,9 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.16`（目前） | `v3.5.15` 再加上：取回檔案（手機 *Chat* 訊息和遠端桌面終端機裡的完整路徑可以點擊下載，手機另有 *⬇*），以及遠端桌面的 *📎* 上傳按鈕。詳見 `CHANGELOG.md`。 |
+| `v3.5.18`（目前） | `v3.5.17` 再加上：*Update* 重開後跳出一次視窗，列出這次更新的內容。詳見 `CHANGELOG.md`。 |
+| `v3.5.17` | `v3.5.16` 再加上：Relax mode 的營地從部落長成城市、看板上的到期日和歷史紀錄、日夜變化；Cross-check 的追問會顯示問了什麼；終端機裡的路徑和網址點一下就能開；*Update* 只更新到有 tag 的版本。詳見 `CHANGELOG.md`。 |
+| `v3.5.16` | `v3.5.15` 再加上：取回檔案（手機 *Chat* 訊息和遠端桌面終端機裡的完整路徑可以點擊下載，手機另有 *⬇*），以及遠端桌面的 *📎* 上傳按鈕。詳見 `CHANGELOG.md`。 |
 | `v3.5.15` | `v3.5.14` 再加上：拖進遠端桌面終端機的檔案會上傳到跑 AMC 的電腦（顯示進度），上傳上限改為 500 MB（手機和遠端桌面）。詳見 `CHANGELOG.md`。 |
 | `v3.5.14` | `v3.5.13` 再加上：遠端桌面的終端機大小改由最後操作（點一下或按鍵）的視窗決定。詳見 `CHANGELOG.md`。 |
 | `v3.5.13` | `v3.5.12` 再加上：⚙ → *Accounts ▸* 移到第二層。詳見 `CHANGELOG.md`。 |
@@ -645,6 +659,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   含空格的路徑）會變成連結，點一下檔案就下載到手機（每個最多 500 MB，下方顯示進度）。📎 旁邊的 *⬇*
   可以直接輸入路徑，給 *Term* 畫面裡看到的路徑用。Agent Mission Control 在這台讀得到的檔案都能這樣取得，
   所以網址和 token 不要給別人。
+- **網址連結：** *Chat* 訊息裡的 `http://` 或 `https://` 網址是連結，點一下用手機瀏覽器開啟。*Term* 畫面裡不是連結。
 - **📌 釘選：** 在 *Chat* 點一則訊息，再按 *📌 Pin*。這個 session 的釘選顯示在對話上方
   一行（`📌 2 · <最新一則>`），點它展開清單，`×` 取消釘選。和桌面版是同一份。
 - **+ 新 session：** 選電腦上有裝的 AI 工具（預設選 Default AI），輸入名稱後按 *Create*，
@@ -671,6 +686,10 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 - **檔案：** 把那台電腦的檔案拖到頁面上，或按 `+` 左邊的 *📎* 選檔（給不接受拖放的 App 視窗用），
   會上傳到這台電腦（每個最多 500 MB，右下角顯示進度），存成 `<temp>/amc-paste/phone-<時間>-<檔名>`，
   並把它在這台的路徑打進放開位置的窗格，不在窗格上就打進目前的分頁。
+- **終端機裡的路徑：** 這台電腦視窗的終端機裡，完整路徑也是連結，點一下用預設的 app 打開檔案（程式或腳本只打開
+  所在資料夾，點擊不會執行任何東西）。路徑有空格、沒用反引號也可以：會把後面的字接上去試，先試最長的，直到檔案存在。
+- **終端機裡的網址：** 終端機裡的 `http://` 或 `https://` 網址是連結（接到下一列也認得），點一下用你正在操作的電腦的預設瀏覽器開啟：
+  AMC 視窗是這台，遠端桌面是那台。
 - **取回檔案：** 終端機裡這台電腦的完整路徑是連結（滑鼠移上去出現底線，被終端機換行或被 AI 自己斷成兩列也認得），
   點一下檔案就下載到那台電腦（每個最多 500 MB，右下角顯示進度）。
 - **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦）。
@@ -827,10 +846,11 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   登出和登入（瀏覽器會開登入頁），按 Enter 後關閉。之後這個工具的所有分頁都改用新帳號。
   *Agy · Switch…* 會開一個 `Agy login` 分頁執行 `agy` 並自動打 `/logout`；接著在裡面打
   `/login` 登入，再退出 agy（Ctrl+C）關閉分頁（agy 無法顯示目前登入的帳號）。
-- **更新**：`⚙` → *Update* 會先確認，再在這個資料夾執行 `git pull --ff-only` 並顯示結果。
+- **更新**：`⚙` → *Update* 會先確認，再把這個資料夾更新到 GitHub `master` 上最新的版本 tag，並顯示結果。
+  tag 之後的 commit 可能還有 bug，所以不會拿；已經超過這個 tag 的就留在原地。
   有新版本時，Agent Mission Control 會透過啟動程式自己重開（所有分頁跟著重開，對話會接續）；
-  已是最新版或出錯時不會重開。不是 git clone 的資料夾
-  （下載的 zip、複製來的）會先變成 clone：你自己的檔案（`agents.json`、`hud-config.json`、
+  重開後會跳出一次視窗，列出這次更新的內容（`CHANGELOG.md` 的標題）。已是最新版或出錯時不會重開。不是 git clone 的資料夾
+  （下載的 zip、複製來的）會先變成停在這個 tag 的 clone：你自己的檔案（`agents.json`、`hud-config.json`、
   `tasks.md`…）不動，跟 GitHub 不同的程式檔會先備份到 `.update-backup/<時間>/` 再換掉。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
   官方的 zip，不需系統管理員）到 `%LOCALAPPDATA%\Programs\MinGit`，只給 Agent Mission Control
   用；Linux 會跳出系統密碼視窗執行 `apt-get install git`。

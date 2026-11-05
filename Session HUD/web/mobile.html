@@ -32,7 +32,7 @@
   #pins .pin small { color: var(--note); display: block; }
   #pins .pin button { align-self: flex-start; padding: 2px 8px; }
   .m.picked { outline: 1px solid var(--note); }
-  .m a.dl { color: var(--busy); text-decoration: underline; cursor: pointer; }
+  .m a.dl, .m a.web { color: var(--busy); text-decoration: underline; cursor: pointer; }
   .m .pin-it { display: block; margin-top: 6px; }
   #dot { width: 10px; height: 10px; border-radius: 50%; background: var(--grey); flex: none; }
   select, button, textarea { font: inherit; color: var(--title); background: var(--bg);
@@ -164,7 +164,22 @@ function findPaths(text) {
   for (const m of text.matchAll(PATH_RE)) {
     let path = m[1] || m[3], start = m.index + (m[1] ? 1 : m[2].length);
     if (!m[1]) path = path.replace(/[.,;:!?]+$/, '');
-    if (path.length > 2) out.push({start, end: start + path.length, path});
+    if (path.length <= 2) continue;
+    const found = {start, end: start + path.length, path, tries: [path]};
+    // Not in backticks, a space may be part of the name ("Agent Mission Control/x.md"), and
+    // only the file system can tell: the next few words go on the list to try, longest
+    // first, and the link reaches as far as a word that looks like more of a path.
+    let at = found.end, sofar = path;
+    for (let n = 0; !m[1] && n < 6; n++) {
+      const w = text.slice(at).match(/^ ([^\s"'`<>|*?，。；」)\]}]+)/);
+      const word = w && w[1].replace(/[.,;:!?]+$/, '');
+      if (!word || /^(?:[A-Za-z]:\\|~\/|\/|https?:\/\/)/.test(word)) break;     // the next path or link starts here
+      sofar += ' ' + word;
+      at += 1 + word.length;
+      found.tries.unshift(sofar);
+      if (/[\\/]/.test(word) || /\.[A-Za-z]\w{0,7}$/.test(word)) { found.end = at; found.path = sofar; }
+    }
+    out.push(found);
   }
   return out;
 }
@@ -201,11 +216,34 @@ async function downloadFile(path, show) {
     return `${name}: download failed: ${e.message}`;
   }
 }
-// Text with its full paths as links: tapped, the file comes to this phone.
+const URL_RE = /https?:\/\/[A-Za-z0-9\-._~:/?#\[\]@!$&()+,;=%]+/g;
+// Web links in a text: [{start, end, url}], end not included. ASCII only, so Chinese right
+// after one is not part of it; trailing punctuation left out, and a ) only if it has its (.
+function findUrls(text) {
+  const out = [];
+  for (const m of text.matchAll(URL_RE)) {
+    let url = m[0], last;
+    do {
+      last = url;
+      url = url.replace(/[.,;:!?]+$/, '');
+      for (const [o, c] of ['()', '[]'])
+        if (url.endsWith(c) && url.split(o).length < url.split(c).length) url = url.slice(0, -1);
+    } while (url !== last);
+    out.push({start: m.index, end: m.index + url.length, url});
+  }
+  return out;
+}
+// Text with its full paths as links (tapped, the file comes to this phone) and its web
+// addresses as links (they open in this phone's browser).
 function linkPaths(text) {
   let html = '', at = 0;
-  for (const p of findPaths(text)) {
-    html += esc(text.slice(at, p.start)) + `<a class="dl" data-path="${esc(p.path)}">${esc(p.path)}</a>`;
+  const urls = findUrls(text);
+  const all = urls.map(u => ({...u, html: `<a class="web" href="${esc(u.url)}" target="_blank" rel="noopener">${esc(u.url)}</a>`}))
+    .concat(findPaths(text).filter(p => !urls.some(u => p.start < u.end && p.end > u.start)).map(p =>
+      ({...p, html: `<a class="dl" data-tries="${esc(JSON.stringify(p.tries))}">${esc(text.slice(p.start, p.end))}</a>`})))
+    .sort((a, b) => a.start - b.start);
+  for (const p of all) {
+    html += esc(text.slice(at, p.start)) + p.html;
     at = p.end;
   }
   return html + esc(text.slice(at));
@@ -293,9 +331,18 @@ let shownMsgs = [], pinsJson = '', pinsOpen = false;
 
 // Pinning: tap a message, then its 📌 Pin. The pins are the session's on the desktop too.
 $('chat').addEventListener('click', async e => {
+  if (e.target.closest('a.web')) return;     // the browser opens it
   const link = e.target.closest('a.dl');
   // What went wrong in a box: the line under the screen is cleared by the next refresh.
-  if (link) { const err = await downloadFile(link.dataset.path, say); if (err) alert(err); return; }
+  if (link) {
+    let err = null;
+    for (const path of JSON.parse(link.dataset.tries)) {
+      err = await downloadFile(path, say);
+      if (!err || !err.startsWith('no such file')) break;
+    }
+    if (err) alert(err);
+    return;
+  }
   const m = e.target.closest('.m[data-i]');
   if (!m || getSelection().toString()) return;
   if (e.target.classList.contains('pin-it')) {

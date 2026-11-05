@@ -60,8 +60,11 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
 FEEDBACK_URL = 'https://github.com/Qertile/Agent-Mission-Control/issues/new'   # ⚙ → Send feedback
+RUNS_WHEN_OPENED = ('.exe', '.bat', '.cmd', '.com', '.msi', '.ps1', '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh', '.scr',
+                    '.lnk', '.url', '.hta', '.reg', '.sh', '.desktop', '.appimage', '.run', '.py', '.pyw', '.jar', '.app')
 APP_ID = 'AgentMissionControl'             # Windows taskbar identity (main(), _set_relaunch)
 REPO_URL = 'https://github.com/Qertile/Agent-Mission-Control.git'   # ⚙ → Update from GitHub
+UPDATE_NOTE = os.path.join(HERE, 'update-note.json')   # what an Update brought, until the restart shows it
 HANDOFF_MESSAGES = 50                      # of a conversation, for the tool it moves to
 HANDOFF_DIR = os.path.join(LAUNCHER_DIR, 'handoff')
 PIN_MAX = 20_000                           # characters kept of one pinned message
@@ -784,26 +787,83 @@ class Api:
         return self.remote_access()
 
     def update(self):
-        """⚙ → Update: `git pull --ff-only` in this folder (a clone of the GitHub repo),
-        installing git first when there is none, and making a folder that is not a clone
-        (a downloaded zip, a copy) one first (_make_clone).
-        Returns {'text': what happened} or {'error': ...}; the new code runs after a restart."""
+        """⚙ → Update: this folder (a clone of the GitHub repo) moves forward to the newest
+        version tag on GitHub's master, never to commits after it, which may still have bugs.
+        A copy already past that tag stays where it is. Installs git first when there is none,
+        and makes a folder that is not a clone (a downloaded zip, a copy) one first (_make_clone).
+        Returns {'text': what happened} or {'error': ...}; the new code runs after a restart,
+        which shows what it brought (update_note)."""
         if not self._git():
             err = self._install_git()
             if err or not self._git():
                 return {'error': err or 'git is not installed'}
-        if not os.path.isdir(os.path.join(core.ROOT, '.git')):
-            return self._make_clone()
+        old = self._changelog()
+        r = self._move_to_tag() if os.path.isdir(os.path.join(core.ROOT, '.git')) else self._make_clone()
+        if r.get('restart'):
+            self._save_update_note(r['tag'], old)
+        return r
+
+    def _move_to_tag(self):
         try:
-            r = self._run_git('pull', '--ff-only')
+            r = self._fetch_version()
+            if r.get('error'):
+                return r
+            tag = r['tag']
+            if self._run_git('merge-base', '--is-ancestor', tag, 'HEAD').returncode == 0:
+                return {'text': 'Already up to date'}
+            r = self._run_git('merge', '-q', '--ff-only', tag)
         except subprocess.TimeoutExpired:
-            return {'error': 'git pull took over 2 minutes'}
+            return {'error': 'git took over 2 minutes'}
         out = (r.stdout + r.stderr).strip()
         if r.returncode:
-            return {'error': out.splitlines()[-1] if out else 'git pull failed'}
-        if 'Already up to date' in out:
-            return {'text': 'Already up to date'}
-        return {'text': 'Updated', 'restart': True}
+            return {'error': out.splitlines()[-1] if out else 'git merge failed'}
+        return {'text': f'Updated to {tag}', 'restart': True, 'tag': tag}
+
+    @staticmethod
+    def _changelog():
+        try:
+            with open(os.path.join(core.ROOT, 'CHANGELOG.md'), encoding='utf-8') as f:
+                return f.read()
+        except OSError:
+            return ''
+
+    @staticmethod
+    def _whats_new(old, new):
+        """The titles of the changelog `new`'s sections that `old` does not have, newest first,
+        without their dates. Only the newest when the two have none in common (no old
+        changelog: not the whole history)."""
+        known = set(re.findall(r'^## .*$', old, re.M))
+        titles = re.findall(r'^## .*$', new, re.M)
+        fresh = [t for t in titles[:next((i for i, t in enumerate(titles) if t in known), 1)]]
+        return [re.sub(r'^## (?:\d{4}-\d\d-\d\d – )?', '', t).strip() for t in fresh]
+
+    def _save_update_note(self, tag, old):
+        """Kept in a file for the restarted AMC. An update that worked is not undone by this failing."""
+        try:
+            with open(UPDATE_NOTE, 'w', encoding='utf-8') as f:
+                json.dump({'version': tag, 'changes': self._whats_new(old, self._changelog())}, f, ensure_ascii=False)
+        except OSError:
+            pass
+
+    def update_note(self):
+        """What the last Update brought, for the popup after its restart, or None. Once: the
+        file goes as it is read."""
+        note = load_json(UPDATE_NOTE)
+        try:
+            os.remove(UPDATE_NOTE)
+        except OSError:
+            pass
+        return note or None
+
+    def _fetch_version(self):
+        """Fetches GitHub's master and tags (--force: a tag can be moved after a fix).
+        Returns {'tag': the newest version tag on master} or {'error': ...}."""
+        r = self._run_git('fetch', '-q', '--tags', '--force', 'origin', 'master')
+        if r.returncode:
+            out = (r.stdout + r.stderr).strip()
+            return {'error': f"git fetch: {out.splitlines()[-1] if out else 'failed'}"}
+        tags = self._run_git('tag', '--merged', 'origin/master', '--list', 'v*', '--sort=-v:refname').stdout.split()
+        return {'tag': tags[0]} if tags else {'error': 'no version tag on GitHub'}
 
     def _run_git(self, *args):
         kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
@@ -811,18 +871,23 @@ class Api:
                               timeout=120, stdin=subprocess.DEVNULL, **kw)
 
     def _make_clone(self):
-        """Turns this folder into a clone of REPO_URL's master at its latest commit. Your own
-        files (agents.json, hud-config.json, tasks.md ... all in .gitignore) are left as they
+        """Turns this folder into a clone of REPO_URL at the newest version tag on master. Your
+        own files (agents.json, hud-config.json, tasks.md ... all in .gitignore) are left as they
         are; a file of the tools that differs from GitHub's is copied to .update-backup/<time>/
         first, then replaced by GitHub's."""
-        steps = [('init', '-q'), ('remote', 'add', 'origin', REPO_URL), ('fetch', '-q', 'origin', 'master'),
-                 ('reset', '-q', 'FETCH_HEAD')]
         try:
-            for step in steps:
+            for step in (('init', '-q'), ('remote', 'add', 'origin', REPO_URL)):
                 r = self._run_git(*step)
                 if r.returncode:
                     out = (r.stdout + r.stderr).strip()
                     return {'error': f"git {step[0]}: {out.splitlines()[-1] if out else 'failed'}"}
+            version = self._fetch_version()
+            if version.get('error'):
+                return version
+            r = self._run_git('reset', '-q', version['tag'])
+            if r.returncode:
+                out = (r.stdout + r.stderr).strip()
+                return {'error': f"git reset: {out.splitlines()[-1] if out else 'failed'}"}
             changed = [f for f in self._run_git('diff', '--name-only', '-z').stdout.split('\0') if f]
             backup = os.path.join(core.ROOT, '.update-backup', datetime.now().strftime('%Y%m%d-%H%M%S'))
             for f in changed:
@@ -838,7 +903,7 @@ class Api:
                     return {'error': f"git {step[0]}: {out.splitlines()[-1] if out else 'failed'}"}
         except subprocess.TimeoutExpired:
             return {'error': 'git took over 2 minutes'}
-        return {'text': 'Updated (this folder is now a git clone)', 'restart': True}
+        return {'text': f"Updated to {version['tag']} (this folder is now a git clone)", 'restart': True, 'tag': version['tag']}
 
     def restart(self):
         """⚙ → Update: closes this window the way its close button does (its tabs end, their
@@ -878,13 +943,40 @@ class Api:
                 os._exit(0)
         threading.Thread(target=close, daemon=True).start()
 
+    def open_path(self, tries):
+        """A path clicked in a terminal: the first of `tries` that exists, opened with its
+        default app. One that would run rather than open (a program, a script): its folder
+        instead, as a click on a path must not start anything. Returns None or what went wrong."""
+        for path in tries:
+            path = os.path.expanduser(str(path).strip())
+            if not os.path.isabs(path) or not os.path.exists(path):
+                continue
+            if os.path.isfile(path) and path.lower().endswith(RUNS_WHEN_OPENED):
+                path = os.path.dirname(path)
+            if WINDOWS:
+                os.startfile(path)
+            else:
+                subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', path],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            return None
+        return f'no such file: {tries[0]}' if tries else 'no path'
+
+    def open_url(self, url):
+        """A web link clicked in a terminal: the default browser. http(s) only, as the text of
+        a link comes from whatever ran in that terminal. Returns None or what went wrong."""
+        url = str(url).strip()
+        if not re.fullmatch(r'https?://\S+', url, re.I):
+            return f'not a web link: {url}'
+        if WINDOWS:
+            os.startfile(url)
+        else:
+            subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', url],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return None
+
     def send_feedback(self):
         """⚙ → Send feedback: a new GitHub issue in the default browser."""
-        if WINDOWS:
-            os.startfile(FEEDBACK_URL)
-        else:
-            subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', FEEDBACK_URL],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        self.open_url(FEEDBACK_URL)
 
     def fork_session(self, sid, name, replace=False):
         """Adds a session named `name` to agents.json that starts from session `sid`'s

@@ -54,6 +54,57 @@ All notable changes to this project are listed here, newest first.
 - Relax mode: more street lights in a town, a city and a metropolis, and more buildings in a
   metropolis's outskirts.
 - README: Relax mode (both languages).
+## 2026-11-05 – v3.5.18: a popup after Update lists what it brought
+
+### Added
+- After *Update*'s restart, a popup lists the titles of the `CHANGELOG.md` sections this
+  update brought, once: they are kept in `Session HUD/update-note.json` (not in git), which
+  goes as it is read. OK or Esc closes it. A copy on older code writes no list, so its update
+  to this version shows no popup; the next one does.
+- README: Update, Versions (both languages).
+- Versions: `v3.5.18`.
+- Tagged `v3.5.18`.
+
+## 2026-11-05 – v3.5.17: Update goes to tagged versions only
+
+### Changed
+- ⚙ → *Update* moves forward to the newest version tag on GitHub's `master` instead of
+  `git pull`, so commits after that tag, which may still have bugs, are not taken. A copy
+  already past the tag stays where it is. A folder that is not a clone becomes one at that
+  tag. A tag moved after a fix is followed. A copy still on older code pulls `master` one
+  last time when it updates to this version.
+- README: Update, Versions (both languages).
+- Versions: `v3.5.17`.
+- Tagged `v3.5.17`.
+
+## 2026-11-05 – web links in terminals open
+
+### Fixed
+- An `http://` or `https://` address in a terminal was plain text, so a click did nothing. It
+  is now a link, also when it goes on in the next row, and opens in the default browser of the
+  computer you are at: `Api.open_url` in the AMC window (http and https only), the browser's
+  own on the remote desktop, which cannot call `open_url`.
+- A link a program marks itself (OSC 8) did nothing in the AMC window. It opens the same way.
+- On the phone, an address in a *Chat* message is a link to the phone's browser. The *Term*
+  view has no links.
+- README: Phone page, Remote desktop (both languages).
+
+## 2026-11-05 – paths with spaces in links
+
+### Fixed
+- A full path with spaces and no backticks was cut at the first space, in terminals and in
+  the phone's *Chat*. The next words (at most 6) are now tried too, longest first, and the
+  link reaches the last word that looks like more of a path. A path the AI broke onto the
+  next line at a space is tried with the space as well.
+- README: Remote desktop (both languages).
+
+## 2026-11-05 – paths in terminals open their files
+
+### Added
+- A full path in a terminal of the AMC window is a link: a click opens the file with its
+  default app (`Api.open_path`). A program or a script opens its folder instead. The remote
+  desktop's click still downloads; it cannot call `open_path`.
+- README: Remote desktop (both languages).
 
 ## 2026-11-05 – Cross-check: follow-ups show what was asked
 

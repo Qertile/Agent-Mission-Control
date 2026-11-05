@@ -211,6 +211,17 @@
   #xc label { margin-right: 14px; }
   #xc .opt { display: block; margin-left: 90px; }
   #xc .hint { color: var(--note); font-style: italic; font-size: 11px; }
+  /* After an Update's restart: what it brought (showUpdateNote). */
+  #update-note { position: fixed; z-index: 30; left: 50%; top: 12%; transform: translateX(-50%); width: min(640px, 90vw);
+                 background: var(--bar); border: 1px solid var(--desc); padding: 12px 14px; display: none; font-size: 13px; color: var(--title); }
+  #update-note .t { color: var(--accent); font-weight: bold; margin-bottom: 8px; }
+  #update-note .list { max-height: 60vh; overflow-y: auto; }
+  #update-note .hint { color: var(--note); font-size: 11px; margin-top: 8px; }
+  #update-note ul { margin: 0; padding-left: 18px; }
+  #update-note li { margin-bottom: 4px; }
+  #update-note button { background: var(--bg); color: var(--accent); border: 1px solid var(--desc); font: inherit;
+                        padding: 3px 14px; cursor: pointer; margin-top: 10px; }
+  #update-note button:hover { border-color: var(--accent); }
   /* appearance: none, or WebKitGTK draws its own light box and ignores the colours */
   #xc select { -webkit-appearance: none; appearance: none; background-color: var(--bg); color: var(--title);
                border: 1px solid var(--desc); font: inherit; padding: 2px 22px 2px 6px; background-repeat: no-repeat;
@@ -307,6 +318,7 @@
   <div id="relax-scene"><canvas id="relax-canvas"></canvas><canvas id="relax-night"></canvas><canvas id="relax-lit"></canvas><canvas id="relax-labels"></canvas></div><div id="relax-msg"></div></div>
 <div class="menu" id="set-menu"></div>
 <div class="menu" id="send-menu"></div>
+<div id="update-note"><div class="t" id="update-note-t"></div><div class="list" id="update-note-list"></div><div class="hint">Details: CHANGELOG.md</div><button id="update-note-ok">OK</button></div>
 <div id="xc">
   <div class="t" id="xc-t">Cross-check</div>
   <div class="line" id="xc-name-line"><b>Name</b><input id="xc-name" spellcheck="false"></div>
@@ -634,10 +646,13 @@ const amc = {
       fontFamily: "'DejaVu Sans Mono', Consolas, monospace", fontSize: 14, cursorBlink: true,
       scrollback: 5000, allowProposedApi: true,
       theme: termTheme(),
+      // A link the program marked itself (OSC 8): xterm's own way, window.open, does nothing here.
+      linkHandler: {activate: (e, url) => amc.openUrl(url)},
     });
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
     term.open(el);
+    term.registerLinkProvider({provideLinks: (y, done) => done(pathLinks(term, y))});
     el.addEventListener('mousedown', () => { if (amc.tabs[id] && id !== amc.active) amc.select(id); }, true);
     term.onData(data => api().write(id, data));
     term.onResize(({cols, rows}) => api().resize(id, cols, rows));
@@ -1158,6 +1173,136 @@ $('terms').addEventListener('drop', e => {
   amc.droppedHere = paths.length > 0;     // then pywebview's copy of the paths is not typed again
   if (paths.length) amc.typePaths(paths);
 }, true);
+// ---------------------------------------------------------------- links in terminals
+// A full path in a terminal is a link. Here it opens the file with this computer's own app;
+// on the remote desktop (remote-desktop.js replaces openPath) the file downloads.
+// A web address is one too: it opens in the browser of the computer you are at.
+// Full paths in a terminal's text: C:\..., /a/b... (two
+// parts at least, so "/config" is not one), ~/...; one in backticks may have spaces.
+// [{start, end, path}], end not included, trailing punctuation left out.
+// (Here \u0001 marks where the AI broke a long line itself; see pathLinks.)
+const PATH_RE = /`((?:[A-Za-z]:\\|~\/|\/)[^`\n]+)`|(^|[\s\u0001(\[{"'“「：:,，])((?:[A-Za-z]:\\|~\/|\/[\w.@-]+\/)[^\s"'`<>|*?)\]}」，。；]+)/g;
+function findPaths(text) {
+  const out = [];
+  for (const m of text.matchAll(PATH_RE)) {
+    let path = m[1] || m[3], start = m.index + (m[1] ? 1 : m[2].length);
+    if (!m[1]) path = path.replace(/[.,;:!?]+$/, '');
+    if (path.length <= 2) continue;
+    const found = {start, end: start + path.length, path, tries: [path]};
+    // Not in backticks, a space may be part of the name ("Agent Mission Control/x.md"), and
+    // only the file system can tell: the next few words go on the list to try, longest
+    // first, and the link reaches as far as a word that looks like more of a path.
+    let at = found.end, sofar = path;
+    for (let n = 0; !m[1] && n < 6; n++) {
+      const w = text.slice(at).match(/^ ([^\s"'`<>|*?，。；」)\]}]+)/);
+      const word = w && w[1].replace(/[.,;:!?]+$/, '');
+      if (!word || /^(?:[A-Za-z]:\\|~\/|\/|https?:\/\/)/.test(word)) break;     // the next path or link starts here
+      sofar += ' ' + word;
+      at += 1 + word.length;
+      found.tries.unshift(sofar);
+      if (/[\\/]/.test(word) || /\.[A-Za-z]\w{0,7}$/.test(word)) { found.end = at; found.path = sofar; }
+    }
+    out.push(found);
+  }
+  return out;
+}
+const URL_RE = /https?:\/\/[A-Za-z0-9\-._~:/?#\[\]@!$&()+,;=%\u0001]+/g;
+// Web links in a text: [{start, end, url}], end not included. ASCII only, so Chinese right
+// after one is not part of it; trailing punctuation left out, and a ) only if it has its (.
+function findUrls(text) {
+  const out = [];
+  for (const m of text.matchAll(URL_RE)) {
+    let url = m[0], last;
+    do {
+      last = url;
+      url = url.replace(/[.,;:!?\u0001]+$/, '');
+      for (const [o, c] of ['()', '[]'])
+        if (url.endsWith(c) && url.split(o).length < url.split(c).length) url = url.slice(0, -1);
+    } while (url !== last);
+    // Past a line the AI broke (\u0001, see pathLinks): a plain word with more text after it is
+    // the next line's first word, not the rest of the link.
+    if (/^ +\S/.test(text.slice(m.index + m[0].length))) url = url.replace(/\u0001[\w-]*$/, '');
+    out.push({start: m.index, end: m.index + url.length, url});
+  }
+  return out;
+}
+// The links of terminal row y (1-based), paths and web links. One can go on past its row two ways: the
+// terminal wrapped it (the next row isWrapped), or the AI broke the line itself (Claude
+// Code does, at about the width): a row that ends at the right edge goes on in the next one,
+// after its indent, marked \u0001. Read cell by cell, so a path's place is right with wide
+// (Chinese) characters before it.
+const MARK = '\u0001';
+// (A row can be longer than the terminal is wide, after it was made narrower: cols counts.)
+function full(line, cols) {
+  for (let x = Math.min(line.length, cols) - 1; x >= 0; x--) {
+    const ch = line.getCell(x) && line.getCell(x).getChars();
+    if (ch && ch !== ' ') return x >= cols - 4;
+  }
+  return false;
+}
+function goesOn(buf, row, cols) {         // row + 1 continues row
+  const line = buf.getLine(row), next = buf.getLine(row + 1);
+  return !!(line && next && (next.isWrapped || full(line, cols)));
+}
+function pathLinks(term, y) {
+  const buf = term.buffer.active;
+  let top = y - 1, bottom = y - 1;
+  while (top > 0 && y - 1 - top < 10 && goesOn(buf, top - 1, term.cols)) top--;
+  while (bottom < buf.length - 1 && bottom - (y - 1) < 10 && goesOn(buf, bottom, term.cols)) bottom++;
+  let text = '';
+  const cell = [];                         // cell[i]: [x, y] of text[i]
+  for (let row = top; row <= bottom; row++) {
+    const line = buf.getLine(row);
+    let x = 0;
+    if (row > top && !line.isWrapped) {    // the AI's own line break: its indent left out
+      while (x < term.cols && (line.getCell(x).getChars() || ' ') === ' ') x++;
+      while (text.endsWith(' ')) { text = text.slice(0, -1); cell.pop(); }   // the empty cells at its end too
+      text += MARK;
+      cell.push(cell.length ? cell[cell.length - 1] : [1, row + 1]);
+    }
+    for (; x < Math.min(line.length, term.cols); x++) {
+      const c = line.getCell(x);
+      if (!c || c.getWidth() === 0) continue;
+      const ch = c.getChars() || ' ';
+      text += ch;
+      for (let k = 0; k < ch.length; k++) cell.push([x + 1, row + 1]);
+    }
+  }
+  const onRow = p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y;
+  const urls = findUrls(text);
+  const inUrl = p => urls.some(u => p.start < u.end && p.end > u.start);   // "?u=:/a/b" is no path
+  const range = p => ({start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}});
+  const webLinks = urls.filter(onRow).map(u => {
+    const url = u.url.split(MARK).join('');
+    return {text: url, range: range(u), activate: () => amc.openUrl(url)};
+  });
+  return webLinks.concat(findPaths(text).filter(p => onRow(p) && !inUrl(p)).map(p => {
+    // Each to try, longest first, also cut at each break the AI made (the text after one can
+    // be words, not the rest of the path), which is either inside a name or where a space was.
+    const tries = [];
+    for (const raw of p.tries) {
+      const parts = raw.split(MARK);
+      for (let n = parts.length; n > 0; n--) for (const glue of n > 1 ? ['', ' '] : ['']) {
+        const t = parts.slice(0, n).join(glue).replace(/[.,;:!?]+$/, '');
+        if (!tries.includes(t)) tries.push(t);
+      }
+    }
+    return {
+      text: p.path.split(MARK).join(''),
+      range: range(p),
+      activate: () => amc.openPath(tries),
+    };
+  }));
+}
+amc.openPath = async tries => {
+  const err = await api().open_path(tries);
+  if (err) alert(err);
+};
+amc.openUrl = async url => {
+  const err = await api().open_url(url);
+  if (err) alert(err);
+};
+
 amc.typePaths = paths => {
   const id = amc.fileTarget || amc.active;
   if (!id || !paths.length) return;
@@ -1969,6 +2114,23 @@ async function refresh() {
   relax.stamina(s.usage);
   relax.update(false, s.camp);
 }
+// Once, after the restart of an Update: what it brought.
+async function showUpdateNote() {
+  const note = await api().update_note();
+  if (!note) return;
+  $('update-note-t').textContent = `Updated to ${note.version}`;
+  $('update-note-list').innerHTML = `<ul>${note.changes.map(c => `<li>${esc(c)}</li>`).join('')}</ul>`;
+  const box = $('update-note'), ok = $('update-note-ok');
+  const close = () => {
+    box.style.display = 'none';
+    const t = amc.tabs[amc.active];
+    if (t) t.term.focus();
+  };
+  ok.onclick = close;
+  box.onkeydown = e => { if (e.key === 'Escape') close(); };
+  box.style.display = 'block';
+  ok.focus();
+}
 async function init() {
   await api().init();
   amc.pins = await api().pins();
@@ -1981,6 +2143,7 @@ async function init() {
   await refreshTasks();
   setInterval(refresh, 1000);
   setInterval(refreshTasks, 30000);
+  showUpdateNote().catch(() => {});
 }
 if (window.pywebview && window.pywebview.api && window.pywebview.api.init) init();
 else window.addEventListener('pywebviewready', init);

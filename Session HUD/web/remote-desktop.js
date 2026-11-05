@@ -27,9 +27,11 @@
     paste_clipboard_image: () => null,     // that clipboard is the other computer's
     // The issue is written in this computer's browser.
     send_feedback: () => { window.open('https://github.com/Qertile/Agent-Mission-Control/issues/new', '_blank'); },
+    // A web link in a terminal opens in this computer's browser too.
+    open_url: url => { window.open(url, '_blank', 'noopener'); return null; },
   };
   async function call(name, args) {
-    if (LOCAL[name]) return LOCAL[name]();
+    if (LOCAL[name]) return LOCAL[name](...args);
     const r = await post('/api/call/' + name, {args});
     if (r.error) throw new Error(r.error);
     if (name === 'init') hook();
@@ -51,8 +53,6 @@
     amc.addTab = function (id, name) {
       const r = add.apply(this, arguments);
       const t = amc.tabs[id];
-      if (t && t.term && t.term.registerLinkProvider)
-        t.term.registerLinkProvider({provideLinks: (y, done) => done(pathLinks(t.term, y))});
       if (t && t.fit) {
         t.propose = t.fit.proposeDimensions.bind(t.fit);
         t.fit.fit = () => { if (using) claim(); };
@@ -61,6 +61,16 @@
       return r;
     };
     addAttach();
+    // A path clicked in a terminal: the file comes here, not opened on that computer. Tried
+    // whole, then cut at each break the AI made (pathLinks in index.html).
+    amc.openPath = async tries => {
+      let err = null;
+      for (const path of tries) {
+        err = await downloadFile(path, progress);
+        if (!err || !err.startsWith('no such file')) break;
+      }
+      if (err) alert(err);
+    };
     poll();
   }
   // The terminals have one size, set by the window used last. A click or a key here gives
@@ -168,20 +178,6 @@
     tools.insertBefore(btn, tools.firstChild);
     document.body.appendChild(pick);
   }
-  // Full paths in a text, of this computer's files or the other's: C:\..., /a/b... (two
-  // parts at least, so "/config" is not one), ~/...; one in backticks may have spaces.
-  // [{start, end, path}], end not included, trailing punctuation left out.
-  // (Here \u0001 marks where the AI broke a long line itself; see pathLinks.)
-  const PATH_RE = /`((?:[A-Za-z]:\\|~\/|\/)[^`\n]+)`|(^|[\s\u0001(\[{"'“「：:,，])((?:[A-Za-z]:\\|~\/|\/[\w.@-]+\/)[^\s"'`<>|*?)\]}」，。；]+)/g;
-  function findPaths(text) {
-    const out = [];
-    for (const m of text.matchAll(PATH_RE)) {
-      let path = m[1] || m[3], start = m.index + (m[1] ? 1 : m[2].length);
-      if (!m[1]) path = path.replace(/[.,;:!?]+$/, '');
-      if (path.length > 2) out.push({start, end: start + path.length, path});
-    }
-    return out;
-  }
   // A file of the computer (GET /api/download, the token in its header) saved on this device,
   // with its progress shown by show(text). Returns null or what went wrong.
   async function downloadFile(path, show) {
@@ -214,67 +210,6 @@
       show('');
       return `${name}: download failed: ${e.message}`;
     }
-  }
-  // The links of terminal row y (1-based). A path can go on past its row two ways: the
-  // terminal wrapped it (the next row isWrapped), or the AI broke the line itself (Claude
-  // Code does, at about the width): a row that ends at the right edge goes on in the next one,
-  // after its indent, marked \u0001. Read cell by cell, so a path's place is right with wide
-  // (Chinese) characters before it.
-  const MARK = '\u0001';
-  // (A row can be longer than the terminal is wide, after it was made narrower: cols counts.)
-  function full(line, cols) {
-    for (let x = Math.min(line.length, cols) - 1; x >= 0; x--) {
-      const ch = line.getCell(x) && line.getCell(x).getChars();
-      if (ch && ch !== ' ') return x >= cols - 4;
-    }
-    return false;
-  }
-  function goesOn(buf, row, cols) {         // row + 1 continues row
-    const line = buf.getLine(row), next = buf.getLine(row + 1);
-    return !!(line && next && (next.isWrapped || full(line, cols)));
-  }
-  function pathLinks(term, y) {
-    const buf = term.buffer.active;
-    let top = y - 1, bottom = y - 1;
-    while (top > 0 && y - 1 - top < 10 && goesOn(buf, top - 1, term.cols)) top--;
-    while (bottom < buf.length - 1 && bottom - (y - 1) < 10 && goesOn(buf, bottom, term.cols)) bottom++;
-    let text = '';
-    const cell = [];                         // cell[i]: [x, y] of text[i]
-    for (let row = top; row <= bottom; row++) {
-      const line = buf.getLine(row);
-      let x = 0;
-      if (row > top && !line.isWrapped) {    // the AI's own line break: its indent left out
-        while (x < term.cols && (line.getCell(x).getChars() || ' ') === ' ') x++;
-        while (text.endsWith(' ')) { text = text.slice(0, -1); cell.pop(); }   // the empty cells at its end too
-        text += MARK;
-        cell.push(cell.length ? cell[cell.length - 1] : [1, row + 1]);
-      }
-      for (; x < Math.min(line.length, term.cols); x++) {
-        const c = line.getCell(x);
-        if (!c || c.getWidth() === 0) continue;
-        const ch = c.getChars() || ' ';
-        text += ch;
-        for (let k = 0; k < ch.length; k++) cell.push([x + 1, row + 1]);
-      }
-    }
-    return findPaths(text).filter(p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y).map(p => {
-      // Tried whole first; if there is no such file, up to each break the AI made, last first
-      // (the text after a break can be words, not the rest of the path).
-      const parts = p.path.split(MARK), tries = [];
-      for (let n = parts.length; n > 0; n--) tries.push(parts.slice(0, n).join('').replace(/[.,;:!?]+$/, ''));
-      return {
-        text: tries[0],
-        range: {start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}},
-        activate: async () => {
-          let err = null;
-          for (const path of tries) {
-            err = await downloadFile(path, progress);
-            if (!err || !err.startsWith('no such file')) break;
-          }
-          if (err) alert(err);
-        },
-      };
-    });
   }
   let since = -1;
   async function poll() {
