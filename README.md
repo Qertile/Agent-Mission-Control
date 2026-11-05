@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v3.5.16` (current) | `v3.5.15` plus getting files back (a full path in a phone *Chat* message or a remote desktop terminal is a download link, and *⬇* on the phone), and *📎* on the remote desktop. See `CHANGELOG.md`. |
+| `v3.5.17` (current) | `v3.5.16` plus the Relax mode camp growing from a tribe to a city, due dates and history on its board, day and night; Cross-check follow-ups showing what was asked; paths and web links in terminals opening on a click; and *Update* going only to tagged versions. See `CHANGELOG.md`. |
+| `v3.5.16` | `v3.5.15` plus getting files back (a full path in a phone *Chat* message or a remote desktop terminal is a download link, and *⬇* on the phone), and *📎* on the remote desktop. See `CHANGELOG.md`. |
 | `v3.5.15` | `v3.5.14` plus files dropped on the remote desktop's terminals uploaded to the computer running AMC (with progress), and uploads up to 500 MB (phone and remote desktop). See `CHANGELOG.md`. |
 | `v3.5.14` | `v3.5.13` plus the remote desktop's terminals taking the size of the window used last (a click or a key there). See `CHANGELOG.md`. |
 | `v3.5.13` | `v3.5.12` plus ⚙ → *Accounts ▸* as a second-layer list. See `CHANGELOG.md`. |
@@ -424,11 +425,12 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   account), then closes on Enter. Every tab of that tool uses the new account from then on.
   *Agy · Switch…* opens an `Agy login` tab running `agy` with `/logout` typed in; type
   `/login` there, then quit agy (Ctrl+C) to close it (agy cannot say which account it uses).
-- **Update:** `⚙` → *Update* asks first, then runs `git pull --ff-only` in this folder and
-  shows how it went. With a new version, Agent Mission Control restarts itself through its
+- **Update:** `⚙` → *Update* asks first, then moves this folder forward to the newest version
+  tag on GitHub's `master` and shows how it went. Commits after that tag are not taken, as
+  they may still have bugs, and a copy already past it stays where it is. With a new version, Agent Mission Control restarts itself through its
   launcher (every tab restarts, conversations go on); already up to date or an error, it
   does not.
-  A folder that is not a git clone (a downloaded zip, a copy) is made one first: your own
+  A folder that is not a git clone (a downloaded zip, a copy) is made one at that tag: your own
   files (`agents.json`, `hud-config.json`, `tasks.md` ...) stay as they are, and a file of
   the tools that differs from GitHub's is copied to `.update-backup/<time>/` before it is
   replaced. With no git, it installs it
@@ -498,7 +500,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v3.5.16`（目前） | `v3.5.15` 再加上：取回檔案（手機 *Chat* 訊息和遠端桌面終端機裡的完整路徑可以點擊下載，手機另有 *⬇*），以及遠端桌面的 *📎* 上傳按鈕。詳見 `CHANGELOG.md`。 |
+| `v3.5.17`（目前） | `v3.5.16` 再加上：Relax mode 的營地從部落長成城市、看板上的到期日和歷史紀錄、日夜變化；Cross-check 的追問會顯示問了什麼；終端機裡的路徑和網址點一下就能開；*Update* 只更新到有 tag 的版本。詳見 `CHANGELOG.md`。 |
+| `v3.5.16` | `v3.5.15` 再加上：取回檔案（手機 *Chat* 訊息和遠端桌面終端機裡的完整路徑可以點擊下載，手機另有 *⬇*），以及遠端桌面的 *📎* 上傳按鈕。詳見 `CHANGELOG.md`。 |
 | `v3.5.15` | `v3.5.14` 再加上：拖進遠端桌面終端機的檔案會上傳到跑 AMC 的電腦（顯示進度），上傳上限改為 500 MB（手機和遠端桌面）。詳見 `CHANGELOG.md`。 |
 | `v3.5.14` | `v3.5.13` 再加上：遠端桌面的終端機大小改由最後操作（點一下或按鍵）的視窗決定。詳見 `CHANGELOG.md`。 |
 | `v3.5.13` | `v3.5.12` 再加上：⚙ → *Accounts ▸* 移到第二層。詳見 `CHANGELOG.md`。 |
@@ -819,10 +822,11 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   登出和登入（瀏覽器會開登入頁），按 Enter 後關閉。之後這個工具的所有分頁都改用新帳號。
   *Agy · Switch…* 會開一個 `Agy login` 分頁執行 `agy` 並自動打 `/logout`；接著在裡面打
   `/login` 登入，再退出 agy（Ctrl+C）關閉分頁（agy 無法顯示目前登入的帳號）。
-- **更新**：`⚙` → *Update* 會先確認，再在這個資料夾執行 `git pull --ff-only` 並顯示結果。
+- **更新**：`⚙` → *Update* 會先確認，再把這個資料夾更新到 GitHub `master` 上最新的版本 tag，並顯示結果。
+  tag 之後的 commit 可能還有 bug，所以不會拿；已經超過這個 tag 的就留在原地。
   有新版本時，Agent Mission Control 會透過啟動程式自己重開（所有分頁跟著重開，對話會接續）；
   已是最新版或出錯時不會重開。不是 git clone 的資料夾
-  （下載的 zip、複製來的）會先變成 clone：你自己的檔案（`agents.json`、`hud-config.json`、
+  （下載的 zip、複製來的）會先變成停在這個 tag 的 clone：你自己的檔案（`agents.json`、`hud-config.json`、
   `tasks.md`…）不動，跟 GitHub 不同的程式檔會先備份到 `.update-backup/<時間>/` 再換掉。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
   官方的 zip，不需系統管理員）到 `%LOCALAPPDATA%\Programs\MinGit`，只給 Agent Mission Control
   用；Linux 會跳出系統密碼視窗執行 `apt-get install git`。

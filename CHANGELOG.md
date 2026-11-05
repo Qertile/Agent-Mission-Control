@@ -2,6 +2,18 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – v3.5.17: Update goes to tagged versions only
+
+### Changed
+- ⚙ → *Update* moves forward to the newest version tag on GitHub's `master` instead of
+  `git pull`, so commits after that tag, which may still have bugs, are not taken. A copy
+  already past the tag stays where it is. A folder that is not a clone becomes one at that
+  tag. A tag moved after a fix is followed. A copy still on older code pulls `master` one
+  last time when it updates to this version.
+- README: Update, Versions (both languages).
+- Versions: `v3.5.17`.
+- Tagged `v3.5.17`.
+
 ## 2026-11-05 – web links in terminals open
 
 ### Fixed
