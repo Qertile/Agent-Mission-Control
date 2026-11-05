@@ -310,7 +310,10 @@ const relax = (() => {
       // A patch of earth under each building.
       g.fillStyle = 'rgba(120, 90, 50, 0.35)';
       g.beginPath(); g.ellipse(cx, ground - 4, plot * 0.4, plot * 0.14, 0, 0, Math.PI * 2); g.fill();
+      const building = (b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting';
+      if (building) scaffold(g, cx, ground, level, false);
       if (pic) g.drawImage(pic, cx - s / 2, ground - s * ANCHOR, s, s);
+      if (building) scaffold(g, cx, ground, level, true);
       const top = ground - s * (ANCHOR - TOP[level]);
       labels.push(() => {
       // Status: busy a tool sign, waiting a "!" flag; ended is the wreck.
@@ -354,6 +357,33 @@ const relax = (() => {
     out.setTransform(dpr, 0, 0, dpr, 0, 0);
     for (const f of fires) flames(out, f);
     for (const p of [...people.values()].sort((a, c) => a.y - c.y)) person(out, p);
+  }
+
+  // A busy session's building is under construction: wooden scaffolding around it, up to
+  // under its roof. Drawn in two parts, the back before the building and the front after,
+  // on the pictures' camera: a square of half side 0.72 in world units on the ground.
+  function scaffold(g, cx, ground, level, front) {
+    const dx = plot * 0.332, dy = plot * 0.171, floor = plot * 0.279;
+    // A campfire or a tent has no walls to climb: only a low fence around the site.
+    const low = level === 'level0' || level === 'level1';
+    const tall = low ? floor * 0.4 : Math.max(floor, (ANCHOR - TOP[level]) * plot * 1.5 * 0.72);
+    const L = [cx - dx, ground], R = [cx + dx, ground], near = [cx, ground + dy], far = [cx, ground - dy];
+    const sides = front ? [[L, near], [near, R]] : [[far, L], [far, R]];
+    const line = (a, b, up1, up2, color, width) => {
+      g.strokeStyle = color; g.lineWidth = width;
+      g.beginPath(); g.moveTo(a[0], a[1] - up1); g.lineTo(b[0], b[1] - up2); g.stroke();
+    };
+    const thin = Math.max(1.5, plot * 0.012), thick = Math.max(2, plot * 0.024);
+    g.lineCap = 'round';
+    for (const c of front ? [L, near, R] : [far]) line(c, c, 0, low ? tall * 1.2 : tall, '#7a5a35', thin * 1.4);
+    for (const [a, b] of sides) {
+      if (low) { line(a, b, tall, tall, '#c49a62', thin); continue; }
+      for (let up = floor * 0.9; up <= tall + 1; up += floor) {
+        line(a, b, up, up, '#c49a62', thick);      // a walkway of planks
+        line(a, b, up + floor * 0.28, up + floor * 0.28, '#7a5a35', thin);   // its rail
+      }
+      if (front) line(a, b, 0, floor * 0.9, '#7a5a35', thin);   // a brace
+    }
   }
 
   // The roads: the shortest set of winding roads that joins every building and prop but
