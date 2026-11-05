@@ -101,7 +101,9 @@ const relax = (() => {
       let best = null, bestGap = -1;
       for (let t = 0; t < 80; t++) {
         const x = plot * 0.55 + rnd() * (w - plot * 1.1), y = plot * 0.95 + rnd() * (h - plot * 0.95 - 50);
-        const gap = Math.min(Infinity, ...placed.map(p => Math.hypot((p.x - x) / (plot * 1.05), (p.y - y) / (plot * 0.95))));
+        // Not on the river (the worst spot of all, but one to take when there is no other).
+        const gap = wet(x, y) ? -0.5
+          : Math.min(Infinity, ...placed.map(p => Math.hypot((p.x - x) / (plot * 1.05), (p.y - y) / (plot * 0.95))));
         if (gap > bestGap) { best = {x, y}; bestGap = gap; }
         if (gap >= 1) break;
       }
@@ -113,6 +115,98 @@ const relax = (() => {
 
   // Trees and rocks, the same ones every time (a fixed seed), not on a building's ground.
   // The more the camp has grown, the fewer are left; a city keeps a few planted ones.
+  // --- the land under it all, drawn into the background: drawn, not pictures, so no new art.
+  // A river from the mountains at the top to the bottom edge, the same for the same size.
+  let river = [];
+  function riverPath(w, h) {
+    const line = [], n = 60;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      line.push({x: w * (0.8 - 0.48 * t + 0.07 * Math.sin(t * 7.5) + 0.025 * Math.sin(t * 19)), y: -10 + (h + 20) * t});
+    }
+    return line;
+  }
+  const riverWidth = () => plot * 0.3;
+  function riverGap(x, y) { return Math.min(...river.map(q => Math.hypot(q.x - x, q.y - y))); }
+  // A building with its person and its name keeps off the river: its ground point, sides,
+  // and name below.
+  function wet(x, y) {
+    const clear = riverWidth() / 2 + plot * 0.14;
+    return [[0, 0], [-0.45, 0], [0.45, 0], [0, 0.42], [-0.3, 0.42], [0.3, 0.42]]
+      .some(([dx, dy]) => riverGap(x + dx * plot, y + dy * plot) < clear);
+  }
+  function strokeLine(g, line, color, width, cap = 'round') {
+    g.strokeStyle = color; g.lineWidth = width; g.lineCap = cap; g.lineJoin = 'round';
+    g.beginPath();
+    line.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
+    g.stroke();
+  }
+  // A low-poly mountain, lit from the left like the kits' pictures: a lit and a shaded face,
+  // and snow on the tall ones.
+  function mountain(g, x, base, wide, high) {
+    const peak = {x: x - wide * 0.06, y: base - high};
+    const face = (pts, color) => { g.fillStyle = color; g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.fill(); };
+    const left = [x - wide / 2, base], right = [x + wide / 2, base], foot = [x + wide * 0.08, base + wide * 0.05];
+    face([left, [peak.x, peak.y], foot], '#93a08f');
+    face([right, [peak.x, peak.y], foot], '#6a7a6b');
+    if (high > plot * 0.5) {
+      const k = 0.3, at = ([a, b]) => [peak.x + (a - peak.x) * k, peak.y + (b - peak.y) * k];
+      const l = at(left), f = at(foot), r = at(right);
+      face([l, [peak.x, peak.y], f, [(l[0] + f[0]) / 2, (l[1] + f[1]) / 2 - high * 0.03]], '#f4f6f4');
+      face([r, [peak.x, peak.y], f, [(r[0] + f[0]) / 2, (r[1] + f[1]) / 2 - high * 0.03]], '#c9d2d6');
+    }
+  }
+  function land(g, w, h, e) {
+    const rnd = rng(11);
+    // Soft patches, so the grass is not one flat colour.
+    for (let i = 0, n = Math.round(w * h / 45000); i < n; i++) {
+      g.fillStyle = rnd() < 0.5 ? 'rgba(255, 255, 190, 0.05)' : 'rgba(0, 50, 20, 0.06)';
+      g.beginPath();
+      g.ellipse(rnd() * w, rnd() * h, plot * (0.5 + rnd()), plot * (0.2 + rnd() * 0.3), 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    // The mountains along the top, back to front, the river's source among them.
+    const source = river[0].x, peaks = [];
+    for (let x = -plot * 0.2; x < w + plot * 0.4; x += plot * (0.55 + rnd() * 0.4)) {
+      const near = 1 - Math.min(1, Math.abs(x - source) / (w * 0.42));   // highest around the source
+      peaks.push([x, plot * (0.3 + near * 0.42 + rnd() * 0.12)]);
+    }
+    for (const [x, high] of peaks) mountain(g, x, plot * 0.76 + rnd() * plot * 0.08, high * 1.7, high);
+    // Their feet melt into the grass.
+    const foot = g.createLinearGradient(0, plot * 0.62, 0, plot * 0.98);
+    foot.addColorStop(0, 'rgba(79, 125, 68, 0)');
+    foot.addColorStop(1, e[2]);
+    g.fillStyle = foot;
+    g.fillRect(0, plot * 0.62, w, plot * 0.36);
+    // Banks, then water with a paler line down its middle; a city's river runs between stone.
+    strokeLine(g, river, e[1] === 'City' ? '#8b887d' : '#c7b27a', riverWidth() + plot * 0.07);
+    strokeLine(g, river, '#3c86bd', riverWidth());
+    strokeLine(g, river, 'rgba(160, 215, 240, 0.35)', riverWidth() * 0.34);
+  }
+  // A bridge wherever a road crosses the river: the road's part over the water, drawn again
+  // as planks (a town's and a city's: stone) with a rail on each side.
+  function bridges(g, edges, e) {
+    const half = riverWidth() / 2 + plot * 0.05, wood = e[1] === 'Village';
+    for (const {line} of edges) {
+      let part = [];
+      const flush = () => {
+        if (part.length > 1) {
+          const width = plot * e[4];
+          strokeLine(g, part, wood ? '#4f3a22' : '#55534d', width + plot * 0.05, 'butt');
+          strokeLine(g, part, wood ? '#a57c4c' : '#b9b5a8', width, 'butt');
+          g.setLineDash([2, 6]);
+          strokeLine(g, part, 'rgba(0, 0, 0, 0.28)', width, 'butt');
+          g.setLineDash([]);
+        }
+        part = [];
+      };
+      for (const q of line) {
+        if (riverGap(q.x, q.y) < half) part.push(q);
+        else flush();
+      }
+      flush();
+    }
+  }
   function scenery(g, w, h, placed, plot, e, edges) {
     const rnd = rng(7);
     // Points along the roads, so nothing grows on one.
@@ -124,6 +218,7 @@ const relax = (() => {
       const x = rnd() * w, y = 30 + rnd() * (h - 30), s = 70 + rnd() * 30, keep = rnd() < e[6];
       const pic = img[e[1] === 'City' ? (kind === 'rock' ? 'rock' : 'tree-city') : kind];
       if (road.some(p => Math.hypot(p.x - x, p.y - y) < clear)) continue;
+      if (riverGap(x, y) < riverWidth() / 2 + s * 0.2 || y < plot * 0.45) continue;   // nor in the river or on the mountains
       if (!keep || !pic || placed.some(p => Math.abs(p.x - x) < plot * 0.6 && y > p.y - plot * 0.9 && y < p.y + plot * 0.45 + s * 0.8)) continue;
       g.drawImage(pic, x - s / 2, y - s * ANCHOR, s, s);
     }
@@ -136,6 +231,7 @@ const relax = (() => {
     // Room for every building with space around it; past that, the camp scrolls.
     const h = Math.max(box.clientHeight - $('relax-top').offsetHeight, Math.ceil(list.length / cols) * plot * 1.6 + 60);
     const e = era(camp);
+    river = riverPath(w, h);
     const placed = place(list, w, h, plot, e[7].map((kind, i) => ({id: '~' + kind + i, kind, prop: true})));
     dpr = window.devicePixelRatio || 1;
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
@@ -146,7 +242,10 @@ const relax = (() => {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.fillStyle = e[2];
     g.fillRect(0, 0, w, h);
-    const {lamps, edges} = roads(g, placed, e);
+    land(g, w, h, e);
+    const {lamps: allLamps, edges} = roads(g, placed, e);
+    const lamps = allLamps.filter(l => riverGap(l.x, l.y) > riverWidth() / 2 + plot * 0.04);
+    bridges(g, edges, e);
     const trees = e[1] === 'City' ? streetTrees(edges, placed, lamps, e, w, h) : [];
     scenery(g, w, h, placed, plot, e, edges);
     if (e[1] === 'City') wall(g, w, h);
@@ -280,6 +379,7 @@ const relax = (() => {
       const near = (list, gap) => list.some(q => Math.hypot(q.x - x, q.y - y) < gap);
       if (x < plot * 0.3 || x > w - plot * 0.3 || y < plot * 0.7 || y > h - 30) continue;
       if (near(road, plot * (e[4] / 2 + 0.12)) || near(lamps, plot * 0.25) || near(trees, plot * 0.9)) continue;
+      if (riverGap(x, y) < riverWidth() / 2 + plot * 0.1) continue;
       if (placed.some(q => Math.abs(q.x - x) < plot * 0.5 && y > q.y - plot * 0.25 && y < q.y + plot * 0.8)) continue;
       trees.push({x, y, b: {prop: true, kind: 'tree-city', scale: 0.6}});
     }
