@@ -54,6 +54,37 @@ const block = (m, color, wide = 1.5, up = 1) => [['ck', m, 0, 0, 0, 0, [wide, wi
 const at = (parts, dx, dz) => parts.map(([kit, m, x, y, z, ...rest]) => [kit, m, x + dx, y, z + dz, ...rest]);
 const paint = (parts, roof, wall) => parts.map(([kit, m, x, y, z, turn, scale = 1, tx = 0, tz = 0]) =>
   [kit, m, x, y, z, turn, scale, tx, tz, m.startsWith('roof') ? roof : m.startsWith('wall') ? wall : null]);
+// The Medieval Village kit's models are 2 wide and 3 high to a storey: at this scale, about the
+// town kit's. med() scales [model, x, y, z, turn, colour] to pictures' parts.
+const MS = 0.33;
+const med = list => list.map(([m, x, y, z, t = 0, color = null]) => ['med', m, x * MS, y * MS, z * MS, t, MS, 0, 0, color]);
+const DOORS = {Door_Round: ['Door_1_Round', -0.53], Door_Flat: ['Door_1_Flat', -0.53], Window_Wide_Round: ['Window_Wide_Round1', 0], Window_Wide_Flat: ['Window_Wide_Flat1', 0], Window_Thin_Round: ['Window_Thin_Round1', 0]};
+const FB = (...walls) => ['UnevenBrick', walls];
+const FP = (...walls) => ['Plaster', walls];
+const SLATE2 = 'MI_RoundTiles|#7c8aa0', BROWN = 'MI_RoundTiles|#9a7650', MOSS = 'MI_RoundTiles|#7f9460', DUSK = 'MI_RoundTiles|#8d6a8c', THATCH2 = 'MI_RoundTiles|#d7b56a', TEAL = 'MI_RoundTiles|#35b5a5';
+// A building of storeys [[kind, walls], ...], walls round it from `front` on +z; windows and doors in
+// their holes, a dark room behind them, the roof by `shape` (gable, tower, wide); dx moves it along x.
+function city(w, d, storeys, tile, extra = [], shape = 'gable', dx = 0) {
+  const o = [], top = storeys.length * 3;
+  const wall = (kind, name, x, y, z, t) => {
+    const full = name === 'Straight' || name === 'WoodGrid' ? `Wall_${kind}_${name === 'WoodGrid' && kind !== 'Plaster' ? 'Straight' : name}` : `Wall_${kind}_${name}`;
+    o.push([full, x, y, z, t]);
+    const fill = DOORS[name];
+    if (!fill) return;
+    const a = t * Math.PI / 180;
+    o.push([fill[0], x + fill[1] * Math.cos(a), y, z - fill[1] * Math.sin(a), t]);
+  };
+  storeys.forEach(([kind, front], f) => {
+    const y = f * 3;
+    for (let i = 0; i < w; i++) { const x = (i - (w - 1) / 2) * 2; wall(kind, front[i % front.length], x, y, d, 0); wall(kind, 'Straight', x, y, -d, 180); }
+    for (let i = 0; i < d; i++) { const z = (i - (d - 1) / 2) * 2; wall(kind, front[(i + 1) % front.length], w, y, z, 90); wall(kind, 'Straight', -w, y, z, 270); }
+    for (const [a, b] of [[w, d], [w, -d], [-w, d], [-w, -d]]) o.push(['Corner_Exterior_Wood', a, y, b, 0]);
+  });
+  const length = d * 2, tiles = w === 3 ? 'Roof_RoundTiles_6x6' : `Roof_RoundTiles_4x${length}`;
+  if (shape === 'tower') o.push(['Roof_Tower_RoundTiles', 0, top, 0, 0, tile]);
+  else { o.push([tiles, 0, top, 0, 0, tile]); const g = w === 3 ? 'Roof_Front_Brick6' : 'Roof_Front_Brick4'; o.push([g, 0, top, d, 0], [g, 0, top, -d, 180]); }
+  return [['box', '#2b2119', dx, top / 2 * MS, 0, 0, [w * 2 * MS * 0.96, top * MS, d * 2 * MS * 0.96]], ...at(med([...o, ...extra]), dx, 0)];
+}
 const PICTURES = {
   'level0': [['sk', 'campfire-pit', 0, 0, 0, 0, SK], ['sk', 'resource-wood', 0.45, 0, -0.25, 40, SK]],
   'level1': [['sk', 'tent', 0, 0, -0.15, 0, SK], ['sk', 'tent-canvas', 0, 0, -0.15, 0, SK], ['sk', 'campfire-pit', 0.55, 0, 0.6, 0, SK]],
@@ -124,6 +155,39 @@ const PICTURES = {
                     ['ftk', 'stall-bench', -0.85, 0, -0.85, 45], ['ck', 'detail-parasol-a', -1.3, 0, -0.35, 0, 1.2], ['ck', 'detail-parasol-b', -0.35, 0, -1.3, 0, 1.2]],
   'metro-ruin': [['ftk', 'wall-broken', -0.3, 0, -0.3, 180], ['ftk', 'wall-broken', -0.3, 0, -0.3, 90], ['car', 'cone', 0.7, 0, 0.7, 0, 0.55], ['car', 'cone', -0.5, 0, 0.8, 0, 0.55], ['car', 'cone', 0.8, 0, -0.4, 0, 0.55],
                  ['car', 'debris-plate-a', 0.1, 0, 0.5, 40, 0.8], ['car', 'debris-tire', 0.4, 0, 0.2, 0, 0.8], ['sk', 'resource-stone', -0.2, 0, 0.55, 0, 1.6], ['car', 'tractor-shovel', 0.5, 0, -0.5, 200, 0.32]],
+  // A city (Quaternius' Medieval Village MegaKit). Nobody's buildings have roofs of their own
+  // colours; only a session's are the kit's red, or teal.
+  'med-a': city(2, 2, [FB('Door_Round', 'Window_Wide_Round'), FP('Window_Wide_Round', 'WoodGrid', 'Window_Thin_Round')], SLATE2),
+  'med-b': city(2, 2, [FP('Door_Flat', 'Window_Wide_Flat'), FP('Window_Wide_Flat', 'WoodGrid'), FP('Window_Thin_Round', 'Window_Wide_Flat')], BROWN, [['Prop_Vine1', 2, 3, 2.05, 0]]),
+  'med-c': city(2, 3, [FB('Door_Round', 'Window_Wide_Round'), FP('Window_Wide_Round', 'WoodGrid', 'Window_Wide_Flat')], MOSS, [['Prop_Chimney', -1, 6.8, -1.5, 0]]),
+  'med-d': city(2, 2, [FP('Door_Round', 'Window_Thin_Round'), FP('Window_Wide_Round', 'Window_Thin_Round')], DUSK, [['Balcony_Simple_Straight', -1, 2.95, 1.1, 0], ['Balcony_Simple_Straight', 1, 2.95, 1.1, 0]]),
+  'med-e': city(2, 3, [FB('Door_Flat', 'Window_Wide_Flat'), FP('Window_Wide_Flat', 'WoodGrid'), FP('Window_Wide_Round', 'Window_Thin_Round')], SLATE2),
+  'med-f': city(2, 2, [FB('Door_Flat', 'Window_Thin_Round'), FB('Window_Wide_Flat', 'Window_Thin_Round')], BROWN, [['Prop_Chimney', 1, 6.8, -1, 0]]),
+  'med-g': city(2, 3, [FP('Door_Round', 'Window_Wide_Round'), FP('Window_Thin_Round', 'WoodGrid')], MOSS),
+  'med-h': city(2, 2, [FB('Door_Round', 'Window_Wide_Flat')], DUSK, [['Prop_Chimney', 1, 3.8, -1, 0]]),
+  'med-shop': [...city(2, 2, [FB('Door_Flat', 'Window_Wide_Flat'), FP('Window_Wide_Flat', 'WoodGrid')], DUSK), ['ftk', 'stall-red', 0.55, 0, 0.85, 0], ['ftk', 'stall-stool', -0.25, 0, 1.0, 0]],
+  'med-tavern': [...city(2, 3, [FB('Door_Round', 'Window_Wide_Round'), FP('Window_Wide_Round', 'WoodGrid')], BROWN, [['Balcony_Simple_Straight', 1, 2.95, 1.1, 0], ['Prop_Chimney', -1, 6.8, -1.5, 0]]),
+                 ['sk', 'barrel', 0.9, 0, 1.1, 0, SK], ['sk', 'barrel', 0.5, 0, 1.15, 30, SK], ['ftk', 'stall-bench', -0.45, 0, 0.95, 0], ['ftk', 'banner-red', 1.05, 0, 0.55, 0]],
+  'med-smithy': [...city(2, 2, [FB('Door_Flat', 'Window_Thin_Round')], SLATE2, [['Prop_Chimney', -1, 3.8, -1, 0], ['Prop_Chimney', 1, 3.8, 1, 0]]),
+                 ['sk', 'workbench-anvil', 0.55, 0, 1.0, 40, SK], ['sk', 'barrel-open', 1.0, 0, 0.55, 0, SK], ['sk', 'resource-stone', -0.4, 0, 1.05, 0, SK]],
+  'med-warehouse': [...city(2, 3, [FB('Door_Flat', 'Window_Thin_Round'), FB('Window_Thin_Round', 'Straight')], BROWN),
+                    ...med([['Prop_Wagon', 2.6, 0, 3.2, 180], ['Prop_Crate', 1, 0, 4, 20], ['Prop_Crate', -0.4, 0, 4.1, 0], ['Prop_Crate', 0.4, 1.05, 4, 40]])],
+  'med-sawmill': [...med([['Roof_RoundTiles_4x4', 0, 3, 0, 0, MOSS], ['Corner_Exterior_Wood', -2, 0, 2, 0], ['Corner_Exterior_Wood', 2, 0, 2, 0], ['Corner_Exterior_Wood', -2, 0, -2, 0], ['Corner_Exterior_Wood', 2, 0, -2, 0]]),
+                  ['sk', 'workbench', 0, 0, 0, 0, SK], ['sk', 'resource-planks', 0.5, 0, 0.95, 20, SK], ['sk', 'tree-log', -0.5, 0, 0.95, 90, 1], ['sk', 'resource-wood', 1, 0, 0.3, 0, SK]],
+  'med-church': [...city(2, 2, [FB('Door_Round', 'Window_Thin_Round'), FB('Window_Thin_Round', 'Straight'), FB('Window_Wide_Round', 'Window_Thin_Round'), FB('Window_Thin_Round', 'Window_Thin_Round')], SLATE2, [], 'tower', -1.2),
+                 ...city(2, 3, [FP('Window_Thin_Round', 'Window_Thin_Round'), FP('Window_Wide_Round', 'Window_Thin_Round')], SLATE2, [], 'gable', 0.25)],
+  'med-townhall': [...city(3, 2, [FB('Door_Round', 'Window_Wide_Round', 'Window_Wide_Round'), FP('Window_Wide_Round', 'WoodGrid'), FP('Window_Wide_Flat', 'Window_Wide_Flat')], DUSK, [], 'wide'),
+                   ['ftk', 'banner-red', 0.6, 0, 0.85, 0], ['ftk', 'banner-green', -0.1, 0, 0.85, 0]],
+  'med-barn': [...city(2, 3, [FB('Door_Flat', 'Straight')], THATCH2)],
+  'med-farm': [...at(city(2, 3, [FB('Door_Flat', 'Straight')], THATCH2), -0.55, -0.7),
+               ...[0, 0.3, 0.6, 0.9, 1.2].flatMap(a => [0, 0.3, 0.6, 0.9].map(b => ['sk', 'grass-large', -0.05 + a - b * 0.1, 0, -0.75 + b + 0.5, a * 90, SK * 0.8, 0, 0, '#fff4b0'])),
+               ['ftk', 'fence', 0.75, 0, 0.6, 0, 0.9], ['ftk', 'fence', -0.2, 0, 0.6, 0, 0.9], ...med([['Prop_Wagon', -2.2, 0, 2.6, 200]])],
+  'med-windmill': [...city(2, 2, [FB('Door_Flat', 'Window_Thin_Round'), FB('Window_Thin_Round', 'Straight'), FB('Window_Thin_Round', 'Straight')], BROWN, [], 'tower'), ['ftk', 'windmill', 0.78, 2.1, 0, 0, 0.9]],
+  'med-watermill': [...city(2, 2, [FB('Door_Round', 'Window_Wide_Flat'), FP('Window_Wide_Flat', 'WoodGrid')], MOSS), ['ftk', 'watermill', 1.0, 0.72, 0, 0, 0.8]],
+  // A session's building in a city, by its level.
+  'med-level2': city(2, 2, [FP('Door_Round', 'Window_Thin_Round')], TEAL),
+  'med-level3': [...city(2, 2, [FB('Door_Round', 'Window_Wide_Round'), FP('Window_Wide_Round', 'Window_Thin_Round')], null), ['ftk', 'banner-red', 0.85, 0, 0.8, 0]],
+  'med-level4': [...city(2, 2, [FB('Door_Round', 'Window_Thin_Round'), FB('Window_Thin_Round', 'Straight'), FB('Window_Wide_Round', 'Window_Thin_Round')], null, [], 'tower'), ['ftk', 'banner-red', 0.85, 0, 0.8, 0], ['ftk', 'banner-red', -0.4, 0, 1.0, 0]],
   // A city's other buildings, each with what it does out in front. The windmill's and the
   // watermill's wheels turn about x with their centre at the model's origin: raised off the
   // ground, on the +x wall.
@@ -174,7 +238,13 @@ async function gltf(kit, name) {
   }
   return cache[key];
 }
-async function model(kit, name) { return (await gltf(kit, name)).scene.clone(); }
+const medLoader = new GLTFLoader();
+async function model(kit, name) {
+  if (kit !== 'med') return (await gltf(kit, name)).scene.clone();
+  const key = 'med/' + name;
+  if (!cache[key]) cache[key] = await medLoader.loadAsync(await api().medieval() + name + '.gltf');
+  return cache[key].scene.clone();
+}
 // The kit's colour map, each pixel's brightness kept and most of its colour replaced.
 const painted = {};
 async function skin(map, color) {
@@ -257,19 +327,27 @@ async function picture(name, parts) {
   sun.position.set(4, 8, 3);
   scene.add(sun);
   for (const [kit, m, x, y, z, turn, scale = 1, tiltX = 0, tiltZ = 0, color = null] of parts) {
+    if (kit === 'box') {          // a dark room behind a building's windows
+      const b = new THREE.Mesh(new THREE.BoxGeometry(...scale), new THREE.MeshBasicMaterial({color: m}));
+      b.position.set(x, y, z);
+      scene.add(b);
+      continue;
+    }
     const o = await model(kit, m);
     if (color) {
+      // 'material|colour' paints only that material of a model.
+      const [mat, paint] = color.includes('|') ? color.split('|') : [null, color];
       const meshes = [];
-      o.traverse(q => { if (q.isMesh) meshes.push(q); });
-      for (const q of meshes) { q.material = q.material.clone(); q.material.map = await skin(q.material.map, color); }
+      o.traverse(q => { if (q.isMesh && (!mat || q.material.name === mat)) meshes.push(q); });
+      for (const q of meshes) { q.material = q.material.clone(); q.material.map = await skin(q.material.map, paint); }
     }
     o.position.set(x, y, z);
     o.rotation.set(tiltX * Math.PI / 180, turn * Math.PI / 180, tiltZ * Math.PI / 180, 'YXZ');
     if (Array.isArray(scale)) o.scale.set(...scale); else o.scale.setScalar(scale);
     scene.add(o);
   }
-  // A metropolis is tall: its pictures show twice the world, at twice the pixels.
-  const k = name.startsWith('metro-') ? 2 : 1;
+  // A metropolis and a city are tall: their pictures show twice the world, at twice the pixels.
+  const k = /^(metro|med)-/.test(name) ? 2 : 1;
   const view = camera.clone();
   view.left *= k; view.right *= k; view.top *= k; view.bottom *= k;
   view.updateProjectionMatrix();

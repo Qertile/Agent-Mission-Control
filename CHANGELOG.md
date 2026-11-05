@@ -2,6 +2,25 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – Relax mode: six eras, a camp that fills up, old and new side by side
+
+### Added
+- Relax mode: a sixth era, the megacity, at 10000 messages. The eras now start at 0, 100, 500,
+  1000, 5000 and 10000.
+- Relax mode: a city's buildings are from Quaternius' Medieval Village MegaKit, with windows,
+  doors and a room behind them added, and roofs recoloured so that only sessions' are red or
+  teal. The earlier Kenney buildings are a village's and a town's.
+
+### Changed
+- Relax mode: buildings that are nobody's come one by one: one per 100 messages up to 1000,
+  then one per 500. At each new era a random half of those standing go up one style.
+  A session's building always takes on the new era's.
+- Relax mode: a session's building is drawn at 1.2 times its size, the others at 0.8.
+- Relax mode: everyone keeps their place from era to era. Existing sessions move once, with
+  this change.
+- Relax mode: pictures only a city and a metropolis use load when the camp reaches them.
+- README: Relax mode (both languages).
+
 ## 2026-11-05 – Relax mode: a fixed map, a real city, and a metropolis
 
 ### Added

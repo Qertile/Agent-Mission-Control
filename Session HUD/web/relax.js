@@ -11,14 +11,17 @@
 // The pictures are PNGs made once by tools/relax_art.py from Kenney's kits (CC0).
 const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
+  const PICS_METRO = ['metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
   const PICS_BASE = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people',
                 'fence', 'signpost', 'lantern', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
                 'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
-                'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall',
-                'metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
+                'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall'];
+  // Pictures only one era uses are loaded when it comes, and never before.
   const LIT_NAMES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'tower-a', 'tower-b', 'tower-c', 'tower-d', 'tower-e', 'mall', 'cafe', 'level1', 'level2', 'level3', 'level4'].map(k => `metro-${k}-lit`);
-  const PICS = [...PICS_BASE, 'metro-meeting', ...LIT_NAMES];
+  const PACKS = {
+    Metropolis: [...PICS_METRO, 'metro-meeting', ...LIT_NAMES],
+    City: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'shop', 'tavern', 'smithy', 'warehouse', 'sawmill', 'church', 'townhall', 'farm', 'windmill', 'watermill', 'level2', 'level3', 'level4'].map(k => `med-${k}`)};
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
   // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
@@ -31,6 +34,7 @@ const relax = (() => {
                'house-a': 0.52, 'house-b': 0.36, 'house-c': 0.3, 'house-d': 0.49, 'house-e': 0.07, 'house-f': 0.2, 'house-g': 0.3, 'house-h': 0.25,
                'house-i': 0.52, 'house-j': 0.36, 'house-k': 0.49, 'house-l': 0.2, 'house-m': 0.25, 'house-n': 0.07,
                shop: 0.28, tavern: 0.14, smithy: 0.38, sawmill: 0.43, warehouse: 0.23, farm: 0.33, windmill: 0.26, watermill: 0.3, church: 0.05, townhall: 0.18,
+               'med-a': 0.545, 'med-b': 0.453, 'med-c': 0.531, 'med-church': 0.256, 'med-d': 0.545, 'med-e': 0.439, 'med-f': 0.545, 'med-farm': 0.576, 'med-g': 0.533, 'med-h': 0.637, 'med-level2': 0.637, 'med-level3': 0.545, 'med-level4': 0.395, 'med-sawmill': 0.637, 'med-shop': 0.545, 'med-smithy': 0.629, 'med-tavern': 0.531, 'med-townhall': 0.4, 'med-warehouse': 0.533, 'med-watermill': 0.545, 'med-windmill': 0.395,
                'metro-a': 0.656, 'metro-b': 0.717, 'metro-c': 0.734, 'metro-cafe': 0.68, 'metro-d': 0.6, 'metro-e': 0.656, 'metro-f': 0.652, 'metro-g': 0.523, 'metro-h': 0.59, 'metro-level0': 0.742, 'metro-level1': 0.693, 'metro-level2': 0.607, 'metro-level3': 0.58, 'metro-level4': 0.338, 'metro-lot': 0.777, 'metro-mall': 0.627, 'metro-park': 0.57, 'metro-ruin': 0.723, 'metro-meeting': 0.762, 'metro-tower-a': 0.387, 'metro-tower-b': 0.094, 'metro-tower-c': 0.119, 'metro-tower-d': 0.098, 'metro-tower-e': 0.074};  // its top
   const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff', disc: '#ffc400'};
   const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0'};
@@ -44,16 +48,18 @@ const relax = (() => {
   // [from, name, ground, road colour (null: none), road width (building widths), edge,
   //  the trees kept, the props it puts in the free spots, how much its roads bend]
   const ERAS = [
+    [10000, 'Megacity', '#587a50', '#54575c', 0.17, '#a3a29a', 0.2, ['fountain'], 0.1],
     [5000, 'Metropolis', '#587a50', '#54575c', 0.17, '#a3a29a', 0.2, ['fountain'], 0.1],
-    [1500, 'City', '#4f7d44', '#8f8b80', 0.17, '#5f5c57', 0.1, ['fountain', 'stall', 'stall-green', 'stall'], 0.1],
+    [1000, 'City', '#4f7d44', '#8f8b80', 0.17, '#5f5c57', 0.1, ['fountain', 'stall', 'stall-green', 'stall'], 0.1],
     [500, 'Town', '#4f7d44', '#a8a497', 0.13, '#7d796e', 0.5, ['fountain', 'stall', 'stall-green', 'fence'], 0.16],
     [100, 'Village', '#4b7a46', '#8a6d45', 0.1, null, 0.8, ['signpost', 'fence', 'fence'], 0.24],
     [0, 'Tribe', '#4b7a46', null, 0, null, 1, [], 0]];
-  const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏯', Metropolis: '🏙'};
-  const urban = e => e[1] === 'City' || e[1] === 'Metropolis';
-  const metro = e => e[1] === 'Metropolis';
-  const shown = (e, level) => (metro(e) && /^(level|ruin|meeting)/.test(level) ? 'metro-' + level : level);   // a session's picture
-  const scaleOf = kind => (kind && kind.startsWith('metro-') ? 2 : 1);     // a metro picture shows twice the world
+  const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏯', Metropolis: '🏙', Megacity: '🌃'};
+  const metro = e => e[1] === 'Metropolis' || e[1] === 'Megacity';
+  const urban = e => e[1] === 'City' || metro(e);
+  const shown = (e, level) => (metro(e) && /^(level|ruin|meeting)/.test(level) ? 'metro-' + level     // a session's picture
+    : e[1] === 'City' && /^level[234]/.test(level) ? 'med-' + level : level);
+  const scaleOf = kind => (/^(metro|med)-/.test(kind || '') ? 2 : 1);     // these pictures show twice the world
   const BOARD_MAX = 8;                     // tasks on the board; the rest are counted
   const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
   const MAP_W = 1800, MAP_H = 1350, ZOOM_MAX = 1.6;   // the map, in world units; a building's plot is 150
@@ -70,15 +76,14 @@ const relax = (() => {
 
   // The pictures load once, the first time Relax mode is shown.
   let loading = null;
-  function load() {
-    loading = loading || Promise.all(PICS.map(n => new Promise(ok => {
-      const im = new Image();
-      im.onload = () => { img[n] = im; ok(); };
-      im.onerror = ok;
-      im.src = 'relax/' + n + '.png';
-    })));
-    return loading;
-  }
+  const fetchAll = names => Promise.all(names.map(n => new Promise(ok => {
+    const im = new Image();
+    im.onload = () => { img[n] = im; ok(); };
+    im.onerror = ok;
+    im.src = 'relax/' + n + '.png';
+  })));
+  function load() { return (loading = loading || fetchAll(PICS_BASE)); }
+  const packs = {};
 
   // One building per session: the running ones (the session list's rows), then the
   // agents.json sessions that are not running (ended). A discussion is a fire instead.
@@ -111,12 +116,14 @@ const relax = (() => {
   // its footprint, person and name; its body is the room for a tower, the tallest it can
   // grow to, kept from the start so that growing never moves anything. Bodies may overlap
   // (one tower stands behind another), but none may cover a base.
-  let bodyTop = 1.17;                      // how high a session's building can grow, in plots
-  function room(x, y, prop) {
+  // A session's building is drawn bigger than the kits make it, everyone else's smaller, so
+  // that the sessions stand out. Its room is the tallest it can grow to, in any era.
+  const SESSION_SIZE = 1.2, DECOR_SIZE = 0.8;
+  function room(x, y, prop, high = 2) {
     const p = plot;
     if (prop) return {base: [x - p * 0.45, y - p * 0.55, x + p * 0.45, y + p * 0.22]};
-    return {base: [x - p * 0.5, y - p * 0.35, x + p * 0.5, y + p * 0.2 + 38],
-            body: [x - p * 0.3, y - p * bodyTop, x + p * 0.3, y - p * 0.35]};
+    return {base: [x - p * 0.57, y - p * 0.39, x + p * 0.57, y + p * 0.2 + 38],
+            body: [x - p * 0.36, y - p * high, x + p * 0.36, y - p * 0.39]};
   }
   const hits = (a, b) => a && b && a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
   const clash = (a, b) => hits(a.base, b.base) || hits(a.body, b.base) || hits(b.body, a.base);
@@ -131,26 +138,6 @@ const relax = (() => {
     return [...list].sort((a, c) => rank(a) - rank(c));
   }
   const LOW = plot * 1.25, HIGH = MAP_H - plot * 0.2 - 44, LEFT = plot * 0.55, RIGHT = MAP_W - plot * 0.55;
-  function place(list, props) {
-    const placed = [], midX = (LEFT + RIGHT) / 2, midY = (LOW + HIGH) / 2;
-    // The era's props come after the sessions, so they never move a building; one with
-    // no clear spot left is left out.
-    for (const b of [...sorted(list), ...props]) {
-      const rnd = rng(hash(b.id));
-      let best = null, bestScore = Infinity;
-      for (let t = 0; t < 200; t++) {
-        const x = midX + (rnd() + rnd() - 1) * (RIGHT - LEFT) / 2, y = midY + (rnd() + rnd() - 1) * (HIGH - LOW) / 2;
-        const r = room(x, y, b.prop), n = placed.reduce((sum, q) => sum + (clash(r, q.r) ? 1 : 0), 0);
-        if (n >= bestScore) continue;
-        const score = n + (wet(x, y) ? 100 : 0);
-        if (score < bestScore) { best = {x, y, r}; bestScore = score; }
-        if (!score) break;
-      }
-      if (bestScore && b.prop) continue;
-      placed.push({...best, b});
-    }
-    return placed;
-  }
   // A city's roads, grown like a real town's: a plaza, avenues from it out through the wall,
   // a road along each river bank, then side streets branching off those. A street stops where
   // it meets another (a T), at the river, or after a while, so no two blocks are the same.
@@ -266,14 +253,48 @@ const relax = (() => {
     }
     return lots;
   }
-  // [picture, how far from the plaza it may stand (0 to 1; further out above that), how many,
-  //  beside the river]. LANDMARKS are placed before the sessions, so they always stand where they do.
-  const LANDMARKS = [['townhall', 0, 0.45, 1], ['church', 0.2, 0.7, 1]];
-  const WORKS = [['shop', 0, 0.65, 3], ['tavern', 0, 0.65, 2], ['smithy', 0.3, 0.85, 1], ['watermill', 0, 2, 1, true],
-                 ['sawmill', 0.4, 0.95, 1], ['warehouse', 0.3, 0.95, 2], ['windmill', 0.7, 2, 2], ['farm', 0.75, 2, 3]];
-  const METRO_LANDMARKS = [['metro-tower-c', 0, 0.3, 1], ['metro-tower-e', 0, 0.4, 1], ['metro-mall', 0, 0.45, 1]];
-  const METRO_WORKS = [['metro-tower-b', 0, 0.5, 2], ['metro-cafe', 0, 0.6, 3], ['metro-park', 0.15, 0.9, 3], ['metro-lot', 0.3, 1, 2], ['metro-tower-a', 0.2, 0.6, 2]];
-  const BIG = new Set(['farm', 'windmill', 'sawmill', 'warehouse', 'tavern', 'townhall', 'church', 'metro-mall', 'metro-park', 'metro-lot', 'metro-f', 'metro-g', 'metro-h']);
+  // The camp's buildings that are nobody's: one for each 100 messages up to 1000, then one for
+  // each 500. Each has a place of its own for good, and a picture for each era from the village
+  // on. [how near the plaza, how far from it (0 to 1; further out above that), by the river,
+  //  its pictures: village, town, city, metropolis, megacity]
+  const DECOR = [
+    [0, 2, 0, ['house-a', 'house-d', 'med-h', 'metro-a', 'metro-tower-d']],
+    [0.6, 2, 0, ['farm', 'farm', 'med-farm', 'metro-park', 'metro-park']],
+    [0, 2, 0, ['house-i', 'shop', 'med-shop', 'metro-cafe', 'metro-g']],
+    [0, 2, 0, ['house-k', 'tavern', 'med-tavern', 'metro-mall', 'metro-tower-a']],
+    [0.6, 2, 0, ['windmill', 'windmill', 'med-windmill', 'metro-lot', 'metro-lot']],
+    [0, 2, 0, ['house-a', 'smithy', 'med-smithy', 'metro-c', 'metro-f']],
+    [0, 2, 0, ['house-d', 'warehouse', 'med-warehouse', 'metro-f', 'metro-h']],
+    [0, 2, 0, ['house-g', 'house-f', 'med-b', 'metro-d', 'metro-tower-b']],
+    [0, 0.8, 0, ['house-i', 'church', 'med-church', 'metro-tower-e', 'metro-tower-e']],
+    [0, 0.6, 0, ['house-j', 'townhall', 'med-townhall', 'metro-tower-c', 'metro-tower-c']],
+    [0, 2, 1, ['watermill', 'watermill', 'med-watermill', 'metro-h', 'metro-g']],
+    [0, 2, 0, ['house-h', 'house-e', 'med-e', 'metro-g', 'metro-tower-b']],
+    [0.6, 2, 0, ['farm', 'farm', 'med-farm', 'metro-park', 'metro-lot']],
+    [0, 2, 0, ['house-b', 'house-l', 'med-c', 'metro-e', 'metro-tower-a']]];
+  const BIG = new Set(['med-farm', 'med-windmill', 'med-sawmill', 'med-warehouse', 'med-tavern', 'med-townhall', 'med-church', 'med-c', 'med-e', 'med-g',
+                       'metro-mall', 'metro-park', 'metro-lot', 'metro-f', 'metro-g', 'metro-h', 'farm', 'house-f', 'house-l']);
+  const BORN = ERAS.map(([n]) => n).reverse();         // where each era starts: 0, 100, 500, ...
+  const eraIndex = turns => BORN.filter(n => turns >= n).length - 1;
+  function decorCount(turns) { return turns < 1000 ? Math.floor(turns / 100) : 10 + Math.floor((turns - 1000) / 500); }
+  function decorBorn(k) { return k < 9 ? (k + 1) * 100 : 1000 + (k - 9) * 500; }
+  // Which era's picture each building shows. At every new era half of those already standing,
+  // picked by a fixed shuffle, go up one style and the rest stay as they are; one built since
+  // has the style of its time. So a city keeps some old houses, and a metropolis more.
+  function decorStyles(turns) {
+    const n = decorCount(turns), now = eraIndex(turns), style = Array(n).fill(1);
+    for (let i = 1; i <= now; i++) {
+      const old = [];
+      for (let k = 0; k < n; k++) {
+        const born = decorBorn(k);
+        if (born < BORN[i]) old.push(k);
+        else if (i === BORN.length - 1 || born < BORN[i + 1]) style[k] = i;
+      }
+      old.sort((a, c) => hash(`${a}@${i}`) - hash(`${c}@${i}`));
+      for (const k of old.slice(0, Math.floor(old.length / 2))) style[k] = Math.min(style[k] + 1, i);
+    }
+    return style;
+  }
   // Where a wider building can stand: the same, further from the road.
   function wideSpots({all, pts}) {
     const rx = plot * 0.5, ry = plot * 0.3, list = [];
@@ -289,6 +310,17 @@ const relax = (() => {
     }
     return list.sort((p, q) => p.far - q.far).map((l, n) => ({...l, n: `w${n}`}));
   }
+  // Any ground clear of roads and the river, for when so many sessions are open that the spots
+  // along the roads have run out.
+  function openGround({pts}) {
+    const rx = plot * 0.5, ry = plot * 0.3, list = [];
+    for (let y = LOW; y <= HIGH; y += 36) for (let x = LEFT; x <= RIGHT; x += 44) {
+      if (wet(x, y) || Math.hypot((x - PLAZA.x) / 190, (y - PLAZA.y) / 115) < 1) continue;
+      if (pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1)) continue;
+      list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100, n: `o${list.length}`});
+    }
+    return list.sort((p, q) => p.far - q.far);
+  }
   let cityMemo = null;
   function cityPlan() {
     if (cityMemo) return cityMemo;
@@ -297,76 +329,72 @@ const relax = (() => {
     for (const r of grown.all)
       for (let i = 0; i < r.line.length - 1; i += 15)
         edges.push({line: r.line.slice(i, i + 16), width: r.width});
-    return (cityMemo = {edges, lots: streetLots(grown), wide: wideSpots(grown), bridge: grown.pts.filter(p => riverGap(p.x, p.y) < riverWidth() / 2 + plot * 0.05)});
+    return (cityMemo = {edges, lots: streetLots(grown), wide: wideSpots(grown), open: openGround(grown), bridge: grown.pts.filter(p => riverGap(p.x, p.y) < riverWidth() / 2 + plot * 0.05)});
   }
-  // The fountain stands on the plaza. The sessions and props each take the first free lot,
-  // nearest the plaza give or take a little (from the id).
-  function city(list, props, e) {
-    const {lots, wide} = cityPlan(), placed = [], used = new Set(), houses = [], m = metro(e);
-    bodyTop = m ? 1.85 : 1.17;
+  // Everyone's place, the same in every era, so that the camp grows round what is there and
+  // only what stands there changes. The fountain is on the plaza; each session takes the first
+  // free wide spot, nearest the plaza give or take a little (from the id); then the era's props;
+  // then the buildings, each with room for the tallest it may become.
+  function arrange(list, props, turns) {
+    const {lots, wide, open} = cityPlan(), placed = [], used = new Set(), houses = [];
     for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: {base: [PLAZA.x - plot * 0.45, PLAZA.y - plot * 0.25, PLAZA.x + plot * 0.45, PLAZA.y + plot * 0.16]}, b});
-    let named = placed;
-    // A building on a spot, if it hides no session's door or person, and fits among the others.
-    const build = (l, kind) => {
-      const tall = (ANCHOR - TOP[kind]) * plot * 1.5 * scaleOf(kind), half = plot * (BIG.has(kind) ? 0.46 : 0.36);
-      const r = {base: [l.x - half, l.y - plot * 0.24, l.x + half, l.y + plot * 0.16],
-                 body: [l.x - plot * 0.3, l.y - tall, l.x + plot * 0.3, l.y - plot * 0.24]};
-      if (named.some(q => clash(r, q.r)) || houses.some(h => hits(r.base, h))) return false;
-      houses.push(r.base);
-      used.add(l);
-      placed.push({x: l.x, y: l.y, r, b: {id: `~h${l.n}`, prop: true, house: true, kind}});
-      return true;
-    };
-    const works = list2 => {
-      for (const [kind, near, far, count, bank] of list2) {
-        let left = count;
-        for (const l of BIG.has(kind) ? wide : lots) {
-          if (!left) break;
-          if (used.has(l) || l.far < near || l.far > far) continue;
-          if (bank && riverGap(l.x + plot * 0.6, l.y) > plot * 0.35) continue;
-          if (build(l, kind)) left--;
-        }
+    for (const b of sorted(list)) {
+      const rnd = rng(hash(b.id));
+      const order = wide.map(l => [l.far + rnd() * 0.25, l]).sort((a, c) => a[0] - c[0]);
+      // Room for a skyscraper if there is any; with many sessions, for less: a later tower
+      // may then stand in front of a neighbour, which is better than on top of it.
+      let found = null, high = 2;
+      for (const h of [2, 1.4, 0.7]) {
+        // A skyscraper's room must also be on the map.
+        found = order.find(([, l]) => !used.has(l) && l.y - plot * h >= 0 && !placed.some(q => clash(room(l.x, l.y, false, h), q.r)));
+        if (found) { high = h; break; }
       }
-    };
-    works(m ? METRO_LANDMARKS : LANDMARKS);
-    for (const b of [...sorted(list), ...props.filter(q => q.kind !== 'fountain')]) {
+      // Then any open ground; at the last, ground where only another's tower is in front of it.
+      const free = found ? null : open.find(l => !used.has(l) && !placed.some(q => clash(room(l.x, l.y, false, 0.7), q.r)))
+        || open.find(l => !used.has(l) && !placed.some(q => hits(room(l.x, l.y).base, q.r.base)));
+      if (free) high = 0.7;
+      const l = free || (found || order[0])[1];
+      used.add(l);
+      placed.push({x: l.x, y: l.y, r: room(l.x, l.y, false, high), b});
+    }
+    for (const b of props.filter(q => q.kind !== 'fountain')) {
       const rnd = rng(hash(b.id));
       const order = lots.map(l => [l.far + rnd() * 0.25, l]).sort((a, c) => a[0] - c[0]);
-      const free = ([, l]) => !used.has(l) && !placed.some(q => clash(room(l.x, l.y, b.prop), q.r));
-      // With the lots full, a session may take a spot set back from the road.
-      const found = order.find(free) || (!b.prop && wide.map(l => [0, l]).find(free));
-      if (!found) { if (!b.prop) placed.push({...order[0][1], r: room(order[0][1].x, order[0][1].y), b}); continue; }
-      const l = found[1];
+      const found = order.find(([, l]) => !used.has(l) && !placed.some(q => clash(room(l.x, l.y, true), q.r)));
+      if (!found) continue;
+      used.add(found[1]);
+      placed.push({x: found[1].x, y: found[1].y, r: room(found[1].x, found[1].y, true), b});
+    }
+    const named = [...placed], styles = decorStyles(turns);
+    styles.forEach((style, k) => {
+      const [near, far, bank, pics] = DECOR[k % DECOR.length];
+      const big = pics.some(p => BIG.has(p)), half = plot * (big ? 0.46 : 0.36) * DECOR_SIZE;
+      const tall = Math.max(...pics.map(p => (ANCHOR - TOP[p]) * plot * 1.5 * scaleOf(p))) * DECOR_SIZE;
+      const fits = l => {
+        if (used.has(l) || wet(l.x, l.y) || l.y - tall < 8) return null;   // nor above the map
+        const r = {base: [l.x - half, l.y - plot * 0.2, l.x + half, l.y + plot * 0.14],
+                   body: [l.x - plot * 0.25, l.y - tall, l.x + plot * 0.25, l.y - plot * 0.2]};
+        return named.some(q => clash(r, q.r)) || houses.some(h => hits(r.base, h)) ? null : r;
+      };
+      const spots = big ? wide : lots;
+      const wanted = l => l.far >= near && l.far <= far && (!bank || riverGap(l.x + plot * 0.6, l.y) < plot * 0.35);
+      const l = spots.find(q => wanted(q) && fits(q)) || spots.find(fits);
+      if (!l) return;
+      const r = fits(l);
       used.add(l);
-      placed.push({x: l.x, y: l.y, r: room(l.x, l.y, b.prop), b});
-    }
-    // Then the rest of what makes it a city, each where it belongs; then houses fill most of
-    // the lots left, the fewer the further out.
-    named = [...placed];
-    works(m ? METRO_WORKS : WORKS);
-    for (const l of lots) {
-      if (used.has(l)) continue;
-      if (rng(hash(`lot${l.n}`))() > (m ? 1.8 - l.far : 1.45 - l.far * 1.2)) continue;
-      // Tall in the middle, low further out; a lower one where a tall one would not fit.
-      const choice = m ? (l.far < 0.45 ? ['metro-tower-a', 'metro-g', 'metro-tower-d', 'metro-h', 'metro-d'] : l.far < 0.8 ? ['metro-d', 'metro-g', 'metro-f', 'metro-a', 'metro-e', 'metro-h'] : ['metro-b', 'metro-c', 'metro-a', 'metro-e', 'metro-f'])
-        : l.far < 0.45 ? ['house-e', 'house-l', 'house-f', 'house-n', 'house-c', 'house-m', 'house-g', 'house-h']
-        : l.far < 0.8 ? ['house-b', 'house-m', 'house-c', 'house-j', 'house-f', 'house-k', 'house-a', 'house-l', 'house-d', 'house-i', 'house-g', 'house-h']
-        : ['house-a', 'house-k', 'house-d', 'house-i', 'house-b', 'house-j', 'house-g'];
-      const first = choice[l.n % choice.length];     // in turn, so neighbours differ
-      const lower = m ? ['metro-e', 'metro-a', 'metro-b', 'metro-c'] : l.n % 2 ? ['house-g', 'house-j', 'house-d', 'house-i'] : ['house-j', 'house-b', 'house-k', 'house-a'];
-      [first, ...lower].some(kind => build(l, kind));
-    }
+      houses.push(r.base);
+      placed.push({x: l.x, y: l.y, r, b: {id: `~d${k}`, prop: true, house: true, kind: pics[style - 1]}});
+    });
     return placed;
   }
   // Everyone's place, worked out again only when who is there or the era changes.
   let layoutKey = '', layoutMemo = [];
   function layout(list, e) {
     const props = e[7].map((kind, i) => ({id: '~' + kind + i, kind, prop: true}));
-    const key = JSON.stringify([list.map(b => b.id), e[1], amc.order]);
+    const key = JSON.stringify([list.map(b => b.id), e[1], decorCount(camp), amc.order]);
     if (key !== layoutKey) {
       layoutKey = key;
-      if (!metro(e)) bodyTop = 1.17;
-      layoutMemo = urban(e) ? city(list, props, e) : place(list, props);
+      layoutMemo = arrange(list, props, camp);
     }
     const byId = new Map(list.map(b => [b.id, b]));
     return layoutMemo.map(p => (byId.has(p.b.id) ? {...p, b: byId.get(p.b.id)} : p));
@@ -491,6 +519,14 @@ const relax = (() => {
 
   function draw(list) {
     const w = MAP_W, h = MAP_H, e = era(camp);
+    // The pictures of this era and those before it first, then draw: a city's old houses
+    // stand on in a metropolis.
+    const need = [eraIndex(camp) >= 3 ? 'City' : '', eraIndex(camp) >= 4 ? 'Metropolis' : ''].filter(Boolean);
+    const missing = need.filter(n => packs[n] !== true);
+    if (missing.length) {
+      for (const n of missing) packs[n] = packs[n] || fetchAll(PACKS[n]).then(() => { packs[n] = true; update(true); });
+      return;
+    }
     if (!river.length) river = riverPath(w, h);
     const placed = layout(list, e);
     res = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -515,17 +551,17 @@ const relax = (() => {
     // Back to front, so a building lower on the screen stands in front of one above it.
     for (const {x: cx, y: ground, b} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
       if (b.prop) {
-        const s = plot * 1.5 * (b.scale || scaleOf(b.kind));
+        const s = plot * 1.5 * (b.scale || scaleOf(b.kind)) * (b.house ? DECOR_SIZE : 1);
         if (img[b.kind]) g.drawImage(img[b.kind], cx - s / 2, ground - s * ANCHOR, s, s);
         if (metro(e)) litList.push([b.kind, cx, ground, s]);
         continue;
       }
       // An ended session is a wreck.
       const level = shown(e, b.status === 'ended' ? 'ruin' : b.level);
-      const s = plot * 1.5 * scaleOf(level), pic = img[level];
+      const big = b.kind === 'meeting' ? 1 : SESSION_SIZE, s = plot * 1.5 * scaleOf(level) * big, pic = img[level];
       // A patch of earth under each building.
       g.fillStyle = 'rgba(120, 90, 50, 0.35)';
-      g.beginPath(); g.ellipse(cx, ground - 4, plot * 0.4, plot * 0.14, 0, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse(cx, ground - 4, plot * 0.4 * big, plot * 0.14 * big, 0, 0, Math.PI * 2); g.fill();
       const building = (b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting';
       if (building) scaffold(g, cx, ground, level, false);
       if (pic) g.drawImage(pic, cx - s / 2, ground - s * ANCHOR, s, s);
@@ -533,7 +569,7 @@ const relax = (() => {
       if (metro(e)) litList.push([level, cx, ground, s]);
       const top = ground - s * (ANCHOR - TOP[level]);
       tags.push({cx, ground, top, b});
-      spots.unshift({x: cx - plot / 2, y: ground - plot * 0.9, w: plot, h: plot * 1.1 + 34, b});
+      spots.unshift({x: cx - plot / 2 * big, y: ground - plot * 0.9 * big, w: plot * big, h: plot * 1.1 * big + 34, b});
     }
     // What is lit at night: each building with someone in it, the fires, the lanterns.
     lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
@@ -649,10 +685,10 @@ const relax = (() => {
   // under its roof. Drawn in two parts, the back before the building and the front after,
   // on the pictures' camera: a square of half side 0.72 in world units on the ground.
   function scaffold(g, cx, ground, level, front) {
-    const dx = plot * 0.332, dy = plot * 0.171, floor = plot * 0.279;
+    const k = SESSION_SIZE, dx = plot * 0.332 * k, dy = plot * 0.171 * k, floor = plot * 0.279 * k;
     // A campfire or a tent has no walls to climb: only a low fence around the site.
     const low = /level[01]$/.test(level);
-    const tall = low ? floor * 0.4 : Math.max(floor, (ANCHOR - TOP[level]) * plot * 1.5 * scaleOf(level) * 0.72);
+    const tall = low ? floor * 0.4 : Math.max(floor, (ANCHOR - TOP[level]) * plot * 1.5 * scaleOf(level) * k * 0.72);
     const L = [cx - dx, ground], R = [cx + dx, ground], near = [cx, ground + dy], far = [cx, ground - dy];
     const sides = front ? [[L, near], [near, R]] : [[far, L], [far, R]];
     const line = (a, b, up1, up2, color, width) => {
@@ -832,7 +868,7 @@ const relax = (() => {
   // Each spot: [dx, dy] in building widths from the ground point, and the way it faces.
   const SPOTS = {work: [0.34, 0.02, 1], wave: [0.05, 0.16, 0], seat: [-0.3, 0.12, 0]};
   function want(status) { return status === 'busy' || status === 'running' ? 'work' : status === 'waiting' ? 'wave' : 'rest'; }
-  function spot(name) { const [dx, dy, dir] = SPOTS[name]; return {dx: dx * plot, dy: dy * plot, dir}; }
+  function spot(name) { const [dx, dy, dir] = SPOTS[name]; return {dx: dx * plot * SESSION_SIZE, dy: dy * plot * SESSION_SIZE, dir}; }
   function stroll() { const t = target({x: 0, y: 0}); return {dx: t.x, dy: t.y, dir: null}; }
 
   // A participant's place by the fire: SEATS in relax_art.html's world units, moved a
@@ -874,7 +910,7 @@ const relax = (() => {
   }
   // Somewhere in front of the building, a little to either side.
   function target(home) {
-    return {x: home.x + (Math.random() - 0.5) * plot * 0.9, y: home.y + (Math.random() * 0.2 - 0.04) * plot};
+    return {x: home.x + (Math.random() - 0.5) * plot * 0.9 * SESSION_SIZE, y: home.y + (Math.random() * 0.2 - 0.04) * plot * SESSION_SIZE};
   }
   function size() { return plot * 0.75; }
   function box(p) {
