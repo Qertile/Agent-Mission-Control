@@ -48,6 +48,9 @@ const SHAPE = {
          ['ftk', 'roof-gable', 0.3, 2, 0, 0], ['ftk', 'roof-gable', -0.7, 2, 0, 0]],
   narrow: [...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall', 'wall-window-shutters'), ['ftk', 'roof-high-gable', 0, 2, 0, 90]],
 };
+const CKA = 'ck:variation-a', CKB = 'ck:variation-b';
+// One city-kit building, wider by `wide` and taller again by `up` than the kit's.
+const block = (m, color, wide = 1.5, up = 1) => [['ck', m, 0, 0, 0, 0, [wide, wide * up, wide], 0, 0, color]];
 const at = (parts, dx, dz) => parts.map(([kit, m, x, y, z, ...rest]) => [kit, m, x + dx, y, z + dz, ...rest]);
 const paint = (parts, roof, wall) => parts.map(([kit, m, x, y, z, turn, scale = 1, tx = 0, tz = 0]) =>
   [kit, m, x, y, z, turn, scale, tx, tz, m.startsWith('roof') ? roof : m.startsWith('wall') ? wall : null]);
@@ -96,6 +99,28 @@ const PICTURES = {
   'house-l': paint(SHAPE.wide, KIT, KIT),
   'house-m': paint(SHAPE.narrow, KIT, KIT),
   'house-n': paint(SHAPE.tall, KIT, KIT),
+  // A metropolis (Kenney's City Kit Commercial and Car Kit). Its towers are stretched taller
+  // than the kit made them, and come in the kit's three colour maps.
+  'metro-a': block('building-a', null), 'metro-b': block('building-c', CKA), 'metro-c': block('building-e', CKB), 'metro-d': block('building-g', null),
+  'metro-e': block('building-h', CKA), 'metro-f': block('building-k', CKB, 1.3), 'metro-g': block('building-l', null), 'metro-h': block('building-n', CKA, 1.2),
+  'metro-tower-a': block('building-skyscraper-a', null, 1.1, 1.5), 'metro-tower-b': block('building-skyscraper-b', CKA, 1.1, 1.6),
+  'metro-tower-c': block('building-skyscraper-c', CKB, 1.15, 1.7), 'metro-tower-d': block('building-skyscraper-d', null, 1.1, 1.35),
+  'metro-tower-e': block('building-skyscraper-e', CKA, 1.1, 1.8),
+  'metro-mall': [block('building-k', null, 1.45)[0], ['ck', 'detail-awning-wide', 0, 0, 0.85, 0, 1.2], ['ck', 'detail-parasol-a', 0.95, 0, 0.75, 0, 1.3], ['ck', 'detail-parasol-b', -0.6, 0, 1.0, 0, 1.3]],
+  'metro-cafe': [block('building-b', CKB, 1.35)[0], ['ck', 'detail-awning', 0, 0, 0.7, 0, 1.3], ['ck', 'detail-parasol-a', 0.75, 0, 0.6, 0, 1.2], ['ck', 'detail-parasol-b', -0.35, 0, 0.95, 0, 1.2]],
+  'metro-park': [['ftk', 'hedge-large', -1.05, 0, 0.3, 90], ['ftk', 'hedge-large', 0.3, 0, -1.05, 0], ['ftk', 'tree-high-round', -0.6, 0, -0.6, 0], ['ftk', 'tree-high-round', 0.45, 0, -0.4, 0, 0.8],
+                 ['ftk', 'tree-high', -0.5, 0, 0.45, 0, 0.75], ['ftk', 'fountain-round-detail', 0.4, 0, 0.45, 0, 0.45], ['ftk', 'stall-bench', -0.1, 0, 0.8, 0], ['ftk', 'lantern', 0.9, 0, 0.9, 0, 0.9]],
+  'metro-lot': [...[[-0.6, 0.45], [0.05, 0.45], [0.7, 0.45], [-0.6, -0.4], [0.05, -0.4], [0.7, -0.4]].map(([x, z], i) =>
+                 ['car', ['sedan', 'taxi', 'suv', 'van', 'police', 'hatchback-sports'][i], x, 0, z, 0, 0.34]),
+                ['car', 'cone', 1.15, 0, 0.95, 0, 0.5], ['car', 'cone', -1.1, 0, 0.95, 0, 0.5]],
+  // A session's building in a metropolis, by its level; a site being cleared when it has ended.
+  'metro-level0': [['ftk', 'stall-red', 0, 0, 0, 0], ['ck', 'detail-parasol-a', 0.85, 0, 0.3, 0, 1.2], ['ftk', 'stall-stool', 0.3, 0, 0.75, 0], ['car', 'cone', -0.75, 0, 0.5, 0, 0.5]],
+  'metro-level1': [block('building-a', 'roof:#2fa89a', 1.25)[0], ['ck', 'detail-awning', 0, 0, 0.62, 0, 1.2]],
+  'metro-level2': [block('building-f', 'roof:#2fa89a', 1.45)[0], ['ftk', 'banner-green', 0.5, 0, 0.75, 0]],
+  'metro-level3': [block('building-g', 'roof:#d94a55', 1.6)[0], ['ftk', 'banner-red', 0.55, 0, 0.85, 0]],
+  'metro-level4': [block('building-skyscraper-c', 'roof:#d94a55', 1.15, 1.2)[0], ['ftk', 'banner-red', 0.7, 0, 0.95, 0], ['ftk', 'banner-red', -0.7, 0, 0.95, 0]],
+  'metro-ruin': [['ftk', 'wall-broken', -0.3, 0, -0.3, 180], ['ftk', 'wall-broken', -0.3, 0, -0.3, 90], ['car', 'cone', 0.7, 0, 0.7, 0, 0.55], ['car', 'cone', -0.5, 0, 0.8, 0, 0.55], ['car', 'cone', 0.8, 0, -0.4, 0, 0.55],
+                 ['car', 'debris-plate-a', 0.1, 0, 0.5, 40, 0.8], ['car', 'debris-tire', 0.4, 0, 0.2, 0, 0.8], ['sk', 'resource-stone', -0.2, 0, 0.55, 0, 1.6], ['car', 'tractor-shovel', 0.5, 0, -0.5, 200, 0.32]],
   // A city's other buildings, each with what it does out in front. The windmill's and the
   // watermill's wheels turn about x with their centre at the model's origin: raised off the
   // ground, on the +x wall.
@@ -151,8 +176,28 @@ async function model(kit, name) { return (await gltf(kit, name)).scene.clone(); 
 const painted = {};
 async function skin(map, color) {
   if (painted[color]) return painted[color];
-  if (color !== KIT) return tinted(map, color);
-  const tex = await new THREE.TextureLoader().loadAsync(await api().variation());
+  if (color.startsWith('roof:')) return roofed(map, color);
+  if (color !== KIT && !color.startsWith('ck:')) return tinted(map, color);
+  const [kit, name] = color === KIT ? ['ftk', KIT] : ['ck', color.slice(3)];
+  const tex = await new THREE.TextureLoader().loadAsync(await api().variation(kit, name));
+  tex.flipY = map.flipY; tex.colorSpace = map.colorSpace; tex.magFilter = map.magFilter; tex.minFilter = map.minFilter;
+  return (painted[color] = tex);
+}
+// The city kit's colour map with its dark roof colour and green accents changed: what makes a
+// session's tower a session's, the teal or red of its roof, as in the earlier eras.
+function roofed(map, color) {
+  const c = document.createElement('canvas');
+  c.width = map.image.width; c.height = map.image.height;
+  const g = c.getContext('2d');
+  g.drawImage(map.image, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height), hex = color.slice(5);
+  const to = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  for (let i = 0; i < d.data.length; i += 4) {
+    const near = ([r, gr, b]) => Math.abs(d.data[i] - r) + Math.abs(d.data[i + 1] - gr) + Math.abs(d.data[i + 2] - b) < 24;
+    if (near([0x51, 0x55, 0x66]) || near([0x66, 0x6b, 0x80]) || near([0x38, 0x38, 0x3d]) || near([0x61, 0xcb, 0x8b])) { d.data[i] = to[0]; d.data[i + 1] = to[1]; d.data[i + 2] = to[2]; }
+  }
+  g.putImageData(d, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
   tex.flipY = map.flipY; tex.colorSpace = map.colorSpace; tex.magFilter = map.magFilter; tex.minFilter = map.minFilter;
   return (painted[color] = tex);
 }
@@ -198,14 +243,21 @@ async function picture(name, parts) {
     }
     o.position.set(x, y, z);
     o.rotation.set(tiltX * Math.PI / 180, turn * Math.PI / 180, tiltZ * Math.PI / 180, 'YXZ');
-    o.scale.setScalar(scale);
+    if (Array.isArray(scale)) o.scale.set(...scale); else o.scale.setScalar(scale);
     scene.add(o);
   }
-  renderer.render(scene, camera);
+  // A metropolis is tall: its pictures show twice the world, at twice the pixels.
+  const k = name.startsWith('metro-') ? 2 : 1;
+  const view = camera.clone();
+  view.left *= k; view.right *= k; view.top *= k; view.bottom *= k;
+  view.updateProjectionMatrix();
+  renderer.setSize(SIZE * k, SIZE * k);
+  renderer.render(scene, view);
+  small.width = small.height = OUT * k;
   const g = small.getContext('2d');
-  g.clearRect(0, 0, OUT, OUT);
   g.imageSmoothingQuality = 'high';
-  g.drawImage(renderer.domElement, 0, 0, OUT, OUT);
+  g.drawImage(renderer.domElement, 0, 0, OUT * k, OUT * k);
+  renderer.setSize(SIZE, SIZE);
   return api().save(name, small.toDataURL('image/png'));
 }
 
@@ -256,6 +308,48 @@ async function people() {
   return api().save('people', sheet.toDataURL('image/png'));
 }
 
+// The animals (Quaternius' Ultimate Animated Animal Pack): one row each, in the people's
+// layout at the people's scale: 9 frames facing the lower right, then 9 facing the lower left;
+// of each 9: 0 standing, 1-4 walking, 5-8 eating. Made only when 'animals' is named.
+const ANIMALS = ['Deer', 'Stag', 'Fox', 'Wolf', 'Cow', 'Bull', 'Horse', 'Horse_White', 'Donkey', 'Alpaca', 'Husky', 'ShibaInu'];
+const ANIMAL_ACTS = [['Idle', 1], ['Walk', 4], ['Eating', 4]];
+async function animals() {
+  const cam = new THREE.OrthographicCamera(-FRAME / 4, FRAME / 4, FRAME / 2 * 0.88, -FRAME / 2 * 0.12, 0.1, 100);
+  cam.position.copy(camera.position);
+  cam.lookAt(0, 0, 0);
+  const sheet = document.createElement('canvas');
+  sheet.width = CELL * 18; sheet.height = CELL * ANIMALS.length;
+  const g = sheet.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  const l = new GLTFLoader();
+  for (const [row, name] of ANIMALS.entries()) {
+    const src = await new Promise(async (ok, fail) => l.parse(await api().animal(name), '', ok, fail));
+    for (const [d, turn] of [[0, 90], [1, 0]]) {           // the models face +z: lower left
+      let f = 0;
+      for (const [act, n] of ANIMAL_ACTS) {
+        const c = src.animations.find(a => a.name === act);
+        for (let k = 0; k < n; k++, f++) {
+          const scene = new THREE.Scene();
+          scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 2.4));
+          const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+          sun.position.set(4, 8, 3);
+          scene.add(sun);
+          const o = SkeletonUtils.clone(src.scene);
+          o.rotation.y = turn * Math.PI / 180;
+          o.scale.setScalar(0.17);
+          scene.add(o);
+          const mixer = new THREE.AnimationMixer(o);
+          mixer.clipAction(c).play();
+          mixer.setTime(n === 1 ? 0 : k / n * c.duration);
+          renderer.render(scene, cam);
+          g.drawImage(renderer.domElement, (d * 9 + f) * CELL, row * CELL, CELL, CELL);
+        }
+      }
+    }
+  }
+  return api().save('animals', sheet.toDataURL('image/png'));
+}
+
 // The module may load after pywebview is ready, or before.
 async function run() {
   const done = [];
@@ -264,6 +358,7 @@ async function run() {
     for (const [name, parts] of Object.entries(PICTURES))
       if (!only.length || only.includes(name)) done.push(await picture(name, parts));
     if (!only.length) done.push(await people());
+    if (only.includes('animals')) done.push(await animals());
     await api().done('saved:\n' + done.join('\n'));
   } catch (e) {
     log('failed: ' + e);

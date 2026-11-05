@@ -2,7 +2,9 @@
 
     python3 relax_art.py <kenney_survival-kit.zip> <kenney_fantasy-town-kit_2.0.zip> <kenney_mini-characters.zip> [picture ...]
 
-Name pictures to make only those; with none it makes them all. It opens a window that puts the kits' models together (relax_art.html, three.js) and
+The metro-* pictures need RELAX_CITY_KIT and RELAX_CAR_KIT, the kits' zip files.
+The animals need RELAX_ANIMALS, the folder of Quaternius' Ultimate Animated Animal Pack's
+glTF files, and the name 'animals'. Name pictures to make only those; with none it makes them all. It opens a window that puts the kits' models together (relax_art.html, three.js) and
 saves one transparent PNG per picture, plus people.png: the walking people, one row per
 tool. Agent Mission Control itself only reads the PNGs:
 no 3D, no WebGL at run time. Run it again only to change the pictures.
@@ -36,9 +38,14 @@ class Api:
         z = self._kits[kit]
         return 'data:image/png;base64,' + base64.b64encode(z.read('Models/GLB format/Textures/colormap.png')).decode()
 
-    def variation(self):
-        """The town kit's second colour map as a data URL."""
-        return 'data:image/png;base64,' + base64.b64encode(self._kits['ftk'].read('Models/Textures/variation-a.png')).decode()
+    def animal(self, name):
+        """An animal's glTF file, as text."""
+        with open(os.path.join(os.environ['RELAX_ANIMALS'], f'{name}.gltf'), encoding='utf-8') as f:
+            return f.read()
+
+    def variation(self, kit, name):
+        """Another of a kit's colour maps as a data URL."""
+        return 'data:image/png;base64,' + base64.b64encode(self._kits[kit].read(f'Models/Textures/{name}.png')).decode()
 
     def save(self, name, data_url):
         os.makedirs(OUT, exist_ok=True)
@@ -56,6 +63,9 @@ def main():
     if len(sys.argv) < 4:
         sys.exit(__doc__)
     kits = {'sk': zipfile.ZipFile(sys.argv[1]), 'ftk': zipfile.ZipFile(sys.argv[2]), 'mc': zipfile.ZipFile(sys.argv[3])}
+    for kit, var in (('ck', 'RELAX_CITY_KIT'), ('car', 'RELAX_CAR_KIT')):
+        if os.environ.get(var):
+            kits[kit] = zipfile.ZipFile(os.environ[var])
     webview.create_window('Relax art', os.path.join(HERE, 'relax_art.html'), js_api=Api(kits),
                           width=600, height=600)
     # Not pywebview's usual port (42001): a running Agent Mission Control has it, and this

@@ -2,6 +2,28 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – Relax mode: a fixed map, a real city, and a metropolis
+
+### Added
+- Relax mode: a fifth era, the metropolis, from 5000 messages: asphalt, towers, a mall, parks
+  and car parks, no wall. A session's building follows it: a stall, a shop, flats, an office,
+  a skyscraper, with teal or red roofs, and a cleared site when it has ended.
+- Relax mode: the wheel zooms around the pointer and dragging moves the map. Names are drawn
+  at one size on a canvas of their own.
+- Relax mode: a city has a plaza, avenues, a road along each bank and side streets that branch
+  off them, with bridges only on the avenues. It has shops, a tavern, a smithy, a sawmill,
+  warehouses, a church, a town hall, farms, windmills, a watermill and 14 kinds of house, each
+  where it belongs.
+- A busy session's building is under construction.
+- `relax_art.py`: make only the pictures named on its command line. The pictures now also use
+  Kenney's City Kit (Commercial) and Car Kit, and `animals.png` from Quaternius' Ultimate
+  Animated Animal Pack (all CC0), made but not yet shown.
+
+### Changed
+- Relax mode: the map is one size, 1800 x 1350, in every window, rather than growing with
+  the sessions. Buildings no longer move when the window does.
+- README: Relax mode (both languages).
+
 ## 2026-11-05 – Cross-check: follow-ups show what was asked
 
 ### Fixed

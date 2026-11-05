@@ -252,10 +252,17 @@ The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *L
   hour open). An ended session is a wreck with its name in dark grey.
 - **The whole camp grows too**, with the messages of all the sessions in `agents.json`,
   ended ones included: a tribe on grass from 0, a village with dirt paths from 100, a town
-  with stone roads, lanterns, a fountain and stalls from 500, and a city with wide brick
-  roads, street trees and a wall from 1500. The top left of the camp shows what it is now
-  and when the next one comes. Deleting a session from `agents.json` takes its messages
+  with stone roads, lanterns, a fountain and stalls from 500, a city from 1500, and a
+  metropolis from 5000. A city has a plaza, avenues, side streets and a wall, with houses,
+  shops, a tavern, workshops, a church, a town hall, farms and mills, each where it belongs.
+  A metropolis takes the wall down for asphalt, towers, a mall, parks and car parks, and the
+  sessions' buildings become a stall, a shop, a block of flats, an office and a skyscraper,
+  with teal or red roofs so that they stand out. The top left of the camp shows what it is
+  now and when the next one comes. Deleting a session from `agents.json` takes its messages
   off the count, so the camp can shrink back.
+- **The map** is the same size in every window. The wheel zooms around the pointer and
+  dragging moves the map; names stay one size, and those that would overlap wait for you
+  to zoom in.
 - **Its person**, near it: working while the session is busy, waving while it waits for
   you, sitting or strolling about while idle.
 - **A Cross-check discussion** is a campfire with its models on the logs around it; the one
@@ -270,8 +277,9 @@ The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *L
   and status badges stay as bright as by day.
 - It draws only what changes, about 7% of one CPU core (Office: 4%), and nothing while the
   window is hidden or in Office mode.
-- The pictures come from Kenney's *Survival Kit* and *Fantasy Town Kit* (CC0,
-  [kenney.nl](https://www.kenney.nl)); `Session HUD/tools/relax_art.py` makes them, once.
+- The pictures come from Kenney's *Survival Kit*, *Fantasy Town Kit*, *City Kit (Commercial)*
+  and *Car Kit* (CC0, [kenney.nl](https://www.kenney.nl)), some of them recoloured or
+  stretched; `Session HUD/tools/relax_art.py` makes them, once.
 
 ## Task list
 
@@ -674,8 +682,13 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   名字是深灰色。
 - **整個營地也會成長**，依 `agents.json` 裡所有 session 的訊息總數計算，已結束的也算：
   0 則起是草地上的部落，100 則起是有泥土路的村莊，500 則起是有石板路、路燈、噴泉和攤位的
-  小鎮，1500 則起是有寬磚路、行道樹和城牆的城市。營地左上角會顯示目前的階段和下一階段的
-  門檻。從 `agents.json` 刪除 session 會扣掉它的訊息數，所以營地可能退回前一階段。
+  小鎮，1500 則起是城市，5000 則起是大都會。城市有廣場、大道、支路和城牆，還有住宅、商店、
+  酒館、工坊、教堂、市政廳、農場和磨坊，各在該在的位置。大都會拆掉城牆，換成柏油路、高樓、
+  百貨、公園和停車場；session 的建築變成路邊攤、小店、公寓、辦公樓和摩天樓，屋頂是青綠或
+  紅色，一眼就能認出來。營地左上角會顯示目前的階段和下一階段的門檻。從 `agents.json` 刪除
+  session 會扣掉它的訊息數，所以營地可能退回前一階段。
+- **地圖**在所有視窗都一樣大。滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，
+  會重疊的要放大才顯示。
 - **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒著時坐著或四處走走。
 - **Cross-check 討論**是一堆營火，參與的模型坐在周圍的木頭上；正在回答的站著，步驟進行
   中時有火焰。
@@ -687,8 +700,9 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   路燈會亮，再來是清晨。名字和狀態標記維持白天的亮度。
 - 只重畫有變的部分，大約占一個 CPU 核心的 7%（Office 是 4%）；視窗隱藏或在 Office 模式時
   完全不跑。
-- 圖片來自 Kenney 的 *Survival Kit* 和 *Fantasy Town Kit*（CC0，
-  [kenney.nl](https://www.kenney.nl)），由 `Session HUD/tools/relax_art.py` 產生一次。
+- 圖片來自 Kenney 的 *Survival Kit*、*Fantasy Town Kit*、*City Kit (Commercial)* 和 *Car Kit*
+  （CC0，[kenney.nl](https://www.kenney.nl)），部分重新上色或拉長，由
+  `Session HUD/tools/relax_art.py` 產生一次。
 
 ## 任務清單
 

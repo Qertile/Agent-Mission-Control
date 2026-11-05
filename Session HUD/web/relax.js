@@ -15,7 +15,8 @@ const relax = (() => {
                 'fence', 'signpost', 'lantern', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
                 'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
-                'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall'];
+                'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall',
+                'metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
   // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
@@ -27,7 +28,8 @@ const relax = (() => {
   const TOP = {level0: 0.80, level1: 0.66, level2: 0.56, level3: 0.29, level4: 0.10, ruin: 0.72, meeting: 0.70,
                'house-a': 0.52, 'house-b': 0.36, 'house-c': 0.3, 'house-d': 0.49, 'house-e': 0.07, 'house-f': 0.2, 'house-g': 0.3, 'house-h': 0.25,
                'house-i': 0.52, 'house-j': 0.36, 'house-k': 0.49, 'house-l': 0.2, 'house-m': 0.25, 'house-n': 0.07,
-               shop: 0.28, tavern: 0.14, smithy: 0.38, sawmill: 0.43, warehouse: 0.23, farm: 0.33, windmill: 0.26, watermill: 0.3, church: 0.05, townhall: 0.18};  // its top
+               shop: 0.28, tavern: 0.14, smithy: 0.38, sawmill: 0.43, warehouse: 0.23, farm: 0.33, windmill: 0.26, watermill: 0.3, church: 0.05, townhall: 0.18,
+               'metro-a': 0.656, 'metro-b': 0.717, 'metro-c': 0.734, 'metro-cafe': 0.68, 'metro-d': 0.6, 'metro-e': 0.656, 'metro-f': 0.652, 'metro-g': 0.523, 'metro-h': 0.59, 'metro-level0': 0.742, 'metro-level1': 0.693, 'metro-level2': 0.607, 'metro-level3': 0.58, 'metro-level4': 0.338, 'metro-lot': 0.777, 'metro-mall': 0.627, 'metro-park': 0.57, 'metro-ruin': 0.723, 'metro-tower-a': 0.387, 'metro-tower-b': 0.094, 'metro-tower-c': 0.119, 'metro-tower-d': 0.098, 'metro-tower-e': 0.074};  // its top
   const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff', disc: '#ffc400'};
   const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0'};
   // The building grows with the messages typed into the session (agy: its hours open):
@@ -35,15 +37,21 @@ const relax = (() => {
   const LEVELS = [[200, 'level4'], [50, 'level3'], [10, 'level2'], [1, 'level1'], [0, 'level0']];
   // The whole camp grows with the messages typed into all agents.json sessions, ended
   // ones too (snapshot's 'camp'): a tribe on grass, a village with dirt paths, a town
-  // with stone roads, lanterns, a fountain and stalls, a city with a plaza, avenues and side streets inside a wall.
+  // with stone roads, lanterns, a fountain and stalls, a city with a plaza, avenues and side streets inside a wall, then a metropolis of towers
+  // and asphalt, the wall gone.
   // [from, name, ground, road colour (null: none), road width (building widths), edge,
   //  the trees kept, the props it puts in the free spots, how much its roads bend]
   const ERAS = [
+    [5000, 'Metropolis', '#587a50', '#54575c', 0.17, '#a3a29a', 0.05, ['fountain'], 0.1],
     [1500, 'City', '#4f7d44', '#8f8b80', 0.17, '#5f5c57', 0.1, ['fountain', 'stall', 'stall-green', 'stall'], 0.1],
     [500, 'Town', '#4f7d44', '#a8a497', 0.13, '#7d796e', 0.5, ['fountain', 'stall', 'stall-green', 'fence'], 0.16],
     [100, 'Village', '#4b7a46', '#8a6d45', 0.1, null, 0.8, ['signpost', 'fence', 'fence'], 0.24],
     [0, 'Tribe', '#4b7a46', null, 0, null, 1, [], 0]];
-  const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏙'};
+  const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏯', Metropolis: '🏙'};
+  const urban = e => e[1] === 'City' || e[1] === 'Metropolis';
+  const metro = e => e[1] === 'Metropolis';
+  const shown = (e, level) => (metro(e) && /^(level|ruin)/.test(level) ? 'metro-' + level : level);   // a session's picture
+  const scaleOf = kind => (kind && kind.startsWith('metro-') ? 2 : 1);     // a metro picture shows twice the world
   const BOARD_MAX = 8;                     // tasks on the board; the rest are counted
   const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
   const MAP_W = 1800, MAP_H = 1350, ZOOM_MAX = 1.6;   // the map, in world units; a building's plot is 150
@@ -101,11 +109,12 @@ const relax = (() => {
   // its footprint, person and name; its body is the room for a tower, the tallest it can
   // grow to, kept from the start so that growing never moves anything. Bodies may overlap
   // (one tower stands behind another), but none may cover a base.
+  let bodyTop = 1.17;                      // how high a session's building can grow, in plots
   function room(x, y, prop) {
     const p = plot;
     if (prop) return {base: [x - p * 0.45, y - p * 0.55, x + p * 0.45, y + p * 0.22]};
     return {base: [x - p * 0.5, y - p * 0.35, x + p * 0.5, y + p * 0.2 + 38],
-            body: [x - p * 0.3, y - p * 1.17, x + p * 0.3, y - p * 0.35]};
+            body: [x - p * 0.3, y - p * bodyTop, x + p * 0.3, y - p * 0.35]};
   }
   const hits = (a, b) => a && b && a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
   const clash = (a, b) => hits(a.base, b.base) || hits(a.body, b.base) || hits(b.body, a.base);
@@ -260,7 +269,9 @@ const relax = (() => {
   const LANDMARKS = [['townhall', 0, 0.45, 1], ['church', 0.2, 0.7, 1]];
   const WORKS = [['shop', 0, 0.65, 3], ['tavern', 0, 0.65, 2], ['smithy', 0.3, 0.85, 1], ['watermill', 0, 2, 1, true],
                  ['sawmill', 0.4, 0.95, 1], ['warehouse', 0.3, 0.95, 2], ['windmill', 0.7, 2, 2], ['farm', 0.75, 2, 3]];
-  const BIG = new Set(['farm', 'windmill', 'sawmill', 'warehouse', 'tavern', 'townhall', 'church']);
+  const METRO_LANDMARKS = [['metro-tower-c', 0, 0.3, 1], ['metro-tower-e', 0, 0.4, 1], ['metro-mall', 0, 0.45, 1]];
+  const METRO_WORKS = [['metro-tower-b', 0, 0.5, 2], ['metro-cafe', 0, 0.6, 3], ['metro-park', 0.15, 0.9, 3], ['metro-lot', 0.3, 1, 2], ['metro-tower-a', 0.2, 0.6, 2]];
+  const BIG = new Set(['farm', 'windmill', 'sawmill', 'warehouse', 'tavern', 'townhall', 'church', 'metro-mall', 'metro-park', 'metro-lot', 'metro-f', 'metro-g', 'metro-h']);
   // Where a wider building can stand: the same, further from the road.
   function wideSpots({all, pts}) {
     const rx = plot * 0.5, ry = plot * 0.3, list = [];
@@ -288,13 +299,14 @@ const relax = (() => {
   }
   // The fountain stands on the plaza. The sessions and props each take the first free lot,
   // nearest the plaza give or take a little (from the id).
-  function city(list, props) {
-    const {lots, wide} = cityPlan(), placed = [], used = new Set(), houses = [];
+  function city(list, props, e) {
+    const {lots, wide} = cityPlan(), placed = [], used = new Set(), houses = [], m = metro(e);
+    bodyTop = m ? 1.85 : 1.17;
     for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: {base: [PLAZA.x - plot * 0.45, PLAZA.y - plot * 0.25, PLAZA.x + plot * 0.45, PLAZA.y + plot * 0.16]}, b});
     let named = placed;
     // A building on a spot, if it hides no session's door or person, and fits among the others.
     const build = (l, kind) => {
-      const tall = (ANCHOR - TOP[kind]) * plot * 1.5, half = plot * (BIG.has(kind) ? 0.46 : 0.36);
+      const tall = (ANCHOR - TOP[kind]) * plot * 1.5 * scaleOf(kind), half = plot * (BIG.has(kind) ? 0.46 : 0.36);
       const r = {base: [l.x - half, l.y - plot * 0.24, l.x + half, l.y + plot * 0.16],
                  body: [l.x - plot * 0.3, l.y - tall, l.x + plot * 0.3, l.y - plot * 0.24]};
       if (named.some(q => clash(r, q.r)) || houses.some(h => hits(r.base, h))) return false;
@@ -314,11 +326,13 @@ const relax = (() => {
         }
       }
     };
-    works(LANDMARKS);
+    works(m ? METRO_LANDMARKS : LANDMARKS);
     for (const b of [...sorted(list), ...props.filter(q => q.kind !== 'fountain')]) {
       const rnd = rng(hash(b.id));
       const order = lots.map(l => [l.far + rnd() * 0.25, l]).sort((a, c) => a[0] - c[0]);
-      const found = order.find(([, l]) => !used.has(l) && !placed.some(q => clash(room(l.x, l.y, b.prop), q.r)));
+      const free = ([, l]) => !used.has(l) && !placed.some(q => clash(room(l.x, l.y, b.prop), q.r));
+      // With the lots full, a session may take a spot set back from the road.
+      const found = order.find(free) || (!b.prop && wide.map(l => [0, l]).find(free));
       if (!found) { if (!b.prop) placed.push({...order[0][1], r: room(order[0][1].x, order[0][1].y), b}); continue; }
       const l = found[1];
       used.add(l);
@@ -327,16 +341,18 @@ const relax = (() => {
     // Then the rest of what makes it a city, each where it belongs; then houses fill most of
     // the lots left, the fewer the further out.
     named = [...placed];
-    works(WORKS);
+    works(m ? METRO_WORKS : WORKS);
     for (const l of lots) {
       if (used.has(l)) continue;
       if (rng(hash(`lot${l.n}`))() > 1.45 - l.far * 1.2) continue;
       // Tall in the middle, low further out; a lower one where a tall one would not fit.
-      const choice = l.far < 0.45 ? ['house-e', 'house-l', 'house-f', 'house-n', 'house-c', 'house-m', 'house-g', 'house-h']
+      const choice = m ? (l.far < 0.45 ? ['metro-tower-a', 'metro-g', 'metro-tower-d', 'metro-h', 'metro-d'] : l.far < 0.8 ? ['metro-d', 'metro-g', 'metro-f', 'metro-a', 'metro-e', 'metro-h'] : ['metro-b', 'metro-c', 'metro-a', 'metro-e', 'metro-f'])
+        : l.far < 0.45 ? ['house-e', 'house-l', 'house-f', 'house-n', 'house-c', 'house-m', 'house-g', 'house-h']
         : l.far < 0.8 ? ['house-b', 'house-m', 'house-c', 'house-j', 'house-f', 'house-k', 'house-a', 'house-l', 'house-d', 'house-i', 'house-g', 'house-h']
         : ['house-a', 'house-k', 'house-d', 'house-i', 'house-b', 'house-j', 'house-g'];
       const first = choice[l.n % choice.length];     // in turn, so neighbours differ
-      [first, ...(l.n % 2 ? ['house-g', 'house-j', 'house-d', 'house-i'] : ['house-j', 'house-b', 'house-k', 'house-a'])].some(kind => build(l, kind));
+      const lower = m ? ['metro-e', 'metro-a', 'metro-b', 'metro-c'] : l.n % 2 ? ['house-g', 'house-j', 'house-d', 'house-i'] : ['house-j', 'house-b', 'house-k', 'house-a'];
+      [first, ...lower].some(kind => build(l, kind));
     }
     return placed;
   }
@@ -347,7 +363,8 @@ const relax = (() => {
     const key = JSON.stringify([list.map(b => b.id), e[1], amc.order]);
     if (key !== layoutKey) {
       layoutKey = key;
-      layoutMemo = e[1] === 'City' ? city(list, props) : place(list, props);
+      if (!metro(e)) bodyTop = 1.17;
+      layoutMemo = urban(e) ? city(list, props, e) : place(list, props);
     }
     const byId = new Map(list.map(b => [b.id, b]));
     return layoutMemo.map(p => (byId.has(p.b.id) ? {...p, b: byId.get(p.b.id)} : p));
@@ -425,7 +442,7 @@ const relax = (() => {
       g.restore();
     }
     // Banks, then water with a paler line down its middle; a city's river runs between stone.
-    strokeLine(g, river, e[1] === 'City' ? '#8b887d' : '#c7b27a', riverWidth() + plot * 0.07);
+    strokeLine(g, river, urban(e) ? '#8b887d' : '#c7b27a', riverWidth() + plot * 0.07);
     strokeLine(g, river, '#3c86bd', riverWidth());
     strokeLine(g, river, 'rgba(160, 215, 240, 0.35)', riverWidth() * 0.34);
   }
@@ -439,7 +456,7 @@ const relax = (() => {
         if (part.length > 1) {
           const wide = plot * (width || e[4]);
           strokeLine(g, part, wood ? '#4f3a22' : '#55534d', wide + plot * 0.05, 'butt');
-          strokeLine(g, part, wood ? '#a57c4c' : '#b9b5a8', wide, 'butt');
+          strokeLine(g, part, wood ? '#a57c4c' : metro(e) ? e[3] : '#b9b5a8', wide, 'butt');
           g.setLineDash([2, 6]);
           strokeLine(g, part, 'rgba(0, 0, 0, 0.28)', wide, 'butt');
           g.setLineDash([]);
@@ -462,7 +479,7 @@ const relax = (() => {
     for (let i = 0; i < n; i++) {
       const kind = ['tree', 'tree', 'tree-autumn', 'rock'][Math.floor(rnd() * 4)];
       const x = rnd() * w, y = 30 + rnd() * (h - 30), s = 70 + rnd() * 30, keep = rnd() < e[6];
-      const pic = img[e[1] === 'City' ? (kind === 'rock' ? 'rock' : 'tree-city') : kind];
+      const pic = img[urban(e) ? (kind === 'rock' ? 'rock' : 'tree-city') : kind];
       if (road.some(p => Math.hypot(p.x - x, p.y - y) < clear)) continue;
       if (riverGap(x, y) < riverWidth() / 2 + s * 0.2 || y < plot * 0.45) continue;   // nor in the river or on the mountains
       if (!keep || !pic || placed.some(p => Math.abs(p.x - x) < plot * 0.6 && y > p.y - plot * 0.9 && y < p.y + plot * 0.45 + s * 0.8)) continue;
@@ -485,7 +502,7 @@ const relax = (() => {
     const {lamps: allLamps, edges} = roads(g, placed, e);
     const lamps = allLamps.filter(l => riverGap(l.x, l.y) > riverWidth() / 2 + plot * 0.04);
     bridges(g, edges, e);
-    const trees = e[1] === 'City' ? streetTrees(edges, placed, lamps, e, w, h) : [];
+    const trees = urban(e) ? streetTrees(edges, placed, lamps, e, w, h) : [];
     scenery(g, w, h, placed, plot, e, edges);
     if (e[1] === 'City') wall(g, w, h);
     spots = [];
@@ -494,13 +511,13 @@ const relax = (() => {
     // Back to front, so a building lower on the screen stands in front of one above it.
     for (const {x: cx, y: ground, b} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
       if (b.prop) {
-        const s = plot * 1.5 * (b.scale || 1);
+        const s = plot * 1.5 * (b.scale || scaleOf(b.kind));
         if (img[b.kind]) g.drawImage(img[b.kind], cx - s / 2, ground - s * ANCHOR, s, s);
         continue;
       }
       // An ended session is a wreck.
-      const level = b.status === 'ended' ? 'ruin' : b.level;
-      const s = plot * 1.5, pic = img[level];
+      const level = shown(e, b.status === 'ended' ? 'ruin' : b.level);
+      const s = plot * 1.5 * scaleOf(level), pic = img[level];
       // A patch of earth under each building.
       g.fillStyle = 'rgba(120, 90, 50, 0.35)';
       g.beginPath(); g.ellipse(cx, ground - 4, plot * 0.4, plot * 0.14, 0, 0, Math.PI * 2); g.fill();
@@ -628,8 +645,8 @@ const relax = (() => {
   function scaffold(g, cx, ground, level, front) {
     const dx = plot * 0.332, dy = plot * 0.171, floor = plot * 0.279;
     // A campfire or a tent has no walls to climb: only a low fence around the site.
-    const low = level === 'level0' || level === 'level1';
-    const tall = low ? floor * 0.4 : Math.max(floor, (ANCHOR - TOP[level]) * plot * 1.5 * 0.72);
+    const low = /level[01]$/.test(level);
+    const tall = low ? floor * 0.4 : Math.max(floor, (ANCHOR - TOP[level]) * plot * 1.5 * scaleOf(level) * 0.72);
     const L = [cx - dx, ground], R = [cx + dx, ground], near = [cx, ground + dy], far = [cx, ground - dy];
     const sides = front ? [[L, near], [near, R]] : [[far, L], [far, R]];
     const line = (a, b, up1, up2, color, width) => {
@@ -655,11 +672,11 @@ const relax = (() => {
   // buildings so they stand in front of or behind them, and the roads, which trees avoid.
   function roads(g, placed, e) {
     const joins = placed.filter(p => p.b.kind !== 'fence');
-    if (!e[3] || (joins.length < 2 && e[1] !== 'City')) return {lamps: [], edges: []};
+    if (!e[3] || (joins.length < 2 && !urban(e))) return {lamps: [], edges: []};
     // Each road ends in front of the door (on the lower left), outside the footprint.
     const pts = joins.map(p => ({x: p.x - plot * 0.18, y: p.y + plot * 0.16, id: p.b.id}));
-    const joined = [0], edges = e[1] === 'City' ? cityPlan().edges : [];
-    while (e[1] !== 'City' && joined.length < pts.length) {
+    const joined = [0], edges = urban(e) ? cityPlan().edges : [];
+    while (!urban(e) && joined.length < pts.length) {
       let best = null;
       for (const i of joined) for (let j = 0; j < pts.length; j++) {
         if (joined.includes(j)) continue;
@@ -679,16 +696,26 @@ const relax = (() => {
         g.stroke();
       }
     }
-    if (e[1] === 'City') {                 // a paved plaza where the avenues meet
+    if (metro(e)) {                        // the white line down an avenue
+      g.strokeStyle = 'rgba(240, 240, 230, 0.75)'; g.lineWidth = plot * 0.012; g.lineCap = 'butt';
+      g.setLineDash([plot * 0.1, plot * 0.12]);
+      for (const {line, width} of edges) {
+        if (width < 0.2) continue;
+        g.beginPath(); g.moveTo(line[0].x, line[0].y); for (const q of line) g.lineTo(q.x, q.y);
+        g.stroke();
+      }
+      g.setLineDash([]);
+    }
+    if (urban(e)) {                        // a paved plaza where the avenues meet
       g.fillStyle = e[5];
       g.beginPath(); g.ellipse(PLAZA.x, PLAZA.y, 128, 76, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = e[3];
+      g.fillStyle = metro(e) ? '#c9c5b8' : e[3];
       g.beginPath(); g.ellipse(PLAZA.x, PLAZA.y, 124, 73, 0, 0, Math.PI * 2); g.fill();
     }
-    if (e[1] !== 'Town' && e[1] !== 'City') return {lamps: [], edges};
+    if (e[1] !== 'Town' && !urban(e)) return {lamps: [], edges};
     const lamps = [];
     for (const [n, r] of edges.entries()) {
-      if (e[1] === 'City' && n % 4) continue;   // a city has many streets: a lantern on every fourth stretch
+      if (urban(e) && n % 4) continue;   // a city has many streets: a lantern on every fourth stretch
       // Beside the road's middle.
       const m = along(r, 0.5), t = Math.hypot(m.dx, m.dy) || 1, a = r.line[0], b = r.line[r.line.length - 1];
       const d = Math.hypot(b.x - a.x, b.y - a.y), side = plot * (e[4] / 2 + 0.08);
