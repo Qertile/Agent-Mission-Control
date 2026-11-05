@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – v4.0: Relax mode's new camp, from a tribe to a megacity
+
+### Changed
+- Relax mode's sections below, together: terrain, a fixed map with wheel zoom, six eras,
+  buildings under construction, and the camp showing after dark.
+- README: the CPU figure of Relax mode, which was unverified, is replaced by what was
+  measured.
+- Versions: `v4.0`.
+- Tagged `v4.0`.
+
+### Known
+- Published before the full test. CPU is measured only on a test page without terminals:
+  about 5% of one core at 12000 messages, day and night. The limit of 10% is not confirmed in
+  the full window.
+- Animals and traffic are not in this version; they move to 4.x. `web/relax/animals.png` is
+  in the repo but not used yet.
+- With 20 sessions, one can be hard to double-click at fit zoom, as a tower stands in front
+  of it; zooming in works. Double-clicking a discussion in the camp is not verified. A city's
+  windows do not light at night; a metropolis' and a megacity's do.
+
 ## 2026-11-05 – Relax mode: the camp shows after dark
 
 ### Fixed
