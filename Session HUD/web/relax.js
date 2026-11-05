@@ -14,7 +14,8 @@ const relax = (() => {
   const PICS = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people',
                 'fence', 'signpost', 'lantern', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
-                'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n'];
+                'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
+                'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall'];
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
   // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
@@ -25,7 +26,8 @@ const relax = (() => {
   const ANCHOR = 0.88;                     // where the ground point is in each picture (y)
   const TOP = {level0: 0.80, level1: 0.66, level2: 0.56, level3: 0.29, level4: 0.10, ruin: 0.72, meeting: 0.70,
                'house-a': 0.52, 'house-b': 0.36, 'house-c': 0.3, 'house-d': 0.49, 'house-e': 0.07, 'house-f': 0.2, 'house-g': 0.3, 'house-h': 0.25,
-               'house-i': 0.52, 'house-j': 0.36, 'house-k': 0.49, 'house-l': 0.2, 'house-m': 0.25, 'house-n': 0.07};  // its top
+               'house-i': 0.52, 'house-j': 0.36, 'house-k': 0.49, 'house-l': 0.2, 'house-m': 0.25, 'house-n': 0.07,
+               shop: 0.28, tavern: 0.14, smithy: 0.38, sawmill: 0.43, warehouse: 0.23, farm: 0.33, windmill: 0.26, watermill: 0.3, church: 0.05, townhall: 0.18};  // its top
   const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff', disc: '#ffc400'};
   const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0'};
   // The building grows with the messages typed into the session (agy: its hours open):
@@ -253,6 +255,27 @@ const relax = (() => {
     }
     return lots;
   }
+  // [picture, how far from the plaza it may stand (0 to 1; further out above that), how many,
+  //  beside the river]. LANDMARKS are placed before the sessions, so they always stand where they do.
+  const LANDMARKS = [['townhall', 0, 0.45, 1], ['church', 0.2, 0.7, 1]];
+  const WORKS = [['shop', 0, 0.65, 3], ['tavern', 0, 0.65, 2], ['smithy', 0.3, 0.85, 1], ['watermill', 0, 2, 1, true],
+                 ['sawmill', 0.4, 0.95, 1], ['warehouse', 0.3, 0.95, 2], ['windmill', 0.7, 2, 2], ['farm', 0.75, 2, 3]];
+  const BIG = new Set(['farm', 'windmill', 'sawmill', 'warehouse', 'tavern', 'townhall', 'church']);
+  // Where a wider building can stand: the same, further from the road.
+  function wideSpots({all, pts}) {
+    const rx = plot * 0.5, ry = plot * 0.3, list = [];
+    for (const r of all) for (const side of [-1, 1]) for (let i = 2; i < r.line.length - 2; i += 2) {
+      const a = r.line[i - 1], c = r.line[i + 1], d = Math.hypot(c.x - a.x, c.y - a.y) || 1;
+      const nx = -(c.y - a.y) / d * side, ny = (c.x - a.x) / d * side;
+      const off = plot * r.width / 2 + 6 + Math.hypot(rx * nx, ry * ny);
+      const x = r.line[i].x + nx * off, y = r.line[i].y + ny * off;
+      if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || wet(x, y)) continue;
+      if (Math.hypot((x - PLAZA.x) / 190, (y - PLAZA.y) / 115) < 1) continue;
+      if (pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1)) continue;
+      list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100});
+    }
+    return list.sort((p, q) => p.far - q.far).map((l, n) => ({...l, n: `w${n}`}));
+  }
   let cityMemo = null;
   function cityPlan() {
     if (cityMemo) return cityMemo;
@@ -261,14 +284,37 @@ const relax = (() => {
     for (const r of grown.all)
       for (let i = 0; i < r.line.length - 1; i += 15)
         edges.push({line: r.line.slice(i, i + 16), width: r.width});
-    return (cityMemo = {edges, lots: streetLots(grown), bridge: grown.pts.filter(p => riverGap(p.x, p.y) < riverWidth() / 2 + plot * 0.05)});
+    return (cityMemo = {edges, lots: streetLots(grown), wide: wideSpots(grown), bridge: grown.pts.filter(p => riverGap(p.x, p.y) < riverWidth() / 2 + plot * 0.05)});
   }
   // The fountain stands on the plaza. The sessions and props each take the first free lot,
-  // nearest the plaza give or take a little (from the id); then houses fill most of the lots
-  // left, the fewer the further out.
+  // nearest the plaza give or take a little (from the id).
   function city(list, props) {
-    const lots = cityPlan().lots, placed = [], used = new Set();
+    const {lots, wide} = cityPlan(), placed = [], used = new Set(), houses = [];
     for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: {base: [PLAZA.x - plot * 0.45, PLAZA.y - plot * 0.25, PLAZA.x + plot * 0.45, PLAZA.y + plot * 0.16]}, b});
+    let named = placed;
+    // A building on a spot, if it hides no session's door or person, and fits among the others.
+    const build = (l, kind) => {
+      const tall = (ANCHOR - TOP[kind]) * plot * 1.5, half = plot * (BIG.has(kind) ? 0.46 : 0.36);
+      const r = {base: [l.x - half, l.y - plot * 0.24, l.x + half, l.y + plot * 0.16],
+                 body: [l.x - plot * 0.3, l.y - tall, l.x + plot * 0.3, l.y - plot * 0.24]};
+      if (named.some(q => clash(r, q.r)) || houses.some(h => hits(r.base, h))) return false;
+      houses.push(r.base);
+      used.add(l);
+      placed.push({x: l.x, y: l.y, r, b: {id: `~h${l.n}`, prop: true, house: true, kind}});
+      return true;
+    };
+    const works = list2 => {
+      for (const [kind, near, far, count, bank] of list2) {
+        let left = count;
+        for (const l of BIG.has(kind) ? wide : lots) {
+          if (!left) break;
+          if (used.has(l) || l.far < near || l.far > far) continue;
+          if (bank && riverGap(l.x + plot * 0.6, l.y) > plot * 0.35) continue;
+          if (build(l, kind)) left--;
+        }
+      }
+    };
+    works(LANDMARKS);
     for (const b of [...sorted(list), ...props.filter(q => q.kind !== 'fountain')]) {
       const rnd = rng(hash(b.id));
       const order = lots.map(l => [l.far + rnd() * 0.25, l]).sort((a, c) => a[0] - c[0]);
@@ -278,26 +324,19 @@ const relax = (() => {
       used.add(l);
       placed.push({x: l.x, y: l.y, r: room(l.x, l.y, b.prop), b});
     }
-    const named = [...placed], houses = [];
+    // Then the rest of what makes it a city, each where it belongs; then houses fill most of
+    // the lots left, the fewer the further out.
+    named = [...placed];
+    works(WORKS);
     for (const l of lots) {
       if (used.has(l)) continue;
-      const rnd = rng(hash(`lot${l.n}`));
-      if (rnd() > 1.45 - l.far * 1.2) continue;
-      // Tall in the middle, low further out; a lower one where a tall one would hide a
-      // session's door or person, or the fountain.
+      if (rng(hash(`lot${l.n}`))() > 1.45 - l.far * 1.2) continue;
+      // Tall in the middle, low further out; a lower one where a tall one would not fit.
       const choice = l.far < 0.45 ? ['house-e', 'house-l', 'house-f', 'house-n', 'house-c', 'house-m', 'house-g', 'house-h']
         : l.far < 0.8 ? ['house-b', 'house-m', 'house-c', 'house-j', 'house-f', 'house-k', 'house-a', 'house-l', 'house-d', 'house-i', 'house-g', 'house-h']
         : ['house-a', 'house-k', 'house-d', 'house-i', 'house-b', 'house-j', 'house-g'];
       const first = choice[l.n % choice.length];     // in turn, so neighbours differ
-      for (const kind of [first, ...(l.n % 2 ? ['house-g', 'house-j', 'house-d', 'house-i'] : ['house-j', 'house-b', 'house-k', 'house-a'])]) {
-        const tall = (ANCHOR - TOP[kind]) * plot * 1.5;
-        const r = {base: [l.x - plot * 0.36, l.y - plot * 0.24, l.x + plot * 0.36, l.y + plot * 0.16],
-                   body: [l.x - plot * 0.3, l.y - tall, l.x + plot * 0.3, l.y - plot * 0.24]};
-        if (named.some(q => clash(r, q.r)) || houses.some(h => hits(r.base, h))) continue;
-        houses.push(r.base);
-        placed.push({x: l.x, y: l.y, r, b: {id: `~h${l.n}`, prop: true, house: true, kind}});
-        break;
-      }
+      [first, ...(l.n % 2 ? ['house-g', 'house-j', 'house-d', 'house-i'] : ['house-j', 'house-b', 'house-k', 'house-a'])].some(kind => build(l, kind));
     }
     return placed;
   }

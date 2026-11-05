@@ -48,6 +48,7 @@ const SHAPE = {
          ['ftk', 'roof-gable', 0.3, 2, 0, 0], ['ftk', 'roof-gable', -0.7, 2, 0, 0]],
   narrow: [...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall', 'wall-window-shutters'), ['ftk', 'roof-high-gable', 0, 2, 0, 90]],
 };
+const at = (parts, dx, dz) => parts.map(([kit, m, x, y, z, ...rest]) => [kit, m, x + dx, y, z + dz, ...rest]);
 const paint = (parts, roof, wall) => parts.map(([kit, m, x, y, z, turn, scale = 1, tx = 0, tz = 0]) =>
   [kit, m, x, y, z, turn, scale, tx, tz, m.startsWith('roof') ? roof : m.startsWith('wall') ? wall : null]);
 const PICTURES = {
@@ -95,7 +96,35 @@ const PICTURES = {
   'house-l': paint(SHAPE.wide, KIT, KIT),
   'house-m': paint(SHAPE.narrow, KIT, KIT),
   'house-n': paint(SHAPE.tall, KIT, KIT),
+  // A city's other buildings, each with what it does out in front. The windmill's and the
+  // watermill's wheels turn about x with their centre at the model's origin: raised off the
+  // ground, on the +x wall.
+  'shop': [...paint(at([...sides(0, 'wall', 'wall-window-glass'), ...sides(1, 'wall-wood', 'wall-wood-window-small'), ['ftk', 'roof-gable', 0, 2, 0, 0]], -0.3, -0.4), CLAY, PLASTER),
+           ['ftk', 'stall-red', 0.35, 0, 0.6, 0], ['ftk', 'stall-stool', -0.35, 0, 0.75, 0]],
+  'tavern': [...paint(at(SHAPE.wide, 0.1, -0.35), KIT, KIT), ['ftk', 'banner-red', 0.75, 0, 0.3, 0], ['ftk', 'stall-bench', -0.45, 0, 0.55, 0],
+             ['sk', 'barrel', 0.75, 0, 0.75, 0, SK], ['sk', 'barrel', 0.3, 0, 0.8, 30, SK]],
+  'smithy': [...paint(at([...sides(0, 'wall', 'wall-doorway-square'), ['ftk', 'roof-flat', 0, 1, 0, 0], ['ftk', 'chimney', -0.2, 1, -0.2, 0, 1.3]], -0.25, -0.35), COAL, null),
+             ['sk', 'workbench-anvil', 0.55, 0, 0.45, 40, SK], ['sk', 'resource-stone', -0.5, 0, 0.75, 0, SK], ['sk', 'barrel-open', 0.75, 0, -0.2, 0, SK]],
+  'sawmill': [['ftk', 'pillar-wood', 0.6, 0, 0.3, 0], ['ftk', 'pillar-wood', -0.8, 0, 0.3, 0], ['ftk', 'pillar-wood', 0.6, 0, -0.6, 0], ['ftk', 'pillar-wood', -0.8, 0, -0.6, 0],
+              ...paint([['ftk', 'roof-gable', 0.3, 1, -0.15, 0], ['ftk', 'roof-gable', -0.5, 1, -0.15, 0]], THATCH, null),
+              ['sk', 'workbench', -0.1, 0, -0.15, 0, SK], ['sk', 'resource-planks', 0.6, 0, 0.75, 20, SK], ['sk', 'tree-log', -0.7, 0, 0.75, 90, 1], ['sk', 'resource-wood', 0.95, 0, 0.1, 0, SK]],
+  'warehouse': [...paint(at([...sides(0, 'wall-wood', 'wall-wood-doorway-square-wide', 0.3), ...sides(0, 'wall-wood', 'wall-wood', -0.7), ...sides(1, 'wall-wood', 'wall-wood-window-small', 0.3), ...sides(1, 'wall-wood', 'wall-wood-window-small', -0.7),
+                ['ftk', 'roof-gable', 0.3, 2, 0, 0], ['ftk', 'roof-gable', -0.7, 2, 0, 0]], 0, -0.35), SLATE, TIMBER),
+                ['sk', 'box-large', 0.75, 0, 0.45, 15, SK], ['sk', 'box', 0.35, 0, 0.75, 0, SK], ['sk', 'barrel', -0.5, 0, 0.7, 0, SK], ['ftk', 'cart', -0.05, 0, 0.75, 70, 0.7]],
+  'farm': [...paint(at(SHAPE.long, -0.55, -0.75), CLAY, TIMBER),
+           ...[0, 0.3, 0.6, 0.9, 1.2].flatMap(a => [0, 0.3, 0.6, 0.9].map(b => ['sk', 'grass-large', 0.25 + a - b * 0.1, 0, -0.55 + b, a * 90, SK * 0.8, 0, 0, '#fff4b0'])),
+           ['ftk', 'fence', 1.0, 0, 0.25, 0, 0.9], ['ftk', 'fence', 0.05, 0, 0.25, 0, 0.9], ['ftk', 'cart', -0.75, 0, 0.3, 200, 0.7], ['sk', 'tool-hoe', 0.1, 0.1, 0.45, 0, SK]],
+  'windmill': [...paint([...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall', 'wall-window-small'), ['ftk', 'roof-high-point', 0, 2, 0, 0]], SLATE, null), ['ftk', 'windmill', 0.62, 1.45, 0, 0, 0.8]],
+  'watermill': [...paint([...sides(0, 'wall-wood', 'wall-wood-door'), ...sides(1, 'wall-wood', 'wall-wood-window-small'), ['ftk', 'roof-gable', 0, 2, 0, 0]], THATCH, TIMBER), ['ftk', 'watermill', 0.84, 0.7, 0, 0, 0.78]],
+  'church': [...paint([...sides(0, 'wall', 'wall-door', -0.75), ...sides(1, 'wall', 'wall-window-round', -0.75), ...sides(2, 'wall', 'wall-window-small', -0.75), ['ftk', 'roof-high-point', -0.75, 3, 0, 0],
+             ...sides(0, 'wall', 'wall-window-round', 0.25), ...sides(1, 'wall', 'wall', 0.25), ['ftk', 'roof-high-gable', 0.25, 2, 0, 0]], SLATE, PLASTER)],
+  'townhall': [...paint(at([...sides(0, 'wall', 'wall-doorway-round', 0.3), ...sides(0, 'wall', 'wall-window-stone', -0.7), ...sides(1, 'wall', 'wall-window-stone', 0.3), ...sides(1, 'wall', 'wall-window-stone', -0.7),
+               ['ftk', 'roof-high-gable', 0.3, 2, 0, 0], ['ftk', 'roof-high-gable', -0.7, 2, 0, 0]], 0, -0.3), KIT, null),
+               ['ftk', 'banner-red', 0.75, 0, 0.3, 0], ['ftk', 'banner-green', -0.15, 0, 0.3, 0]],
 };
+// Moved back from the camera, so that what stands out in front stays inside the picture.
+for (const [name, d] of [['shop', 0.15], ['tavern', 0.25], ['sawmill', 0.35], ['warehouse', 0.25], ['farm', 0.35], ['watermill', 0.35], ['windmill', 0.25]])
+  PICTURES[name] = at(PICTURES[name], -d, -d);
 
 const loaders = {}, cache = {};
 async function loader(kit) {
