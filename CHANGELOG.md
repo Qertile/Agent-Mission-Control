@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – Cross-check: follow-ups show what was asked
+
+### Fixed
+- A Cross-check follow-up went to the participants but was not kept, so its tab showed only
+  the answers. It is now saved (`followUps` in the discussion's file) and shown under its
+  `Follow-up N` heading. Follow-ups asked before this have no text to show.
+- README: Cross-check (both languages).
+
 ## 2026-11-05 – Relax mode: the board does what the Tasks column does, day and night
 
 ### Added

@@ -938,7 +938,10 @@ amc.drawDiscussion = async (id, d) => {
       if (stage !== null) html += '</div>';
       stage = e.stage;
       const cols = d.entries.filter(x => x.stage === stage).length;
-      html += `<div class="stage">${esc(stage)}</div><div class="cards" style="grid-template-columns: repeat(${cols}, 1fr)">`;
+      // A follow-up's own stage starts with what the user asked.
+      const asked = (d.followUps || {})[(stage.match(/^Follow-up (\d+)$/) || [])[1]];
+      html += `<div class="stage">${esc(stage)}</div>` + (asked ? `<div class="d-q">${esc(asked)}</div>` : '') +
+              `<div class="cards" style="grid-template-columns: repeat(${cols}, 1fr)">`;
     }
     const text = e.status === 'thinking' ? 'thinking…' : e.text;
     // A summary or conclusion can go to a session's tab, to be acted on there.

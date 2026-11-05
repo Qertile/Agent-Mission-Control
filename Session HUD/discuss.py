@@ -369,6 +369,7 @@ def follow_up(did, text):
         return 'type a question'
     n, text = len(d['participants']), text.strip()
     k = 1 + len({e['stage'] for e in d['entries'] if re.fullmatch(r'Follow-up \d+', e['stage'])})
+    d.setdefault('followUps', {})[str(k)] = text   # shown above its answers; saved with its first entry
 
     def work(d):
         answers = _ok(_turns(d, [(i, f"Follow-up question from the user:\n\n{text}\n\n{_rules(d)}")
