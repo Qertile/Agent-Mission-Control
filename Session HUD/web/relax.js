@@ -12,7 +12,9 @@
 const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
   const PICS = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people',
-                'fence', 'signpost', 'lantern', 'stall', 'stall-green', 'fountain', 'tree-city'];
+                'fence', 'signpost', 'lantern', 'stall', 'stall-green', 'fountain', 'tree-city',
+                'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
+                'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n'];
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
   // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
@@ -21,7 +23,9 @@ const relax = (() => {
   // units, and the way the one sitting there faces.
   const SEATS = [[-1.1, 0.15, 0], [0.15, -1.1, 1], [-0.85, -0.85, 0]];
   const ANCHOR = 0.88;                     // where the ground point is in each picture (y)
-  const TOP = {level0: 0.80, level1: 0.66, level2: 0.56, level3: 0.29, level4: 0.10, ruin: 0.72, meeting: 0.70};  // its top
+  const TOP = {level0: 0.80, level1: 0.66, level2: 0.56, level3: 0.29, level4: 0.10, ruin: 0.72, meeting: 0.70,
+               'house-a': 0.52, 'house-b': 0.36, 'house-c': 0.3, 'house-d': 0.49, 'house-e': 0.07, 'house-f': 0.2, 'house-g': 0.3, 'house-h': 0.25,
+               'house-i': 0.52, 'house-j': 0.36, 'house-k': 0.49, 'house-l': 0.2, 'house-m': 0.25, 'house-n': 0.07};  // its top
   const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff', disc: '#ffc400'};
   const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0'};
   // The building grows with the messages typed into the session (agy: its hours open):
@@ -220,19 +224,32 @@ const relax = (() => {
     }
     return {all, pts};
   }
-  // Where a building can stand: side by side along both sides of every road, avenues first.
+  // Where a building can stand: along both sides of every road. The lots nearest the plaza
+  // are taken first and packed closest, so the middle is the densest. No tower may hide a bridge.
   function streetLots({all, pts}) {
-    const rx = plot * 0.36, ry = plot * 0.2, lots = [];
+    const rx = plot * 0.36, ry = plot * 0.2, free = [], lots = [];
+    const bridge = pts.filter(p => riverGap(p.x, p.y) < riverWidth() / 2 + plot * 0.05);
+    const clear = (x, y) => !pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1) && !wet(x, y);
+    // Round the plaza first.
+    for (let a = 0; a < 32; a++) {
+      const x = PLAZA.x + Math.cos(a / 32 * Math.PI * 2) * 188, y = PLAZA.y + Math.sin(a / 32 * Math.PI * 2) * 112;
+      if (clear(x, y)) free.push({x, y, far: 0});
+    }
     for (const r of all) for (const side of [-1, 1]) for (let i = 2; i < r.line.length - 2; i++) {
       const a = r.line[i - 1], c = r.line[i + 1], d = Math.hypot(c.x - a.x, c.y - a.y) || 1;
       const nx = -(c.y - a.y) / d * side, ny = (c.x - a.x) / d * side;
       const off = plot * r.width / 2 + 6 + Math.hypot(rx * nx, ry * ny);
       const x = r.line[i].x + nx * off, y = r.line[i].y + ny * off;
-      if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || wet(x, y)) continue;
+      if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || !clear(x, y)) continue;
       if (Math.hypot((x - PLAZA.x) / 170, (y - PLAZA.y) / 100) < 1) continue;
-      if (pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1)) continue;
-      if (lots.some(l => groundGap(l, {x, y}) < 118)) continue;
-      lots.push({x, y, n: lots.length, far: groundGap({x, y}, PLAZA) / 1100});
+      if (bridge.some(p => Math.abs(p.x - x) < plot * 0.5 && p.y > y - plot * 1.3 && p.y < y)) continue;
+      free.push({x, y, far: groundGap({x, y}, PLAZA) / 1100});
+    }
+    free.sort((a, c) => a.far - c.far);
+    for (const l of free) {
+      if (lots.some(q => groundGap(q, l) < 96 + 50 * l.far)) continue;
+      l.n = lots.length;
+      lots.push(l);
     }
     return lots;
   }
@@ -244,14 +261,14 @@ const relax = (() => {
     for (const r of grown.all)
       for (let i = 0; i < r.line.length - 1; i += 15)
         edges.push({line: r.line.slice(i, i + 16), width: r.width});
-    return (cityMemo = {edges, lots: streetLots(grown)});
+    return (cityMemo = {edges, lots: streetLots(grown), bridge: grown.pts.filter(p => riverGap(p.x, p.y) < riverWidth() / 2 + plot * 0.05)});
   }
   // The fountain stands on the plaza. The sessions and props each take the first free lot,
   // nearest the plaza give or take a little (from the id); then houses fill most of the lots
   // left, the fewer the further out.
   function city(list, props) {
     const lots = cityPlan().lots, placed = [], used = new Set();
-    for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: room(PLAZA.x, PLAZA.y, true), b});
+    for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: {base: [PLAZA.x - plot * 0.45, PLAZA.y - plot * 0.25, PLAZA.x + plot * 0.45, PLAZA.y + plot * 0.16]}, b});
     for (const b of [...sorted(list), ...props.filter(q => q.kind !== 'fountain')]) {
       const rnd = rng(hash(b.id));
       const order = lots.map(l => [l.far + rnd() * 0.25, l]).sort((a, c) => a[0] - c[0]);
@@ -265,15 +282,22 @@ const relax = (() => {
     for (const l of lots) {
       if (used.has(l)) continue;
       const rnd = rng(hash(`lot${l.n}`));
-      if (rnd() > 1.4 - l.far) continue;
-      const kind = ['level2', 'level2', 'level3', 'level3', l.far < 0.4 ? 'level4' : 'level3'][Math.floor(rnd() * 5)];
-      const tall = (ANCHOR - TOP[kind]) * plot * 1.5;
-      const r = {base: [l.x - plot * 0.36, l.y - plot * 0.24, l.x + plot * 0.36, l.y + plot * 0.16],
-                 body: [l.x - plot * 0.3, l.y - tall, l.x + plot * 0.3, l.y - plot * 0.24]};
-      // A house may stand behind a session's, but never hide its door or its person.
-      if (named.some(q => clash(r, q.r)) || houses.some(h => hits(r.base, h))) continue;
-      houses.push(r.base);
-      placed.push({x: l.x, y: l.y, r, b: {id: `~h${l.n}`, prop: true, house: true, kind}});
+      if (rnd() > 1.45 - l.far * 1.2) continue;
+      // Tall in the middle, low further out; a lower one where a tall one would hide a
+      // session's door or person, or the fountain.
+      const choice = l.far < 0.45 ? ['house-e', 'house-l', 'house-f', 'house-n', 'house-c', 'house-m', 'house-g', 'house-h']
+        : l.far < 0.8 ? ['house-b', 'house-m', 'house-c', 'house-j', 'house-f', 'house-k', 'house-a', 'house-l', 'house-d', 'house-i', 'house-g', 'house-h']
+        : ['house-a', 'house-k', 'house-d', 'house-i', 'house-b', 'house-j', 'house-g'];
+      const first = choice[l.n % choice.length];     // in turn, so neighbours differ
+      for (const kind of [first, ...(l.n % 2 ? ['house-g', 'house-j', 'house-d', 'house-i'] : ['house-j', 'house-b', 'house-k', 'house-a'])]) {
+        const tall = (ANCHOR - TOP[kind]) * plot * 1.5;
+        const r = {base: [l.x - plot * 0.36, l.y - plot * 0.24, l.x + plot * 0.36, l.y + plot * 0.16],
+                   body: [l.x - plot * 0.3, l.y - tall, l.x + plot * 0.3, l.y - plot * 0.24]};
+        if (named.some(q => clash(r, q.r)) || houses.some(h => hits(r.base, h))) continue;
+        houses.push(r.base);
+        placed.push({x: l.x, y: l.y, r, b: {id: `~h${l.n}`, prop: true, house: true, kind}});
+        break;
+      }
     }
     return placed;
   }
@@ -1091,5 +1115,5 @@ const relax = (() => {
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
           _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
           _hour: h => { hourForTest = h; skySig = ''; sky(); },
-          _layout: () => ({zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : []})};
+          _layout: () => ({zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
 })();

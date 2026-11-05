@@ -29,6 +29,27 @@ const SK = 1.8;                               // Survival Kit is smaller than th
 // 180 on -x, 270 on +z (the side facing the camera).
 const sides = (y, model, front, x = 0) => [
   ['ftk', model, x, y, 0, 0], ['ftk', model, x, y, 0, 90], ['ftk', model, x, y, 0, 180], ['ftk', front, x, y, 0, 270]];
+// Colours for houses: paint(parts, roof, walls) tints the roofs and walls of a picture's parts.
+const THATCH = '#d0ad5e', SLATE = '#66758a', COAL = '#4a4b55', CLAY = '#cf6f3e', PLUM = '#8a5a80';
+const PLASTER = '#f3e8d2', SAND = '#dcc79a', TIMBER = '#94704c';
+const KIT = 'variation-a';     // not a colour: the kit's own Models/Textures/variation-a.png
+const SHAPE = {
+  cottage: [...sides(0, 'wall-wood', 'wall-wood-door'), ['ftk', 'roof-gable', 0, 1, 0, 0], ['ftk', 'chimney', 0.25, 1, -0.25, 0]],
+  timber: [...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall-wood-detail-cross', 'wall-wood-window-glass'), ['ftk', 'roof-gable', 0, 2, 0, 90]],
+  flat: [...sides(0, 'wall', 'wall-doorway-square'), ...sides(1, 'wall', 'wall-window-glass'), ['ftk', 'roof-flat', 0, 2, 0, 0], ['ftk', 'chimney', -0.2, 2, -0.2, 0]],
+  long: [...sides(0, 'wall-wood', 'wall-wood-door', 0.3), ...sides(0, 'wall-wood', 'wall-wood-window-shutters', -0.7),
+         ['ftk', 'roof-gable', 0.3, 1, 0, 0], ['ftk', 'roof-gable', -0.7, 1, 0, 0]],
+  tall: [...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall', 'wall-window-small'), ...sides(2, 'wall', 'wall-window-round'), ['ftk', 'roof-high-gable', 0, 3, 0, 0]],
+  wide: [...sides(0, 'wall', 'wall-door', 0.3), ...sides(0, 'wall', 'wall-window-shutters', -0.7),
+         ...sides(1, 'wall-wood', 'wall-wood-window-glass', 0.3), ...sides(1, 'wall-wood', 'wall-wood-window-glass', -0.7),
+         ['ftk', 'roof-high-gable', 0.3, 2, 0, 0], ['ftk', 'roof-high-gable', -0.7, 2, 0, 0]],
+  wood: [...sides(0, 'wall-wood', 'wall-wood-door', 0.3), ...sides(0, 'wall-wood', 'wall-wood-window-small', -0.7),
+         ...sides(1, 'wall-wood', 'wall-wood-window-round', 0.3), ...sides(1, 'wall-wood', 'wall-wood-window-small', -0.7),
+         ['ftk', 'roof-gable', 0.3, 2, 0, 0], ['ftk', 'roof-gable', -0.7, 2, 0, 0]],
+  narrow: [...sides(0, 'wall', 'wall-door'), ...sides(1, 'wall', 'wall-window-shutters'), ['ftk', 'roof-high-gable', 0, 2, 0, 90]],
+};
+const paint = (parts, roof, wall) => parts.map(([kit, m, x, y, z, turn, scale = 1, tx = 0, tz = 0]) =>
+  [kit, m, x, y, z, turn, scale, tx, tz, m.startsWith('roof') ? roof : m.startsWith('wall') ? wall : null]);
 const PICTURES = {
   'level0': [['sk', 'campfire-pit', 0, 0, 0, 0, SK], ['sk', 'resource-wood', 0.45, 0, -0.25, 40, SK]],
   'level1': [['sk', 'tent', 0, 0, -0.15, 0, SK], ['sk', 'tent-canvas', 0, 0, -0.15, 0, SK], ['sk', 'campfire-pit', 0.55, 0, 0.6, 0, SK]],
@@ -58,6 +79,22 @@ const PICTURES = {
   'stall-green': [['ftk', 'stall-green', 0, 0, 0, 0], ['ftk', 'cart', 0.9, 0, -0.5, 60]],
   'fountain': [['ftk', 'fountain-round-detail', 0, 0, 0, 0, 0.9]],
   'tree-city': [['ftk', 'tree-high-round', 0, 0, 0, 0]],
+  // A city's houses, nobody's: none has the sessions' teal or red roofs, so those stand out.
+  // Some in colours of our own (paint, below), some in the kit's own second colour map.
+  'house-a': paint(SHAPE.cottage, THATCH, PLASTER),
+  'house-b': paint(SHAPE.timber, SLATE, PLASTER),
+  'house-c': paint(SHAPE.flat, COAL, SAND),
+  'house-d': paint(SHAPE.long, CLAY, PLASTER),
+  'house-e': paint(SHAPE.tall, SLATE, null),
+  'house-f': paint(SHAPE.wide, CLAY, SAND),
+  'house-g': paint(SHAPE.wood, THATCH, TIMBER),
+  'house-h': paint(SHAPE.narrow, PLUM, PLASTER),
+  'house-i': paint(SHAPE.cottage, KIT, KIT),
+  'house-j': paint(SHAPE.timber, KIT, KIT),
+  'house-k': paint(SHAPE.long, KIT, KIT),
+  'house-l': paint(SHAPE.wide, KIT, KIT),
+  'house-m': paint(SHAPE.narrow, KIT, KIT),
+  'house-n': paint(SHAPE.tall, KIT, KIT),
 };
 
 const loaders = {}, cache = {};
@@ -81,6 +118,30 @@ async function gltf(kit, name) {
   return cache[key];
 }
 async function model(kit, name) { return (await gltf(kit, name)).scene.clone(); }
+// The kit's colour map, each pixel's brightness kept and most of its colour replaced.
+const painted = {};
+async function skin(map, color) {
+  if (painted[color]) return painted[color];
+  if (color !== KIT) return tinted(map, color);
+  const tex = await new THREE.TextureLoader().loadAsync(await api().variation());
+  tex.flipY = map.flipY; tex.colorSpace = map.colorSpace; tex.magFilter = map.magFilter; tex.minFilter = map.minFilter;
+  return (painted[color] = tex);
+}
+function tinted(map, color) {
+  const c = document.createElement('canvas');
+  c.width = map.image.width; c.height = map.image.height;
+  const g = c.getContext('2d');
+  g.drawImage(map.image, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height), t = new THREE.Color(color).convertLinearToSRGB();
+  for (let i = 0; i < d.data.length; i += 4) {
+    const [r, gr, b] = [d.data[i], d.data[i + 1], d.data[i + 2]], k = Math.min(1.1, (r * 0.3 + gr * 0.59 + b * 0.11) / 150);
+    d.data[i] = r * 0.15 + 0.85 * 255 * t.r * k; d.data[i + 1] = gr * 0.15 + 0.85 * 255 * t.g * k; d.data[i + 2] = b * 0.15 + 0.85 * 255 * t.b * k;
+  }
+  g.putImageData(d, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.flipY = map.flipY; tex.colorSpace = map.colorSpace; tex.magFilter = map.magFilter; tex.minFilter = map.minFilter;
+  return (painted[color] = tex);
+}
 
 const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
@@ -99,8 +160,13 @@ async function picture(name, parts) {
   const sun = new THREE.DirectionalLight(0xffffff, 2.2);
   sun.position.set(4, 8, 3);
   scene.add(sun);
-  for (const [kit, m, x, y, z, turn, scale = 1, tiltX = 0, tiltZ = 0] of parts) {
+  for (const [kit, m, x, y, z, turn, scale = 1, tiltX = 0, tiltZ = 0, color = null] of parts) {
     const o = await model(kit, m);
+    if (color) {
+      const meshes = [];
+      o.traverse(q => { if (q.isMesh) meshes.push(q); });
+      for (const q of meshes) { q.material = q.material.clone(); q.material.map = await skin(q.material.map, color); }
+    }
     o.position.set(x, y, z);
     o.rotation.set(tiltX * Math.PI / 180, turn * Math.PI / 180, tiltZ * Math.PI / 180, 'YXZ');
     o.scale.setScalar(scale);
@@ -165,8 +231,10 @@ async function people() {
 async function run() {
   const done = [];
   try {
-    for (const [name, parts] of Object.entries(PICTURES)) done.push(await picture(name, parts));
-    done.push(await people());
+    const only = await api().only();
+    for (const [name, parts] of Object.entries(PICTURES))
+      if (!only.length || only.includes(name)) done.push(await picture(name, parts));
+    if (!only.length) done.push(await people());
     await api().done('saved:\n' + done.join('\n'));
   } catch (e) {
     log('failed: ' + e);

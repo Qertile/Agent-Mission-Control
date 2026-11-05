@@ -1,8 +1,8 @@
 """Makes Relax mode's pictures (web/relax/*.png) from Kenney's 3D kits, once.
 
-    python3 relax_art.py <kenney_survival-kit.zip> <kenney_fantasy-town-kit_2.0.zip> <kenney_mini-characters.zip>
+    python3 relax_art.py <kenney_survival-kit.zip> <kenney_fantasy-town-kit_2.0.zip> <kenney_mini-characters.zip> [picture ...]
 
-It opens a window that puts the kits' models together (relax_art.html, three.js) and
+Name pictures to make only those; with none it makes them all. It opens a window that puts the kits' models together (relax_art.html, three.js) and
 saves one transparent PNG per picture, plus people.png: the walking people, one row per
 tool. Agent Mission Control itself only reads the PNGs:
 no 3D, no WebGL at run time. Run it again only to change the pictures.
@@ -22,6 +22,10 @@ class Api:
     def __init__(self, kits):
         self._kits = kits
 
+    def only(self):
+        """The pictures named on the command line (none: all of them)."""
+        return sys.argv[4:]
+
     def model(self, kit, name):
         """The model's GLB, base64."""
         z = self._kits[kit]
@@ -31,6 +35,10 @@ class Api:
         """The kit's colour map as a data URL (every model of a kit shares it)."""
         z = self._kits[kit]
         return 'data:image/png;base64,' + base64.b64encode(z.read('Models/GLB format/Textures/colormap.png')).decode()
+
+    def variation(self):
+        """The town kit's second colour map as a data URL."""
+        return 'data:image/png;base64,' + base64.b64encode(self._kits['ftk'].read('Models/Textures/variation-a.png')).decode()
 
     def save(self, name, data_url):
         os.makedirs(OUT, exist_ok=True)
@@ -45,7 +53,7 @@ class Api:
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) < 4:
         sys.exit(__doc__)
     kits = {'sk': zipfile.ZipFile(sys.argv[1]), 'ftk': zipfile.ZipFile(sys.argv[2]), 'mc': zipfile.ZipFile(sys.argv[3])}
     webview.create_window('Relax art', os.path.join(HERE, 'relax_art.html'), js_api=Api(kits),
