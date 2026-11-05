@@ -262,8 +262,12 @@ The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *L
   answering stands, and the fire burns while a step runs.
 - **Mouse:** hovering shows the name, status and messages; double-click shows the tab
   (an ended one starts again, a discussion opens); right-click is the session list's menu.
-- **Top:** the open tasks on a board (click a status to change it, as in the Tasks
-  column) and *⚡ Stamina*, each tool's limits left.
+- **Top:** the open tasks on a board (click a date or a status to change it, as in the
+  Tasks column; *History* shows the finished and discarded ones, and a click on a status
+  there restores it), *⚡ Stamina*, each tool's limits left, and the box to Task Reminder.
+- **Day and night**, by this computer's clock: daylight from 8:00 to 16:30, then dusk, night
+  from 19:30 to 5:00 with the sessions' buildings and the lanterns lit, then dawn. Names
+  and status badges stay as bright as by day.
 - It draws only what changes, about 7% of one CPU core (Office: 4%), and nothing while the
   window is hidden or in Office mode.
 - The pictures come from Kenney's *Survival Kit* and *Fantasy Town Kit* (CC0,
@@ -677,8 +681,10 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   中時有火焰。
 - **滑鼠**：移到上面顯示名稱、狀態和訊息數；雙擊切到它的分頁（結束的會重新啟動，討論會
   打開）；右鍵是 session 清單的選單。
-- **上方**：公告板列出未完成的任務（點狀態可以改，和 Tasks 欄一樣），*⚡ Stamina* 顯示各
-  工具剩下的用量。
+- **上方**：公告板列出未完成的任務（點日期或狀態可以改，和 Tasks 欄一樣；*History* 列出已完成
+  和已捨棄的任務，點狀態可以還原），*⚡ Stamina* 顯示各工具剩下的用量，下面是給 Task Reminder 的輸入框。
+- **日夜**：依這台電腦的時鐘，8:00 到 16:30 是白天，接著是黃昏，19:30 到 5:00 是夜晚，有人的建築和
+  路燈會亮，再來是清晨。名字和狀態標記維持白天的亮度。
 - 只重畫有變的部分，大約占一個 CPU 核心的 7%（Office 是 4%）；視窗隱藏或在 Office 模式時
   完全不跑。
 - 圖片來自 Kenney 的 *Survival Kit* 和 *Fantasy Town Kit*（CC0，

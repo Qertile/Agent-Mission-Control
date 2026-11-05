@@ -17,15 +17,27 @@
   #relax { display: none; grid-column: 1 / 4; grid-row: 1; position: relative; min-width: 0; min-height: 0;
            overflow-y: auto; overflow-x: hidden; background: #4b7a46; }
   #relax-canvas { display: block; }
+  /* Day and night: laid over the camp, multiplying it; the lights are the pale parts. */
+  #relax-scene { position: relative; isolation: isolate; line-height: 0; }
+  #relax-night { position: absolute; left: 0; top: 0; pointer-events: none; mix-blend-mode: multiply; display: none; }
   /* Above the camp, staying there as it scrolls: the task board and the stamina bars. */
-  #relax-top { position: sticky; top: 0; z-index: 1; display: flex; gap: 8px; padding: 6px; font-size: 12px;
+  #relax-top { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; padding: 6px; font-size: 12px;
                background: #6b4a2b; border-bottom: 3px solid #4a3019; color: #fff3d6; }
-  #board { flex: 1; min-width: 0; max-height: 120px; overflow-y: auto; padding: 4px 8px;
+  /* A fixed height: the camp's layout depends on the room left, so it must not move with the list. */
+  #board { flex: 1 1 0; min-width: 0; height: 84px; overflow-y: auto; padding: 4px 8px;
            background: #a87b4f; border: 2px solid #4a3019; border-radius: 3px; box-shadow: inset 0 0 0 2px #c4955f; }
   #board .h, #stamina .h { color: #fff3d6; font-weight: bold; margin-bottom: 2px; }
   #board .board-row { display: flex; gap: 8px; color: #2b1a0c; padding: 1px 0; }
   #board .board-row .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #board .board-row .due { color: #4a3019; }
+  #board .board-row .due { color: #4a3019; cursor: pointer; }
+  #board .board-row .due:hover { text-decoration: underline; }
+  #board .board-row .when { color: #4a3019; }
+  #board .h { display: flex; justify-content: space-between; }
+  #board .h .hist { cursor: pointer; font-weight: normal; text-decoration: underline; }
+  #relax-chat { flex: 0 0 100%; box-sizing: border-box; background: #a87b4f; border: 2px solid #4a3019; border-radius: 3px; padding: 3px 8px 5px; }
+  #relax-chat .chat-head .cap, #relax-chat .chat-head .status { color: #fff3d6; }
+  #relax-chat textarea { height: 26px; font-size: 13px; background: #fff3d6; color: #2b1a0c; caret-color: #2b1a0c; border-color: #4a3019; }
+  #relax-chat textarea:focus { border-color: #2b1a0c; }
   #board .board-row .st { cursor: pointer; font-weight: bold; }
   #board .board-row .st:hover { text-decoration: underline; }
   #board .more { color: #4a3019; font-style: italic; }
@@ -288,8 +300,8 @@
 <div class="menu" id="result-box"><input id="result-in" spellcheck="false"></div>
 <div class="menu" id="restore-menu"><div>Restore → Pending</div></div>
 <div class="menu" id="add-menu"></div>
-<div id="relax"><div id="relax-top"><div id="board"></div><div id="stamina"></div></div>
-  <canvas id="relax-canvas"></canvas><div id="relax-msg"></div></div>
+<div id="relax"><div id="relax-top"><div id="board"></div><div id="stamina"></div><div class="chat" id="relax-chat"></div></div>
+  <div id="relax-scene"><canvas id="relax-canvas"></canvas><canvas id="relax-night"></canvas></div><div id="relax-msg"></div></div>
 <div class="menu" id="set-menu"></div>
 <div class="menu" id="send-menu"></div>
 <div id="xc">
@@ -1525,6 +1537,7 @@ function chatBox(host, target) {
   });
 }
 chatBox($('task-chat'), () => 'Task Reminder');
+chatBox($('relax-chat'), () => 'Task Reminder');
 
 // ---------------------------------------------------------------- usage
 function pieSvg(frac) {

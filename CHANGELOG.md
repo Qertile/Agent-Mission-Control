@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – Relax mode: the board does what the Tasks column does, day and night
+
+### Added
+- Relax mode's board: a click on a task's date opens the calendar, *History* shows the
+  finished and discarded tasks with a restore on their status, and a box writes to Task
+  Reminder, so nothing of the Tasks column needs Office mode.
+- Relax mode: day and night by this computer's clock. A colour multiplied over the camp (a
+  canvas of its own, drawn again only as the hour moves on, none at all by day), pale around
+  the lit buildings and the lanterns; names, badges and the era's label stay bright.
+
+### Fixed
+- Relax mode: the board's height moved with its list, and the camp's layout with it, so a
+  task added or History shown moved the buildings. The board has a fixed height now.
+- README: Relax mode (both languages).
+
 ## 2026-11-05 – Relax mode: from a tribe to a city
 
 ### Added

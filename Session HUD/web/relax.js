@@ -151,7 +151,8 @@ const relax = (() => {
     scenery(g, w, h, placed, plot, e, edges);
     if (e[1] === 'City') wall(g, w, h);
     spots = [];
-    const labels = [];
+    badges = [];
+    const labels = [], clear = [];
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
     for (const {x: cx, y: ground, b} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
@@ -180,6 +181,7 @@ const relax = (() => {
       g.fillStyle = ended ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.55)';
       const ly = ground + plot * 0.2;
       g.fillRect(cx - nw / 2 - 14, ly, nw + 22, ended ? 18 : 30);
+      clear.push([cx - nw / 2 - 14, ly, nw + 22, ended ? 18 : 30]);
       g.fillStyle = TOOL_COLORS[b.tool] || TOOL_COLORS.claude;
       if (b.kind === 'meeting') { g.font = "12px 'DejaVu Sans Mono', Consolas, monospace"; g.fillText('⚖', cx - nw / 2 - 5, ly + 13);
                                   g.font = "bold 12px 'DejaVu Sans Mono', Consolas, monospace"; }
@@ -196,7 +198,12 @@ const relax = (() => {
     }
     // The names and status badges go over everything, so no building or lantern hides one.
     for (const f of labels) f();
-    eraLabel(g, e);
+    const label = eraLabel(g, e);
+    // What is lit at night: each building with someone in it, the fires, the lanterns.
+    lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
+              ...lamps.filter(l => l.b.kind === 'lantern').map(l => ({x: l.x, y: l.y - plot * 0.25, r: plot * 0.5}))];
+    plain = [...clear, label];
+    sky(w, h);
     settle(placed.filter(p => !p.b.prop));
     const out = cv.getContext('2d');
     out.setTransform(1, 0, 0, 1, 0, 0);
@@ -335,6 +342,7 @@ const relax = (() => {
     g.fillStyle = '#ffffff';
     g.fillText(text, 20, 19);
     g.textAlign = 'center';
+    return [14, 6, tw + 12, 18];
   }
 
   // --- the people: one per building that is not ended, and one per participant around
@@ -455,6 +463,50 @@ const relax = (() => {
     }
   }
 
+  // Day and night, by this computer's clock: a colour multiplied over the whole camp (a
+  // canvas of its own, drawn once and again only as the hour moves on, so the people's 5 Hz
+  // redraw does not pay for it), pale around the lights. Nothing at all in full daylight.
+  const SKY = [[0, [84, 96, 150]], [5, [84, 96, 150]], [6.5, [255, 200, 165]], [8, [255, 255, 255]], [16.5, [255, 255, 255]],
+               [18, [255, 170, 120]], [19.5, [84, 96, 150]], [24, [84, 96, 150]]];
+  // `plain`: the names, status badges and the era's label stay as bright as by day, to be read.
+  let lights = [], plain = [], badges = [], skyW = 0, skyH = 0, skySig = '', hourForTest = null;
+  function hourNow() {
+    const d = new Date();
+    return hourForTest !== null ? hourForTest : d.getHours() + d.getMinutes() / 60;
+  }
+  function skyColor(hour) {
+    const n = SKY.findIndex(([h]) => h > hour), [h0, a] = SKY[n - 1], [h1, b] = SKY[n], t = (hour - h0) / (h1 - h0);
+    return a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  }
+  function sky(w, h) {
+    if (w) { skyW = w; skyH = h; skySig = ''; }
+    const c = skyColor(hourNow()), sig = c.join(), cv = $('relax-night');
+    if (sig === skySig || !skyW) return;
+    skySig = sig;
+    if (sig === '255,255,255') { cv.style.display = 'none'; return; }
+    cv.width = skyW; cv.height = skyH;
+    cv.style.width = skyW + 'px'; cv.style.height = skyH + 'px';
+    cv.style.display = 'block';
+    const g = cv.getContext('2d'), dark = 1 - Math.min(...c) / 255;
+    g.fillStyle = `rgb(${c})`;
+    g.fillRect(0, 0, skyW, skyH);
+    // The lights come on as it gets dark.
+    for (const {x, y, r} of lights) {
+      const glow = g.createRadialGradient(x, y, 0, x, y, r);
+      glow.addColorStop(0, `rgba(255, 228, 180, ${Math.min(0.85, dark * 1.3)})`);
+      glow.addColorStop(0.4, `rgba(255, 222, 170, ${Math.min(0.5, dark * 0.75)})`);
+      glow.addColorStop(0.75, `rgba(255, 215, 160, ${Math.min(0.14, dark * 0.2)})`);
+      glow.addColorStop(1, 'rgba(255, 210, 150, 0)');
+      g.fillStyle = glow;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    for (const [x, y, w, h] of plain) g.clearRect(x, y, w, h);
+    g.globalCompositeOperation = 'destination-out';
+    g.fillStyle = '#000';
+    for (const [x, y] of badges) { g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.fill(); }
+    g.globalCompositeOperation = 'source-over';
+  }
+
   // One step for everyone. Only the squares that changed are drawn again, from the
   // background, then the flames and people on top.
   function tick() {
@@ -490,6 +542,7 @@ const relax = (() => {
   }
 
   function badge(g, x, y, text, color) {
+    badges.push([x, y]);
     g.fillStyle = 'rgba(0, 0, 0, 0.6)';
     g.beginPath(); g.arc(x, y, 11, 0, Math.PI * 2); g.fill();
     g.strokeStyle = color; g.lineWidth = 2; g.stroke();
@@ -513,6 +566,7 @@ const relax = (() => {
   function update(force, turns) {
     if (turns !== undefined) camp = turns;
     if (!on || document.hidden) return;
+    sky();
     const list = buildings(), box = $('relax');
     const now = JSON.stringify([camp, box.clientWidth, box.clientHeight, $('relax-top').offsetHeight,
                                 list.map(b => [b.id, b.name, b.tool, b.status, b.level, b.people])]);
@@ -523,14 +577,30 @@ const relax = (() => {
 
   // --- above the camp: the open tasks on a board, and each tool's limits as stamina
 
-  let boardTasks = [], staminaSig = '';
+  let boardTasks = [], boardDone = [], boardHistory = false, staminaSig = '';
+  const boardHead = () => `<div class="h"><span>📋 Tasks${boardHistory ? ' · history' : ''}</span>` +
+    `<span class="hist" data-hist="1">${boardHistory ? 'Open tasks' : 'History'}</span></div>`;
+  // The finished and discarded tasks, latest first; a click on its status restores one.
+  async function loadDone() {
+    const done = await api().task_history();
+    if (!boardHistory) return;
+    boardDone = done;
+    $('board').innerHTML = boardHead() + (done.length ? done.map((t, i) => {
+      const results = t.results.map(r => [r.subitem, r.result].filter(Boolean).join(' → ')).filter(Boolean).join('\n');
+      return `<div class="board-row"><span class="what" title="${esc(results || t.text)}">${t.discarded ? '✗' : '✓'} ${esc(t.text.charAt(0).toUpperCase() + t.text.slice(1))}</span>` +
+        `<span class="when">${esc(t.done || '?')}</span>` +
+        `<span class="st" data-r="${i}" title="restore it as Pending" style="color:#4a3019">${t.discarded ? 'Discarded' : 'Finished'}</span></div>`;
+    }).join('') : '<div class="more">No finished or discarded tasks</div>');
+  }
   async function loadTasks() {
+    if (boardHistory) return loadDone();
     const {tasks, remaining} = await api().task_list();
+    if (boardHistory) return;
     boardTasks = tasks;
     const shown = tasks.slice(0, BOARD_MAX), more = tasks.length - shown.length + (remaining || 0);
-    $('board').innerHTML = '<div class="h">📋 Tasks</div>' + (shown.length ? shown.map((t, i) =>
+    $('board').innerHTML = boardHead() + (shown.length ? shown.map((t, i) =>
       `<div class="board-row"><span class="what" title="${esc(t.text)}">${esc(t.text.charAt(0).toUpperCase() + t.text.slice(1))}</span>` +
-      (t.due ? `<span class="due">${esc(t.due)}</span>` : '') +
+      `<span class="due" data-d="${i}" title="change the date">${esc(t.due || 'no due')}</span>` +
       `<span class="st" data-i="${i}" style="color:${TASK_COLORS[t.status] || TASK_COLORS.Pending}">${esc(t.status || 'Pending')}</span></div>`).join('')
       : '<div class="more">No open tasks</div>') + (more > 0 ? `<div class="more">+${more} more</div>` : '');
   }
@@ -588,13 +658,27 @@ const relax = (() => {
         : b.status === 'ended' ? `${b.name} · ended (double-click to start)`
         : `${b.name} · ${b.status} · ${b.tool === 'agy' ? (b.row.up || '') + ' open' : (b.row.turns || 0) + ' messages'}`;
     });
-    // A task's status on the board opens the same menu as in the Tasks column.
+    // A task's status and date on the board open the same menu and calendar as in the Tasks
+    // column; History swaps the list, and a finished one's status restores it.
     $('board').addEventListener('click', e => {
-      const i = e.target.dataset.i;
-      if (i === undefined) return;
+      const {i, d, r, hist} = e.target.dataset;
+      if (hist) {
+        boardHistory = !boardHistory;
+        $('board').scrollTop = 0;
+        loadTasks();
+      } else if (i !== undefined) {
+        taskEdit = boardTasks[+i];
+        showAt($('status-menu'), e.clientX, e.clientY);
+      } else if (d !== undefined) {
+        taskEdit = boardTasks[+d];
+        openCalendar(taskEdit.due, e.clientX, e.clientY);
+      } else if (r !== undefined) {
+        taskEdit = boardDone[+r];
+        showAt($('restore-menu'), e.clientX, e.clientY);
+      } else {
+        return;
+      }
       e.stopPropagation();
-      taskEdit = boardTasks[+i];
-      showAt($('status-menu'), e.clientX, e.clientY);
     });
     new ResizeObserver(() => update()).observe($('relax'));
     document.addEventListener('visibilitychange', () => { update(); clock(); });
@@ -602,5 +686,6 @@ const relax = (() => {
   }
 
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
-          _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1]};   // for tests
+          _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
+          _hour: h => { hourForTest = h; skySig = ''; sky(); }};
 })();
