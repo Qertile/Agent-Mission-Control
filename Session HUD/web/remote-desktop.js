@@ -27,9 +27,11 @@
     paste_clipboard_image: () => null,     // that clipboard is the other computer's
     // The issue is written in this computer's browser.
     send_feedback: () => { window.open('https://github.com/Qertile/Agent-Mission-Control/issues/new', '_blank'); },
+    // A web link in a terminal opens in this computer's browser too.
+    open_url: url => { window.open(url, '_blank', 'noopener'); return null; },
   };
   async function call(name, args) {
-    if (LOCAL[name]) return LOCAL[name]();
+    if (LOCAL[name]) return LOCAL[name](...args);
     const r = await post('/api/call/' + name, {args});
     if (r.error) throw new Error(r.error);
     if (name === 'init') hook();

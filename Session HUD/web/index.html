@@ -631,6 +631,8 @@ const amc = {
       fontFamily: "'DejaVu Sans Mono', Consolas, monospace", fontSize: 14, cursorBlink: true,
       scrollback: 5000, allowProposedApi: true,
       theme: termTheme(),
+      // A link the program marked itself (OSC 8): xterm's own way, window.open, does nothing here.
+      linkHandler: {activate: (e, url) => amc.openUrl(url)},
     });
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
@@ -1156,9 +1158,10 @@ $('terms').addEventListener('drop', e => {
   amc.droppedHere = paths.length > 0;     // then pywebview's copy of the paths is not typed again
   if (paths.length) amc.typePaths(paths);
 }, true);
-// ---------------------------------------------------------------- paths in terminals
+// ---------------------------------------------------------------- links in terminals
 // A full path in a terminal is a link. Here it opens the file with this computer's own app;
 // on the remote desktop (remote-desktop.js replaces openPath) the file downloads.
+// A web address is one too: it opens in the browser of the computer you are at.
 // Full paths in a terminal's text: C:\..., /a/b... (two
 // parts at least, so "/config" is not one), ~/...; one in backticks may have spaces.
 // [{start, end, path}], end not included, trailing punctuation left out.
@@ -1178,7 +1181,7 @@ function findPaths(text) {
     for (let n = 0; !m[1] && n < 6; n++) {
       const w = text.slice(at).match(/^ ([^\s"'`<>|*?，。；」)\]}]+)/);
       const word = w && w[1].replace(/[.,;:!?]+$/, '');
-      if (!word || /^(?:[A-Za-z]:\\|~\/|\/)/.test(word)) break;     // the next path starts here
+      if (!word || /^(?:[A-Za-z]:\\|~\/|\/|https?:\/\/)/.test(word)) break;     // the next path or link starts here
       sofar += ' ' + word;
       at += 1 + word.length;
       found.tries.unshift(sofar);
@@ -1188,7 +1191,27 @@ function findPaths(text) {
   }
   return out;
 }
-// The links of terminal row y (1-based). A path can go on past its row two ways: the
+const URL_RE = /https?:\/\/[A-Za-z0-9\-._~:/?#\[\]@!$&()+,;=%\u0001]+/g;
+// Web links in a text: [{start, end, url}], end not included. ASCII only, so Chinese right
+// after one is not part of it; trailing punctuation left out, and a ) only if it has its (.
+function findUrls(text) {
+  const out = [];
+  for (const m of text.matchAll(URL_RE)) {
+    let url = m[0], last;
+    do {
+      last = url;
+      url = url.replace(/[.,;:!?\u0001]+$/, '');
+      for (const [o, c] of ['()', '[]'])
+        if (url.endsWith(c) && url.split(o).length < url.split(c).length) url = url.slice(0, -1);
+    } while (url !== last);
+    // Past a line the AI broke (\u0001, see pathLinks): a plain word with more text after it is
+    // the next line's first word, not the rest of the link.
+    if (/^ +\S/.test(text.slice(m.index + m[0].length))) url = url.replace(/\u0001[\w-]*$/, '');
+    out.push({start: m.index, end: m.index + url.length, url});
+  }
+  return out;
+}
+// The links of terminal row y (1-based), paths and web links. One can go on past its row two ways: the
 // terminal wrapped it (the next row isWrapped), or the AI broke the line itself (Claude
 // Code does, at about the width): a row that ends at the right edge goes on in the next one,
 // after its indent, marked \u0001. Read cell by cell, so a path's place is right with wide
@@ -1230,7 +1253,15 @@ function pathLinks(term, y) {
       for (let k = 0; k < ch.length; k++) cell.push([x + 1, row + 1]);
     }
   }
-  return findPaths(text).filter(p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y).map(p => {
+  const onRow = p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y;
+  const urls = findUrls(text);
+  const inUrl = p => urls.some(u => p.start < u.end && p.end > u.start);   // "?u=:/a/b" is no path
+  const range = p => ({start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}});
+  const webLinks = urls.filter(onRow).map(u => {
+    const url = u.url.split(MARK).join('');
+    return {text: url, range: range(u), activate: () => amc.openUrl(url)};
+  });
+  return webLinks.concat(findPaths(text).filter(p => onRow(p) && !inUrl(p)).map(p => {
     // Each to try, longest first, also cut at each break the AI made (the text after one can
     // be words, not the rest of the path), which is either inside a name or where a space was.
     const tries = [];
@@ -1243,13 +1274,17 @@ function pathLinks(term, y) {
     }
     return {
       text: p.path.split(MARK).join(''),
-      range: {start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}},
+      range: range(p),
       activate: () => amc.openPath(tries),
     };
-  });
+  }));
 }
 amc.openPath = async tries => {
   const err = await api().open_path(tries);
+  if (err) alert(err);
+};
+amc.openUrl = async url => {
+  const err = await api().open_url(url);
   if (err) alert(err);
 };
 

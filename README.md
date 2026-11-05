@@ -202,6 +202,8 @@ running sessions, each one's conversation or terminal, and a box to type into it
   to the phone (up to 500 MB, its progress under the screen). *⬇* next to 📎 takes a path
   typed in, for one the *Term* view shows. Any file Agent Mission Control can read here can
   be fetched this way, so keep the link and token to yourself.
+- **Web links:** an `http://` or `https://` address in a *Chat* message is a link that opens
+  in the phone's browser. In the *Term* view it is not a link.
 - **📌 Pins:** tap a message in *Chat*, then *📌 Pin*. The session's pins show in a line
   above the chat (`📌 2 · <the latest>`); tap it for the list, `×` unpins. They are the
   same pins as the desktop's.
@@ -238,6 +240,9 @@ Tailscale network and token as the phone page.
   too: click it and the file opens with its default app (a program or a script: its folder,
   so a click starts nothing). A path with spaces works without backticks too: the words
   after it are tried, longest first, until a file is there.
+- **Web links in terminals:** an `http://` or `https://` address in a terminal is a link
+  (also when it goes on in the next row). Click it and it opens in the default browser of
+  the computer you are at: this one in the AMC window, the other one on the remote desktop.
 - **Getting files back:** a full path of this computer in a terminal is a link (underlined
   under the mouse, also when it goes on in the next row, wrapped by the terminal or broken
   by the AI): click it and the file downloads
@@ -637,6 +642,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   含空格的路徑）會變成連結，點一下檔案就下載到手機（每個最多 500 MB，下方顯示進度）。📎 旁邊的 *⬇*
   可以直接輸入路徑，給 *Term* 畫面裡看到的路徑用。Agent Mission Control 在這台讀得到的檔案都能這樣取得，
   所以網址和 token 不要給別人。
+- **網址連結：** *Chat* 訊息裡的 `http://` 或 `https://` 網址是連結，點一下用手機瀏覽器開啟。*Term* 畫面裡不是連結。
 - **📌 釘選：** 在 *Chat* 點一則訊息，再按 *📌 Pin*。這個 session 的釘選顯示在對話上方
   一行（`📌 2 · <最新一則>`），點它展開清單，`×` 取消釘選。和桌面版是同一份。
 - **+ 新 session：** 選電腦上有裝的 AI 工具（預設選 Default AI），輸入名稱後按 *Create*，
@@ -665,6 +671,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   並把它在這台的路徑打進放開位置的窗格，不在窗格上就打進目前的分頁。
 - **終端機裡的路徑：** 這台電腦視窗的終端機裡，完整路徑也是連結，點一下用預設的 app 打開檔案（程式或腳本只打開
   所在資料夾，點擊不會執行任何東西）。路徑有空格、沒用反引號也可以：會把後面的字接上去試，先試最長的，直到檔案存在。
+- **終端機裡的網址：** 終端機裡的 `http://` 或 `https://` 網址是連結（接到下一列也認得），點一下用你正在操作的電腦的預設瀏覽器開啟：
+  AMC 視窗是這台，遠端桌面是那台。
 - **取回檔案：** 終端機裡這台電腦的完整路徑是連結（滑鼠移上去出現底線，被終端機換行或被 AI 自己斷成兩列也認得），
   點一下檔案就下載到那台電腦（每個最多 500 MB，右下角顯示進度）。
 - **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦）。

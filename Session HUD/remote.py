@@ -184,7 +184,7 @@ def start(api, conf, web_dir):
 
 
 # What the remote desktop page may not call: the ones that use this computer's screen.
-NOT_REMOTE = {'paste_clipboard_image', 'open_path'}   # open_path: starts an app here, for this window only
+NOT_REMOTE = {'paste_clipboard_image', 'open_path', 'open_url'}   # open_*: start an app here, for this window only
 
 
 def desktop_handler(api, conf, web_dir):

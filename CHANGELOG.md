@@ -2,6 +2,18 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – web links in terminals open
+
+### Fixed
+- An `http://` or `https://` address in a terminal was plain text, so a click did nothing. It
+  is now a link, also when it goes on in the next row, and opens in the default browser of the
+  computer you are at: `Api.open_url` in the AMC window (http and https only), the browser's
+  own on the remote desktop, which cannot call `open_url`.
+- A link a program marks itself (OSC 8) did nothing in the AMC window. It opens the same way.
+- On the phone, an address in a *Chat* message is a link to the phone's browser. The *Term*
+  view has no links.
+- README: Phone page, Remote desktop (both languages).
+
 ## 2026-11-05 – paths with spaces in links
 
 ### Fixed

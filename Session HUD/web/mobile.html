@@ -32,7 +32,7 @@
   #pins .pin small { color: var(--note); display: block; }
   #pins .pin button { align-self: flex-start; padding: 2px 8px; }
   .m.picked { outline: 1px solid var(--note); }
-  .m a.dl { color: var(--busy); text-decoration: underline; cursor: pointer; }
+  .m a.dl, .m a.web { color: var(--busy); text-decoration: underline; cursor: pointer; }
   .m .pin-it { display: block; margin-top: 6px; }
   #dot { width: 10px; height: 10px; border-radius: 50%; background: var(--grey); flex: none; }
   select, button, textarea { font: inherit; color: var(--title); background: var(--bg);
@@ -173,7 +173,7 @@ function findPaths(text) {
     for (let n = 0; !m[1] && n < 6; n++) {
       const w = text.slice(at).match(/^ ([^\s"'`<>|*?，。；」)\]}]+)/);
       const word = w && w[1].replace(/[.,;:!?]+$/, '');
-      if (!word || /^(?:[A-Za-z]:\\|~\/|\/)/.test(word)) break;     // the next path starts here
+      if (!word || /^(?:[A-Za-z]:\\|~\/|\/|https?:\/\/)/.test(word)) break;     // the next path or link starts here
       sofar += ' ' + word;
       at += 1 + word.length;
       found.tries.unshift(sofar);
@@ -216,11 +216,34 @@ async function downloadFile(path, show) {
     return `${name}: download failed: ${e.message}`;
   }
 }
-// Text with its full paths as links: tapped, the file comes to this phone.
+const URL_RE = /https?:\/\/[A-Za-z0-9\-._~:/?#\[\]@!$&()+,;=%]+/g;
+// Web links in a text: [{start, end, url}], end not included. ASCII only, so Chinese right
+// after one is not part of it; trailing punctuation left out, and a ) only if it has its (.
+function findUrls(text) {
+  const out = [];
+  for (const m of text.matchAll(URL_RE)) {
+    let url = m[0], last;
+    do {
+      last = url;
+      url = url.replace(/[.,;:!?]+$/, '');
+      for (const [o, c] of ['()', '[]'])
+        if (url.endsWith(c) && url.split(o).length < url.split(c).length) url = url.slice(0, -1);
+    } while (url !== last);
+    out.push({start: m.index, end: m.index + url.length, url});
+  }
+  return out;
+}
+// Text with its full paths as links (tapped, the file comes to this phone) and its web
+// addresses as links (they open in this phone's browser).
 function linkPaths(text) {
   let html = '', at = 0;
-  for (const p of findPaths(text)) {
-    html += esc(text.slice(at, p.start)) + `<a class="dl" data-tries="${esc(JSON.stringify(p.tries))}">${esc(text.slice(p.start, p.end))}</a>`;
+  const urls = findUrls(text);
+  const all = urls.map(u => ({...u, html: `<a class="web" href="${esc(u.url)}" target="_blank" rel="noopener">${esc(u.url)}</a>`}))
+    .concat(findPaths(text).filter(p => !urls.some(u => p.start < u.end && p.end > u.start)).map(p =>
+      ({...p, html: `<a class="dl" data-tries="${esc(JSON.stringify(p.tries))}">${esc(text.slice(p.start, p.end))}</a>`})))
+    .sort((a, b) => a.start - b.start);
+  for (const p of all) {
+    html += esc(text.slice(at, p.start)) + p.html;
     at = p.end;
   }
   return html + esc(text.slice(at));
@@ -308,6 +331,7 @@ let shownMsgs = [], pinsJson = '', pinsOpen = false;
 
 // Pinning: tap a message, then its 📌 Pin. The pins are the session's on the desktop too.
 $('chat').addEventListener('click', async e => {
+  if (e.target.closest('a.web')) return;     // the browser opens it
   const link = e.target.closest('a.dl');
   // What went wrong in a box: the line under the screen is cleared by the next refresh.
   if (link) {

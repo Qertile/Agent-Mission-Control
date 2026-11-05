@@ -898,13 +898,22 @@ class Api:
             return None
         return f'no such file: {tries[0]}' if tries else 'no path'
 
+    def open_url(self, url):
+        """A web link clicked in a terminal: the default browser. http(s) only, as the text of
+        a link comes from whatever ran in that terminal. Returns None or what went wrong."""
+        url = str(url).strip()
+        if not re.fullmatch(r'https?://\S+', url, re.I):
+            return f'not a web link: {url}'
+        if WINDOWS:
+            os.startfile(url)
+        else:
+            subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', url],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return None
+
     def send_feedback(self):
         """⚙ → Send feedback: a new GitHub issue in the default browser."""
-        if WINDOWS:
-            os.startfile(FEEDBACK_URL)
-        else:
-            subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', FEEDBACK_URL],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        self.open_url(FEEDBACK_URL)
 
     def fork_session(self, sid, name, replace=False):
         """Adds a session named `name` to agents.json that starts from session `sid`'s
