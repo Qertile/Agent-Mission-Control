@@ -21,6 +21,7 @@
   #relax-scene { position: relative; isolation: isolate; line-height: 0; }
   #relax-night { position: absolute; left: 0; top: 0; pointer-events: none; mix-blend-mode: multiply; display: none; }
   /* The names, the same size at any zoom. */
+  #relax-lit { position: absolute; left: 0; top: 0; pointer-events: none; display: none; }
   #relax-labels { position: absolute; left: 0; top: 0; pointer-events: none; }
   /* Above the camp, staying there as it scrolls: the task board and the stamina bars. */
   #relax-top { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; padding: 6px; font-size: 12px;
@@ -303,7 +304,7 @@
 <div class="menu" id="restore-menu"><div>Restore → Pending</div></div>
 <div class="menu" id="add-menu"></div>
 <div id="relax"><div id="relax-top"><div id="board"></div><div id="stamina"></div><div class="chat" id="relax-chat"></div></div>
-  <div id="relax-scene"><canvas id="relax-canvas"></canvas><canvas id="relax-night"></canvas><canvas id="relax-labels"></canvas></div><div id="relax-msg"></div></div>
+  <div id="relax-scene"><canvas id="relax-canvas"></canvas><canvas id="relax-night"></canvas><canvas id="relax-lit"></canvas><canvas id="relax-labels"></canvas></div><div id="relax-msg"></div></div>
 <div class="menu" id="set-menu"></div>
 <div class="menu" id="send-menu"></div>
 <div id="xc">

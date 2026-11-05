@@ -11,12 +11,14 @@
 // The pictures are PNGs made once by tools/relax_art.py from Kenney's kits (CC0).
 const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
-  const PICS = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people',
+  const PICS_BASE = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people',
                 'fence', 'signpost', 'lantern', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
                 'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
                 'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall',
                 'metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
+  const LIT_NAMES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'tower-a', 'tower-b', 'tower-c', 'tower-d', 'tower-e', 'mall', 'cafe', 'level1', 'level2', 'level3', 'level4'].map(k => `metro-${k}-lit`);
+  const PICS = [...PICS_BASE, 'metro-meeting', ...LIT_NAMES];
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
   // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
@@ -29,7 +31,7 @@ const relax = (() => {
                'house-a': 0.52, 'house-b': 0.36, 'house-c': 0.3, 'house-d': 0.49, 'house-e': 0.07, 'house-f': 0.2, 'house-g': 0.3, 'house-h': 0.25,
                'house-i': 0.52, 'house-j': 0.36, 'house-k': 0.49, 'house-l': 0.2, 'house-m': 0.25, 'house-n': 0.07,
                shop: 0.28, tavern: 0.14, smithy: 0.38, sawmill: 0.43, warehouse: 0.23, farm: 0.33, windmill: 0.26, watermill: 0.3, church: 0.05, townhall: 0.18,
-               'metro-a': 0.656, 'metro-b': 0.717, 'metro-c': 0.734, 'metro-cafe': 0.68, 'metro-d': 0.6, 'metro-e': 0.656, 'metro-f': 0.652, 'metro-g': 0.523, 'metro-h': 0.59, 'metro-level0': 0.742, 'metro-level1': 0.693, 'metro-level2': 0.607, 'metro-level3': 0.58, 'metro-level4': 0.338, 'metro-lot': 0.777, 'metro-mall': 0.627, 'metro-park': 0.57, 'metro-ruin': 0.723, 'metro-tower-a': 0.387, 'metro-tower-b': 0.094, 'metro-tower-c': 0.119, 'metro-tower-d': 0.098, 'metro-tower-e': 0.074};  // its top
+               'metro-a': 0.656, 'metro-b': 0.717, 'metro-c': 0.734, 'metro-cafe': 0.68, 'metro-d': 0.6, 'metro-e': 0.656, 'metro-f': 0.652, 'metro-g': 0.523, 'metro-h': 0.59, 'metro-level0': 0.742, 'metro-level1': 0.693, 'metro-level2': 0.607, 'metro-level3': 0.58, 'metro-level4': 0.338, 'metro-lot': 0.777, 'metro-mall': 0.627, 'metro-park': 0.57, 'metro-ruin': 0.723, 'metro-meeting': 0.762, 'metro-tower-a': 0.387, 'metro-tower-b': 0.094, 'metro-tower-c': 0.119, 'metro-tower-d': 0.098, 'metro-tower-e': 0.074};  // its top
   const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff', disc: '#ffc400'};
   const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0'};
   // The building grows with the messages typed into the session (agy: its hours open):
@@ -42,7 +44,7 @@ const relax = (() => {
   // [from, name, ground, road colour (null: none), road width (building widths), edge,
   //  the trees kept, the props it puts in the free spots, how much its roads bend]
   const ERAS = [
-    [5000, 'Metropolis', '#587a50', '#54575c', 0.17, '#a3a29a', 0.05, ['fountain'], 0.1],
+    [5000, 'Metropolis', '#587a50', '#54575c', 0.17, '#a3a29a', 0.2, ['fountain'], 0.1],
     [1500, 'City', '#4f7d44', '#8f8b80', 0.17, '#5f5c57', 0.1, ['fountain', 'stall', 'stall-green', 'stall'], 0.1],
     [500, 'Town', '#4f7d44', '#a8a497', 0.13, '#7d796e', 0.5, ['fountain', 'stall', 'stall-green', 'fence'], 0.16],
     [100, 'Village', '#4b7a46', '#8a6d45', 0.1, null, 0.8, ['signpost', 'fence', 'fence'], 0.24],
@@ -50,7 +52,7 @@ const relax = (() => {
   const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏯', Metropolis: '🏙'};
   const urban = e => e[1] === 'City' || e[1] === 'Metropolis';
   const metro = e => e[1] === 'Metropolis';
-  const shown = (e, level) => (metro(e) && /^(level|ruin)/.test(level) ? 'metro-' + level : level);   // a session's picture
+  const shown = (e, level) => (metro(e) && /^(level|ruin|meeting)/.test(level) ? 'metro-' + level : level);   // a session's picture
   const scaleOf = kind => (kind && kind.startsWith('metro-') ? 2 : 1);     // a metro picture shows twice the world
   const BOARD_MAX = 8;                     // tasks on the board; the rest are counted
   const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
@@ -344,7 +346,7 @@ const relax = (() => {
     works(m ? METRO_WORKS : WORKS);
     for (const l of lots) {
       if (used.has(l)) continue;
-      if (rng(hash(`lot${l.n}`))() > 1.45 - l.far * 1.2) continue;
+      if (rng(hash(`lot${l.n}`))() > (m ? 1.8 - l.far : 1.45 - l.far * 1.2)) continue;
       // Tall in the middle, low further out; a lower one where a tall one would not fit.
       const choice = m ? (l.far < 0.45 ? ['metro-tower-a', 'metro-g', 'metro-tower-d', 'metro-h', 'metro-d'] : l.far < 0.8 ? ['metro-d', 'metro-g', 'metro-f', 'metro-a', 'metro-e', 'metro-h'] : ['metro-b', 'metro-c', 'metro-a', 'metro-e', 'metro-f'])
         : l.far < 0.45 ? ['house-e', 'house-l', 'house-f', 'house-n', 'house-c', 'house-m', 'house-g', 'house-h']
@@ -501,18 +503,21 @@ const relax = (() => {
     land(g, w, h, e);
     const {lamps: allLamps, edges} = roads(g, placed, e);
     const lamps = allLamps.filter(l => riverGap(l.x, l.y) > riverWidth() / 2 + plot * 0.04);
+    lampCount = lamps.length;
     bridges(g, edges, e);
     const trees = urban(e) ? streetTrees(edges, placed, lamps, e, w, h) : [];
     scenery(g, w, h, placed, plot, e, edges);
     if (e[1] === 'City') wall(g, w, h);
     spots = [];
     tags = [];
+    litList = [];
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
     for (const {x: cx, y: ground, b} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
       if (b.prop) {
         const s = plot * 1.5 * (b.scale || scaleOf(b.kind));
         if (img[b.kind]) g.drawImage(img[b.kind], cx - s / 2, ground - s * ANCHOR, s, s);
+        if (metro(e)) litList.push([b.kind, cx, ground, s]);
         continue;
       }
       // An ended session is a wreck.
@@ -525,6 +530,7 @@ const relax = (() => {
       if (building) scaffold(g, cx, ground, level, false);
       if (pic) g.drawImage(pic, cx - s / 2, ground - s * ANCHOR, s, s);
       if (building) scaffold(g, cx, ground, level, true);
+      if (metro(e)) litList.push([level, cx, ground, s]);
       const top = ground - s * (ANCHOR - TOP[level]);
       tags.push({cx, ground, top, b});
       spots.unshift({x: cx - plot / 2, y: ground - plot * 0.9, w: plot, h: plot * 1.1 + 34, b});
@@ -667,8 +673,8 @@ const relax = (() => {
   }
 
   // The roads: the shortest set of winding roads that joins every building and prop but
-  // the fences (each joins the nearest one not yet joined). From a town on, a lantern stands beside
-  // each road's middle, unless a building is there. Returns the lanterns, drawn with the
+  // the fences (each joins the nearest one not yet joined). From a town on, lanterns stand beside
+  // the roads, unless a building is there. Returns the lanterns, drawn with the
   // buildings so they stand in front of or behind them, and the roads, which trees avoid.
   function roads(g, placed, e) {
     const joins = placed.filter(p => p.b.kind !== 'fence');
@@ -715,13 +721,18 @@ const relax = (() => {
     if (e[1] !== 'Town' && !urban(e)) return {lamps: [], edges};
     const lamps = [];
     for (const [n, r] of edges.entries()) {
-      if (urban(e) && n % 4) continue;   // a city has many streets: a lantern on every fourth stretch
-      // Beside the road's middle.
-      const m = along(r, 0.5), t = Math.hypot(m.dx, m.dy) || 1, a = r.line[0], b = r.line[r.line.length - 1];
-      const d = Math.hypot(b.x - a.x, b.y - a.y), side = plot * (e[4] / 2 + 0.08);
-      const x = m.x - m.dy / t * side, y = m.y + m.dx / t * side;
-      if (d > plot * 0.9 && !placed.some(p => Math.abs(p.x - x) < plot * 0.45 && y > p.y - plot * 0.2 && y < p.y + plot * 0.5))
+      // A town's: two along each road, on either side in turn. A city's roads come in short
+      // stretches: one on every stretch but the side streets' every other.
+      const a = r.line[0], b = r.line[r.line.length - 1], side = plot * ((r.width || e[4]) / 2 + 0.08);
+      if (Math.hypot(b.x - a.x, b.y - a.y) < plot * 0.6) continue;
+      if (urban(e) && r.width < 0.2 && n % 2) continue;
+      for (const [t, way] of urban(e) ? [[0.5, n % 2 ? 1 : -1]] : [[0.25, 1], [0.75, -1]]) {
+        const m = along(r, t), d = Math.hypot(m.dx, m.dy) || 1;
+        const x = m.x - m.dy / d * side * way, y = m.y + m.dx / d * side * way;
+        if (lamps.some(q => Math.hypot(q.x - x, q.y - y) < plot * 0.5)) continue;
+        if (placed.some(p => Math.abs(p.x - x) < plot * 0.45 && y > p.y - plot * 0.2 && y < p.y + plot * 0.5)) continue;
         lamps.push({x, y, b: {prop: true, kind: 'lantern'}});
+      }
     }
     return {lamps, edges};
   }
@@ -934,6 +945,8 @@ const relax = (() => {
   // in full daylight. The names are above it, as bright as by day, to be read.
   const SKY = [[0, [84, 96, 150]], [5, [84, 96, 150]], [6.5, [255, 200, 165]], [8, [255, 255, 255]], [16.5, [255, 255, 255]],
                [18, [255, 170, 120]], [19.5, [84, 96, 150]], [24, [84, 96, 150]]];
+  let lampCount = 0;
+  let litList = [], litMap = null, litOn = false, litAlpha = 0;
   let lights = [], skySig = '', hourForTest = null, nightOn = false, nightColor = '', nightMap = null;
   function hourNow() {
     const d = new Date();
@@ -966,10 +979,27 @@ const relax = (() => {
         g.fillRect(x - r, y - r, r * 2, r * 2);
       }
     }
+    // A metropolis's windows, warm, on a canvas of their own over the multiply: each building
+    // first wipes out what it stands in front of. Only while it is dark at all.
+    litOn = false;
+    if (nightOn && litList.length) {
+      const dark = 1 - Math.min(...c) / 255;
+      litAlpha = Math.min(0.8, dark * 1.2);
+      litMap = litMap || document.createElement('canvas');
+      litMap.width = MAP_W; litMap.height = MAP_H;
+      const g = litMap.getContext('2d');
+      for (const [kind, x, y, s] of litList) {
+        if (img[kind]) { g.globalCompositeOperation = 'destination-out'; g.drawImage(img[kind], x - s / 2, y - s * ANCHOR, s, s); }
+        g.globalCompositeOperation = 'source-over';
+        if (img[kind + '-lit']) g.drawImage(img[kind + '-lit'], x - s / 2, y - s * ANCHOR, s, s);
+      }
+      litOn = true;
+    }
     drawNight();
   }
   function drawNight() {
-    const cv = $('relax-night');
+    const cv = $('relax-night'), lit = $('relax-lit');
+    lit.style.display = 'none';
     if (!nightOn || !nightMap || viewW <= 0) { cv.style.display = 'none'; return; }
     if (cv.width !== viewW || cv.height !== viewH) {
       cv.width = viewW; cv.height = viewH;
@@ -980,6 +1010,16 @@ const relax = (() => {
     g.fillStyle = nightColor;
     g.fillRect(0, 0, viewW, viewH);
     g.drawImage(nightMap, -ox * zoom, -oy * zoom, MAP_W * zoom, MAP_H * zoom);
+    if (!litOn) return;
+    if (lit.width !== viewW || lit.height !== viewH) {
+      lit.width = viewW; lit.height = viewH;
+      lit.style.width = viewW + 'px'; lit.style.height = viewH + 'px';
+    }
+    lit.style.display = 'block';
+    const w = lit.getContext('2d');
+    w.clearRect(0, 0, viewW, viewH);
+    w.globalAlpha = litAlpha;
+    w.drawImage(litMap, -ox * zoom, -oy * zoom, MAP_W * zoom, MAP_H * zoom);
   }
 
   // One step for everyone. Only the squares that changed are drawn again, from the
@@ -1181,5 +1221,5 @@ const relax = (() => {
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
           _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
           _hour: h => { hourForTest = h; skySig = ''; sky(); },
-          _layout: () => ({zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
+          _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
 })();

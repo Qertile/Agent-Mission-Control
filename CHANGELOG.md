@@ -15,6 +15,8 @@ All notable changes to this project are listed here, newest first.
   warehouses, a church, a town hall, farms, windmills, a watermill and 14 kinds of house, each
   where it belongs.
 - A busy session's building is under construction.
+- Relax mode: a metropolis's windows light up at night, on a canvas of their own over the
+  dark, and a discussion there is a fire pit with benches and parasols.
 - `relax_art.py`: make only the pictures named on its command line. The pictures now also use
   Kenney's City Kit (Commercial) and Car Kit, and `animals.png` from Quaternius' Ultimate
   Animated Animal Pack (all CC0), made but not yet shown.
@@ -22,6 +24,8 @@ All notable changes to this project are listed here, newest first.
 ### Changed
 - Relax mode: the map is one size, 1800 x 1350, in every window, rather than growing with
   the sessions. Buildings no longer move when the window does.
+- Relax mode: more street lights in a town, a city and a metropolis, and more buildings in a
+  metropolis's outskirts.
 - README: Relax mode (both languages).
 
 ## 2026-11-05 – Cross-check: follow-ups show what was asked

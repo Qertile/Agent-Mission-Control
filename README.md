@@ -257,7 +257,7 @@ The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *L
   shops, a tavern, workshops, a church, a town hall, farms and mills, each where it belongs.
   A metropolis takes the wall down for asphalt, towers, a mall, parks and car parks, and the
   sessions' buildings become a stall, a shop, a block of flats, an office and a skyscraper,
-  with teal or red roofs so that they stand out. The top left of the camp shows what it is
+  with teal or red roofs so that they stand out; at night its windows light up. The top left of the camp shows what it is
   now and when the next one comes. Deleting a session from `agents.json` takes its messages
   off the count, so the camp can shrink back.
 - **The map** is the same size in every window. The wheel zooms around the pointer and
@@ -685,7 +685,7 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   小鎮，1500 則起是城市，5000 則起是大都會。城市有廣場、大道、支路和城牆，還有住宅、商店、
   酒館、工坊、教堂、市政廳、農場和磨坊，各在該在的位置。大都會拆掉城牆，換成柏油路、高樓、
   百貨、公園和停車場；session 的建築變成路邊攤、小店、公寓、辦公樓和摩天樓，屋頂是青綠或
-  紅色，一眼就能認出來。營地左上角會顯示目前的階段和下一階段的門檻。從 `agents.json` 刪除
+  紅色，一眼就能認出來；到了晚上窗戶會亮。營地左上角會顯示目前的階段和下一階段的門檻。從 `agents.json` 刪除
   session 會扣掉它的訊息數，所以營地可能退回前一階段。
 - **地圖**在所有視窗都一樣大。滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，
   會重疊的要放大才顯示。
