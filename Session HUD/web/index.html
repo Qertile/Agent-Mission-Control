@@ -208,6 +208,17 @@
   #xc label { margin-right: 14px; }
   #xc .opt { display: block; margin-left: 90px; }
   #xc .hint { color: var(--note); font-style: italic; font-size: 11px; }
+  /* After an Update's restart: what it brought (showUpdateNote). */
+  #update-note { position: fixed; z-index: 30; left: 50%; top: 12%; transform: translateX(-50%); width: min(640px, 90vw);
+                 background: var(--bar); border: 1px solid var(--desc); padding: 12px 14px; display: none; font-size: 13px; color: var(--title); }
+  #update-note .t { color: var(--accent); font-weight: bold; margin-bottom: 8px; }
+  #update-note .list { max-height: 60vh; overflow-y: auto; }
+  #update-note .hint { color: var(--note); font-size: 11px; margin-top: 8px; }
+  #update-note ul { margin: 0; padding-left: 18px; }
+  #update-note li { margin-bottom: 4px; }
+  #update-note button { background: var(--bg); color: var(--accent); border: 1px solid var(--desc); font: inherit;
+                        padding: 3px 14px; cursor: pointer; margin-top: 10px; }
+  #update-note button:hover { border-color: var(--accent); }
   /* appearance: none, or WebKitGTK draws its own light box and ignores the colours */
   #xc select { -webkit-appearance: none; appearance: none; background-color: var(--bg); color: var(--title);
                border: 1px solid var(--desc); font: inherit; padding: 2px 22px 2px 6px; background-repeat: no-repeat;
@@ -304,6 +315,7 @@
   <div id="relax-scene"><canvas id="relax-canvas"></canvas><canvas id="relax-night"></canvas></div><div id="relax-msg"></div></div>
 <div class="menu" id="set-menu"></div>
 <div class="menu" id="send-menu"></div>
+<div id="update-note"><div class="t" id="update-note-t"></div><div class="list" id="update-note-list"></div><div class="hint">Details: CHANGELOG.md</div><button id="update-note-ok">OK</button></div>
 <div id="xc">
   <div class="t" id="xc-t">Cross-check</div>
   <div class="line" id="xc-name-line"><b>Name</b><input id="xc-name" spellcheck="false"></div>
@@ -2099,6 +2111,23 @@ async function refresh() {
   relax.stamina(s.usage);
   relax.update(false, s.camp);
 }
+// Once, after the restart of an Update: what it brought.
+async function showUpdateNote() {
+  const note = await api().update_note();
+  if (!note) return;
+  $('update-note-t').textContent = `Updated to ${note.version}`;
+  $('update-note-list').innerHTML = `<ul>${note.changes.map(c => `<li>${esc(c)}</li>`).join('')}</ul>`;
+  const box = $('update-note'), ok = $('update-note-ok');
+  const close = () => {
+    box.style.display = 'none';
+    const t = amc.tabs[amc.active];
+    if (t) t.term.focus();
+  };
+  ok.onclick = close;
+  box.onkeydown = e => { if (e.key === 'Escape') close(); };
+  box.style.display = 'block';
+  ok.focus();
+}
 async function init() {
   await api().init();
   amc.pins = await api().pins();
@@ -2111,6 +2140,7 @@ async function init() {
   await refreshTasks();
   setInterval(refresh, 1000);
   setInterval(refreshTasks, 30000);
+  showUpdateNote().catch(() => {});
 }
 if (window.pywebview && window.pywebview.api && window.pywebview.api.init) init();
 else window.addEventListener('pywebviewready', init);

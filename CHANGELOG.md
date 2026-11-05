@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – v3.5.18: a popup after Update lists what it brought
+
+### Added
+- After *Update*'s restart, a popup lists the titles of the `CHANGELOG.md` sections this
+  update brought, once: they are kept in `Session HUD/update-note.json` (not in git), which
+  goes as it is read. OK or Esc closes it. A copy on older code writes no list, so its update
+  to this version shows no popup; the next one does.
+- README: Update, Versions (both languages).
+- Versions: `v3.5.18`.
+- Tagged `v3.5.18`.
+
 ## 2026-11-05 – v3.5.17: Update goes to tagged versions only
 
 ### Changed

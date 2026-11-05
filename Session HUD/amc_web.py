@@ -64,6 +64,7 @@ RUNS_WHEN_OPENED = ('.exe', '.bat', '.cmd', '.com', '.msi', '.ps1', '.vbs', '.vb
                     '.lnk', '.url', '.hta', '.reg', '.sh', '.desktop', '.appimage', '.run', '.py', '.pyw', '.jar', '.app')
 APP_ID = 'AgentMissionControl'             # Windows taskbar identity (main(), _set_relaunch)
 REPO_URL = 'https://github.com/Qertile/Agent-Mission-Control.git'   # ⚙ → Update from GitHub
+UPDATE_NOTE = os.path.join(HERE, 'update-note.json')   # what an Update brought, until the restart shows it
 HANDOFF_MESSAGES = 50                      # of a conversation, for the tool it moves to
 HANDOFF_DIR = os.path.join(LAUNCHER_DIR, 'handoff')
 PIN_MAX = 20_000                           # characters kept of one pinned message
@@ -790,13 +791,19 @@ class Api:
         version tag on GitHub's master, never to commits after it, which may still have bugs.
         A copy already past that tag stays where it is. Installs git first when there is none,
         and makes a folder that is not a clone (a downloaded zip, a copy) one first (_make_clone).
-        Returns {'text': what happened} or {'error': ...}; the new code runs after a restart."""
+        Returns {'text': what happened} or {'error': ...}; the new code runs after a restart,
+        which shows what it brought (update_note)."""
         if not self._git():
             err = self._install_git()
             if err or not self._git():
                 return {'error': err or 'git is not installed'}
-        if not os.path.isdir(os.path.join(core.ROOT, '.git')):
-            return self._make_clone()
+        old = self._changelog()
+        r = self._move_to_tag() if os.path.isdir(os.path.join(core.ROOT, '.git')) else self._make_clone()
+        if r.get('restart'):
+            self._save_update_note(r['tag'], old)
+        return r
+
+    def _move_to_tag(self):
         try:
             r = self._fetch_version()
             if r.get('error'):
@@ -810,7 +817,43 @@ class Api:
         out = (r.stdout + r.stderr).strip()
         if r.returncode:
             return {'error': out.splitlines()[-1] if out else 'git merge failed'}
-        return {'text': f'Updated to {tag}', 'restart': True}
+        return {'text': f'Updated to {tag}', 'restart': True, 'tag': tag}
+
+    @staticmethod
+    def _changelog():
+        try:
+            with open(os.path.join(core.ROOT, 'CHANGELOG.md'), encoding='utf-8') as f:
+                return f.read()
+        except OSError:
+            return ''
+
+    @staticmethod
+    def _whats_new(old, new):
+        """The titles of the changelog `new`'s sections that `old` does not have, newest first,
+        without their dates. Only the newest when the two have none in common (no old
+        changelog: not the whole history)."""
+        known = set(re.findall(r'^## .*$', old, re.M))
+        titles = re.findall(r'^## .*$', new, re.M)
+        fresh = [t for t in titles[:next((i for i, t in enumerate(titles) if t in known), 1)]]
+        return [re.sub(r'^## (?:\d{4}-\d\d-\d\d – )?', '', t).strip() for t in fresh]
+
+    def _save_update_note(self, tag, old):
+        """Kept in a file for the restarted AMC. An update that worked is not undone by this failing."""
+        try:
+            with open(UPDATE_NOTE, 'w', encoding='utf-8') as f:
+                json.dump({'version': tag, 'changes': self._whats_new(old, self._changelog())}, f, ensure_ascii=False)
+        except OSError:
+            pass
+
+    def update_note(self):
+        """What the last Update brought, for the popup after its restart, or None. Once: the
+        file goes as it is read."""
+        note = load_json(UPDATE_NOTE)
+        try:
+            os.remove(UPDATE_NOTE)
+        except OSError:
+            pass
+        return note or None
 
     def _fetch_version(self):
         """Fetches GitHub's master and tags (--force: a tag can be moved after a fix).
@@ -860,7 +903,7 @@ class Api:
                     return {'error': f"git {step[0]}: {out.splitlines()[-1] if out else 'failed'}"}
         except subprocess.TimeoutExpired:
             return {'error': 'git took over 2 minutes'}
-        return {'text': f"Updated to {version['tag']} (this folder is now a git clone)", 'restart': True}
+        return {'text': f"Updated to {version['tag']} (this folder is now a git clone)", 'restart': True, 'tag': version['tag']}
 
     def restart(self):
         """⚙ → Update: closes this window the way its close button does (its tabs end, their
