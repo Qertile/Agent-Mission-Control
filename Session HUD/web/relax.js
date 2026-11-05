@@ -86,31 +86,71 @@ const relax = (() => {
     return h;
   }
 
+  // What a thing on the ground takes up, as [left, top, right, bottom]. A session's base is
+  // its footprint, person and name; its body is the room for a tower, the tallest it can
+  // grow to, kept from the start so that growing never moves anything. Bodies may overlap
+  // (one tower stands behind another), but none may cover a base.
+  function room(x, y, prop) {
+    const p = plot;
+    if (prop) return {base: [x - p * 0.45, y - p * 0.55, x + p * 0.45, y + p * 0.22]};
+    return {base: [x - p * 0.5, y - p * 0.35, x + p * 0.5, y + p * 0.2 + 38],
+            body: [x - p * 0.3, y - p * 1.17, x + p * 0.3, y - p * 0.35]};
+  }
+  const hits = (a, b) => a && b && a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+  const clash = (a, b) => hits(a.base, b.base) || hits(a.body, b.base) || hits(b.body, a.base);
+
   // Where each building stands: scattered, but each session always tries the same spots
   // (from its id), so it keeps its place from one draw to the next. Sessions are placed in
-  // agents.json order, so a new one does not push the older ones around. A spot must be
-  // clear of the buildings placed before it; after 80 tries the clearest one is taken.
-  function place(list, w, h, plot, props = []) {
+  // agents.json order. A spot must be clear of what was placed before it and of the river;
+  // when a session finds none anywhere, ok is false and layout() gives the camp more height.
+  function place(list, w, h, props) {
     const order = amc.order || [];
     const rank = b => { const i = order.indexOf(b.id); return i < 0 ? order.length : i; };
-    const placed = [];
+    const placed = [], low = plot * 1.25, high = h - plot * 0.2 - 44;
+    let ok = true;
     // The era's props come after the sessions, so they never move a building; one with
     // no clear spot left is left out.
     for (const b of [...[...list].sort((a, c) => rank(a) - rank(c)), ...props]) {
       const rnd = rng(hash(b.id));
-      let best = null, bestGap = -1;
-      for (let t = 0; t < 80; t++) {
-        const x = plot * 0.55 + rnd() * (w - plot * 1.1), y = plot * 0.95 + rnd() * (h - plot * 0.95 - 50);
-        // Not on the river (the worst spot of all, but one to take when there is no other).
-        const gap = wet(x, y) ? -0.5
-          : Math.min(Infinity, ...placed.map(p => Math.hypot((p.x - x) / (plot * 1.05), (p.y - y) / (plot * 0.95))));
-        if (gap > bestGap) { best = {x, y}; bestGap = gap; }
-        if (gap >= 1) break;
+      let best = null, bestScore = Infinity;
+      for (let t = 0; t < 200; t++) {
+        const x = plot * 0.55 + rnd() * (w - plot * 1.1), y = low + rnd() * Math.max(0, high - low);
+        const r = room(x, y, b.prop), n = placed.reduce((sum, q) => sum + (clash(r, q.r) ? 1 : 0), 0);
+        if (n >= bestScore) continue;
+        const score = n + (wet(x, y) ? 100 : 0);
+        if (score < bestScore) { best = {x, y, r}; bestScore = score; }
+        if (!score) break;
       }
-      if (b.prop && bestGap < 0.75) continue;
+      // No luck: the first free spot, row by row from the top, so a crowded camp stays short.
+      for (let y = low; bestScore && y <= high; y += plot * 0.25)
+        for (let x = plot * 0.55; bestScore && x <= w - plot * 0.55; x += plot * 0.25) {
+          const r = room(x, y, b.prop);
+          if (!placed.some(q => clash(r, q.r)) && !wet(x, y)) { best = {x, y, r}; bestScore = 0; }
+        }
+      if (bestScore && b.prop) continue;
+      if (bestScore) ok = false;
       placed.push({...best, b});
     }
-    return placed;
+    return {placed, ok};
+  }
+  // The camp's height and everyone's place: the window's height if they fit, otherwise
+  // taller, and it scrolls. Worked out only when who is there or the size changes.
+  let layoutKey = '', layoutMemo = null;
+  function layout(list, w, roomy, props) {
+    const key = JSON.stringify([list.map(b => b.id), w, roomy, props.map(b => b.id), amc.order]);
+    if (key !== layoutKey) {
+      let h = Math.max(roomy, plot * 3), res;
+      for (let n = 0; n < 40; n++, h += plot * 0.6) {
+        river = riverPath(w, h);
+        res = place(list, w, h, props);
+        if (res.ok) break;
+      }
+      layoutKey = key;
+      layoutMemo = {h, at: new Map(res.placed.map(p => [p.b.id, p]))};
+    }
+    const byId = new Map([...list, ...props].map(b => [b.id, b]));
+    river = riverPath(w, layoutMemo.h);
+    return {h: layoutMemo.h, placed: [...layoutMemo.at.values()].filter(p => byId.has(p.b.id)).map(p => ({...p, b: byId.get(p.b.id)}))};
   }
 
   // Trees and rocks, the same ones every time (a fixed seed), not on a building's ground.
@@ -158,13 +198,6 @@ const relax = (() => {
   }
   function land(g, w, h, e) {
     const rnd = rng(11);
-    // Soft patches, so the grass is not one flat colour.
-    for (let i = 0, n = Math.round(w * h / 45000); i < n; i++) {
-      g.fillStyle = rnd() < 0.5 ? 'rgba(255, 255, 190, 0.05)' : 'rgba(0, 50, 20, 0.06)';
-      g.beginPath();
-      g.ellipse(rnd() * w, rnd() * h, plot * (0.5 + rnd()), plot * (0.2 + rnd() * 0.3), 0, 0, Math.PI * 2);
-      g.fill();
-    }
     // The mountains along the top, back to front, the river's source among them.
     const source = river[0].x, peaks = [];
     for (let x = -plot * 0.2; x < w + plot * 0.4; x += plot * (0.55 + rnd() * 0.4)) {
@@ -178,6 +211,19 @@ const relax = (() => {
     foot.addColorStop(1, e[2]);
     g.fillStyle = foot;
     g.fillRect(0, plot * 0.62, w, plot * 0.36);
+    // Soft patches, so the grass is not one flat colour: each fades out to nothing, no edge.
+    for (let i = 0, n = Math.round(w * h / 45000); i < n; i++) {
+      const tint = rnd() < 0.5 ? '255, 255, 190' : '0, 50, 20', x = rnd() * w, y = plot * 0.9 + rnd() * (h - plot * 0.9);
+      const rx = plot * (0.8 + rnd() * 1.2), ry = plot * (0.35 + rnd() * 0.5);
+      const fade = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+      fade.addColorStop(0, `rgba(${tint}, 0.1)`);
+      fade.addColorStop(1, `rgba(${tint}, 0)`);
+      g.save();
+      g.translate(x, y); g.scale(rx, ry);
+      g.fillStyle = fade;
+      g.fillRect(-1, -1, 2, 2);
+      g.restore();
+    }
     // Banks, then water with a paler line down its middle; a city's river runs between stone.
     strokeLine(g, river, e[1] === 'City' ? '#8b887d' : '#c7b27a', riverWidth() + plot * 0.07);
     strokeLine(g, river, '#3c86bd', riverWidth());
@@ -228,11 +274,9 @@ const relax = (() => {
     const box = $('relax'), cv = $('relax-canvas'), w = box.clientWidth;
     const cols = Math.max(2, Math.floor(w / 150));
     plot = w / cols;
-    // Room for every building with space around it; past that, the camp scrolls.
-    const h = Math.max(box.clientHeight - $('relax-top').offsetHeight, Math.ceil(list.length / cols) * plot * 1.6 + 60);
     const e = era(camp);
-    river = riverPath(w, h);
-    const placed = place(list, w, h, plot, e[7].map((kind, i) => ({id: '~' + kind + i, kind, prop: true})));
+    const {h, placed} = layout(list, w, box.clientHeight - $('relax-top').offsetHeight,
+                               e[7].map((kind, i) => ({id: '~' + kind + i, kind, prop: true})));
     dpr = window.devicePixelRatio || 1;
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     cv.style.width = w + 'px'; cv.style.height = h + 'px';
@@ -787,5 +831,6 @@ const relax = (() => {
 
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
           _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
-          _hour: h => { hourForTest = h; skySig = ''; sky(); }};
+          _hour: h => { hourForTest = h; skySig = ''; sky(); },
+          _layout: () => layoutMemo && {h: layoutMemo.h, things: [...layoutMemo.at.values()].map(p => ({id: p.b.id, prop: !!p.b.prop, x: p.x, y: p.y}))}};
 })();
