@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – paths in terminals open their files
+
+### Added
+- A full path in a terminal of the AMC window is a link: a click opens the file with its
+  default app (`Api.open_path`). A program or a script opens its folder instead. The remote
+  desktop's click still downloads; it cannot call `open_path`.
+- README: Remote desktop (both languages).
+
 ## 2026-11-05 – Cross-check: follow-ups show what was asked
 
 ### Fixed

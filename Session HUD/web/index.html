@@ -635,6 +635,7 @@ const amc = {
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
     term.open(el);
+    term.registerLinkProvider({provideLinks: (y, done) => done(pathLinks(term, y))});
     el.addEventListener('mousedown', () => { if (amc.tabs[id] && id !== amc.active) amc.select(id); }, true);
     term.onData(data => api().write(id, data));
     term.onResize(({cols, rows}) => api().resize(id, cols, rows));
@@ -1155,6 +1156,82 @@ $('terms').addEventListener('drop', e => {
   amc.droppedHere = paths.length > 0;     // then pywebview's copy of the paths is not typed again
   if (paths.length) amc.typePaths(paths);
 }, true);
+// ---------------------------------------------------------------- paths in terminals
+// A full path in a terminal is a link. Here it opens the file with this computer's own app;
+// on the remote desktop (remote-desktop.js replaces openPath) the file downloads.
+// Full paths in a terminal's text: C:\..., /a/b... (two
+// parts at least, so "/config" is not one), ~/...; one in backticks may have spaces.
+// [{start, end, path}], end not included, trailing punctuation left out.
+// (Here \u0001 marks where the AI broke a long line itself; see pathLinks.)
+const PATH_RE = /`((?:[A-Za-z]:\\|~\/|\/)[^`\n]+)`|(^|[\s\u0001(\[{"'“「：:,，])((?:[A-Za-z]:\\|~\/|\/[\w.@-]+\/)[^\s"'`<>|*?)\]}」，。；]+)/g;
+function findPaths(text) {
+  const out = [];
+  for (const m of text.matchAll(PATH_RE)) {
+    let path = m[1] || m[3], start = m.index + (m[1] ? 1 : m[2].length);
+    if (!m[1]) path = path.replace(/[.,;:!?]+$/, '');
+    if (path.length > 2) out.push({start, end: start + path.length, path});
+  }
+  return out;
+}
+// The links of terminal row y (1-based). A path can go on past its row two ways: the
+// terminal wrapped it (the next row isWrapped), or the AI broke the line itself (Claude
+// Code does, at about the width): a row that ends at the right edge goes on in the next one,
+// after its indent, marked \u0001. Read cell by cell, so a path's place is right with wide
+// (Chinese) characters before it.
+const MARK = '\u0001';
+// (A row can be longer than the terminal is wide, after it was made narrower: cols counts.)
+function full(line, cols) {
+  for (let x = Math.min(line.length, cols) - 1; x >= 0; x--) {
+    const ch = line.getCell(x) && line.getCell(x).getChars();
+    if (ch && ch !== ' ') return x >= cols - 4;
+  }
+  return false;
+}
+function goesOn(buf, row, cols) {         // row + 1 continues row
+  const line = buf.getLine(row), next = buf.getLine(row + 1);
+  return !!(line && next && (next.isWrapped || full(line, cols)));
+}
+function pathLinks(term, y) {
+  const buf = term.buffer.active;
+  let top = y - 1, bottom = y - 1;
+  while (top > 0 && y - 1 - top < 10 && goesOn(buf, top - 1, term.cols)) top--;
+  while (bottom < buf.length - 1 && bottom - (y - 1) < 10 && goesOn(buf, bottom, term.cols)) bottom++;
+  let text = '';
+  const cell = [];                         // cell[i]: [x, y] of text[i]
+  for (let row = top; row <= bottom; row++) {
+    const line = buf.getLine(row);
+    let x = 0;
+    if (row > top && !line.isWrapped) {    // the AI's own line break: its indent left out
+      while (x < term.cols && (line.getCell(x).getChars() || ' ') === ' ') x++;
+      while (text.endsWith(' ')) { text = text.slice(0, -1); cell.pop(); }   // the empty cells at its end too
+      text += MARK;
+      cell.push(cell.length ? cell[cell.length - 1] : [1, row + 1]);
+    }
+    for (; x < Math.min(line.length, term.cols); x++) {
+      const c = line.getCell(x);
+      if (!c || c.getWidth() === 0) continue;
+      const ch = c.getChars() || ' ';
+      text += ch;
+      for (let k = 0; k < ch.length; k++) cell.push([x + 1, row + 1]);
+    }
+  }
+  return findPaths(text).filter(p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y).map(p => {
+    // Whole first, then up to each break the AI made, last first
+    // (the text after a break can be words, not the rest of the path).
+    const parts = p.path.split(MARK), tries = [];
+    for (let n = parts.length; n > 0; n--) tries.push(parts.slice(0, n).join('').replace(/[.,;:!?]+$/, ''));
+    return {
+      text: tries[0],
+      range: {start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}},
+      activate: () => amc.openPath(tries),
+    };
+  });
+}
+amc.openPath = async tries => {
+  const err = await api().open_path(tries);
+  if (err) alert(err);
+};
+
 amc.typePaths = paths => {
   const id = amc.fileTarget || amc.active;
   if (!id || !paths.length) return;

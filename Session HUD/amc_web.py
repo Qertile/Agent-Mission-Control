@@ -60,6 +60,8 @@ HISTORY = 400_000                          # characters of each tab's output kep
 # Codex's list comes from its models cache (amc_core.codex_models), Antigravity's from `agy models`.
 MODELS = ['fable', 'opus', 'sonnet', 'haiku']
 FEEDBACK_URL = 'https://github.com/Qertile/Agent-Mission-Control/issues/new'   # ⚙ → Send feedback
+RUNS_WHEN_OPENED = ('.exe', '.bat', '.cmd', '.com', '.msi', '.ps1', '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh', '.scr',
+                    '.lnk', '.url', '.hta', '.reg', '.sh', '.desktop', '.appimage', '.run', '.py', '.pyw', '.jar', '.app')
 APP_ID = 'AgentMissionControl'             # Windows taskbar identity (main(), _set_relaunch)
 REPO_URL = 'https://github.com/Qertile/Agent-Mission-Control.git'   # ⚙ → Update from GitHub
 HANDOFF_MESSAGES = 50                      # of a conversation, for the tool it moves to
@@ -877,6 +879,24 @@ class Api:
                 print(f'restart: could not close the window: {e!r}', file=sys.stderr, flush=True)
                 os._exit(0)
         threading.Thread(target=close, daemon=True).start()
+
+    def open_path(self, tries):
+        """A path clicked in a terminal: the first of `tries` that exists, opened with its
+        default app. One that would run rather than open (a program, a script): its folder
+        instead, as a click on a path must not start anything. Returns None or what went wrong."""
+        for path in tries:
+            path = os.path.expanduser(str(path).strip())
+            if not os.path.isabs(path) or not os.path.exists(path):
+                continue
+            if os.path.isfile(path) and path.lower().endswith(RUNS_WHEN_OPENED):
+                path = os.path.dirname(path)
+            if WINDOWS:
+                os.startfile(path)
+            else:
+                subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', path],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            return None
+        return f'no such file: {tries[0]}' if tries else 'no path'
 
     def send_feedback(self):
         """⚙ → Send feedback: a new GitHub issue in the default browser."""
