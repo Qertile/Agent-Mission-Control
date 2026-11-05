@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-05 – paths with spaces in links
+
+### Fixed
+- A full path with spaces and no backticks was cut at the first space, in terminals and in
+  the phone's *Chat*. The next words (at most 6) are now tried too, longest first, and the
+  link reaches the last word that looks like more of a path. A path the AI broke onto the
+  next line at a space is tried with the space as well.
+- README: Remote desktop (both languages).
+
 ## 2026-11-05 – paths in terminals open their files
 
 ### Added

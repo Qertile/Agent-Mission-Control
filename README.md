@@ -236,7 +236,8 @@ Tailscale network and token as the phone page.
   path here is typed into the pane it was dropped on, otherwise the active tab.
 - **Paths in terminals:** a full path in a terminal of the window on this computer is a link
   too: click it and the file opens with its default app (a program or a script: its folder,
-  so a click starts nothing).
+  so a click starts nothing). A path with spaces works without backticks too: the words
+  after it are tried, longest first, until a file is there.
 - **Getting files back:** a full path of this computer in a terminal is a link (underlined
   under the mouse, also when it goes on in the next row, wrapped by the terminal or broken
   by the AI): click it and the file downloads
@@ -663,7 +664,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
   會上傳到這台電腦（每個最多 500 MB，右下角顯示進度），存成 `<temp>/amc-paste/phone-<時間>-<檔名>`，
   並把它在這台的路徑打進放開位置的窗格，不在窗格上就打進目前的分頁。
 - **終端機裡的路徑：** 這台電腦視窗的終端機裡，完整路徑也是連結，點一下用預設的 app 打開檔案（程式或腳本只打開
-  所在資料夾，點擊不會執行任何東西）。
+  所在資料夾，點擊不會執行任何東西）。路徑有空格、沒用反引號也可以：會把後面的字接上去試，先試最長的，直到檔案存在。
 - **取回檔案：** 終端機裡這台電腦的完整路徑是連結（滑鼠移上去出現底線，被終端機換行或被 AI 自己斷成兩列也認得），
   點一下檔案就下載到那台電腦（每個最多 500 MB，右下角顯示進度）。
 - **不能用的：** 從這台電腦的剪貼簿貼圖片（在那台瀏覽器裡 Ctrl+V 貼圖，圖會存到這台電腦）。

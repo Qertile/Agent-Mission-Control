@@ -1169,7 +1169,22 @@ function findPaths(text) {
   for (const m of text.matchAll(PATH_RE)) {
     let path = m[1] || m[3], start = m.index + (m[1] ? 1 : m[2].length);
     if (!m[1]) path = path.replace(/[.,;:!?]+$/, '');
-    if (path.length > 2) out.push({start, end: start + path.length, path});
+    if (path.length <= 2) continue;
+    const found = {start, end: start + path.length, path, tries: [path]};
+    // Not in backticks, a space may be part of the name ("Agent Mission Control/x.md"), and
+    // only the file system can tell: the next few words go on the list to try, longest
+    // first, and the link reaches as far as a word that looks like more of a path.
+    let at = found.end, sofar = path;
+    for (let n = 0; !m[1] && n < 6; n++) {
+      const w = text.slice(at).match(/^ ([^\s"'`<>|*?，。；」)\]}]+)/);
+      const word = w && w[1].replace(/[.,;:!?]+$/, '');
+      if (!word || /^(?:[A-Za-z]:\\|~\/|\/)/.test(word)) break;     // the next path starts here
+      sofar += ' ' + word;
+      at += 1 + word.length;
+      found.tries.unshift(sofar);
+      if (/[\\/]/.test(word) || /\.[A-Za-z]\w{0,7}$/.test(word)) { found.end = at; found.path = sofar; }
+    }
+    out.push(found);
   }
   return out;
 }
@@ -1216,12 +1231,18 @@ function pathLinks(term, y) {
     }
   }
   return findPaths(text).filter(p => cell[p.start][1] <= y && cell[p.end - 1][1] >= y).map(p => {
-    // Whole first, then up to each break the AI made, last first
-    // (the text after a break can be words, not the rest of the path).
-    const parts = p.path.split(MARK), tries = [];
-    for (let n = parts.length; n > 0; n--) tries.push(parts.slice(0, n).join('').replace(/[.,;:!?]+$/, ''));
+    // Each to try, longest first, also cut at each break the AI made (the text after one can
+    // be words, not the rest of the path), which is either inside a name or where a space was.
+    const tries = [];
+    for (const raw of p.tries) {
+      const parts = raw.split(MARK);
+      for (let n = parts.length; n > 0; n--) for (const glue of n > 1 ? ['', ' '] : ['']) {
+        const t = parts.slice(0, n).join(glue).replace(/[.,;:!?]+$/, '');
+        if (!tries.includes(t)) tries.push(t);
+      }
+    }
     return {
-      text: tries[0],
+      text: p.path.split(MARK).join(''),
       range: {start: {x: cell[p.start][0], y: cell[p.start][1]}, end: {x: cell[p.end - 1][0], y: cell[p.end - 1][1]}},
       activate: () => amc.openPath(tries),
     };
