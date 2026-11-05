@@ -1,11 +1,13 @@
 // Relax mode: the Tasks and Sessions columns become a camp seen from above, one
 // building per session, with its person walking about near it.
 //
-// It costs nothing while it is off, and little while it is on. The page's 1-second
-// refresh calls relax.update(); the camp (grass, trees, buildings, names) is drawn into a
-// background canvas only when what it shows changed (or its size did). The people move
-// on a 5 Hz timer that redraws only the small squares they leave and enter, from that
-// background. Nothing runs while the window is hidden or Office mode is on.
+// It costs nothing while it is off, and little while it is on. The map has one fixed size,
+// the same on every window; the wheel zooms it and dragging pans it. The page's 1-second
+// refresh calls relax.update(); the map (land, roads, buildings) is drawn into a background
+// canvas only when what it shows changed, and scaled from there into a window-sized one
+// when the view changes. The people move on a 5 Hz timer that redraws only the small squares
+// they leave and enter, from that. The names are a layer of their own, the same size at any
+// zoom. Nothing runs while the window is hidden or Office mode is on.
 // The pictures are PNGs made once by tools/relax_art.py from Kenney's kits (CC0).
 const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
@@ -27,20 +29,23 @@ const relax = (() => {
   const LEVELS = [[200, 'level4'], [50, 'level3'], [10, 'level2'], [1, 'level1'], [0, 'level0']];
   // The whole camp grows with the messages typed into all agents.json sessions, ended
   // ones too (snapshot's 'camp'): a tribe on grass, a village with dirt paths, a town
-  // with stone roads, lanterns, a fountain and stalls, a city with wide brick roads inside a wall.
+  // with stone roads, lanterns, a fountain and stalls, a city with a plaza, avenues and side streets inside a wall.
   // [from, name, ground, road colour (null: none), road width (building widths), edge,
   //  the trees kept, the props it puts in the free spots, how much its roads bend]
   const ERAS = [
-    [1500, 'City', '#4f7d44', '#8f8b80', 0.17, '#5f5c57', 0.25, ['fountain', 'stall', 'stall-green', 'stall'], 0.1],
+    [1500, 'City', '#4f7d44', '#8f8b80', 0.17, '#5f5c57', 0.1, ['fountain', 'stall', 'stall-green', 'stall'], 0.1],
     [500, 'Town', '#4f7d44', '#a8a497', 0.13, '#7d796e', 0.5, ['fountain', 'stall', 'stall-green', 'fence'], 0.16],
     [100, 'Village', '#4b7a46', '#8a6d45', 0.1, null, 0.8, ['signpost', 'fence', 'fence'], 0.24],
     [0, 'Tribe', '#4b7a46', null, 0, null, 1, [], 0]];
   const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏙'};
   const BOARD_MAX = 8;                     // tasks on the board; the rest are counted
   const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
+  const MAP_W = 1800, MAP_H = 1350, ZOOM_MAX = 1.6;   // the map, in world units; a building's plot is 150
   const img = {};
   let on = false, sig = '', spots = [], hover = null, msgTimer = 0;
-  let bg = null, dpr = 1, plot = 150, timer = 0, camp = 0;
+  const plot = 150;
+  let bg = null, view = null, res = 1, dpr = 1, timer = 0, camp = 0;
+  let zoom = 0, ox = 0, oy = 0, viewW = 0, viewH = 0, viewDirty = false, tags = [];
   const people = new Map();                // session id (a participant: discussion id#i) -> its person
   let fires = [];                          // the discussions under way: {x, y} of their fire
 
@@ -99,58 +104,190 @@ const relax = (() => {
   const hits = (a, b) => a && b && a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
   const clash = (a, b) => hits(a.base, b.base) || hits(a.body, b.base) || hits(b.body, a.base);
 
-  // Where each building stands: scattered, but each session always tries the same spots
-  // (from its id), so it keeps its place from one draw to the next. Sessions are placed in
-  // agents.json order. A spot must be clear of what was placed before it and of the river;
-  // when a session finds none anywhere, ok is false and layout() gives the camp more height.
-  function place(list, w, h, props) {
+  // Where each building stands: scattered, more of them near the middle of the map, but each
+  // session always tries the same spots (from its id), so it keeps its place from one draw to
+  // the next. Sessions are placed in agents.json order. A spot must be clear of what was
+  // placed before it and of the river; with no such spot left the clearest one is taken.
+  function sorted(list) {
     const order = amc.order || [];
     const rank = b => { const i = order.indexOf(b.id); return i < 0 ? order.length : i; };
-    const placed = [], low = plot * 1.25, high = h - plot * 0.2 - 44;
-    let ok = true;
+    return [...list].sort((a, c) => rank(a) - rank(c));
+  }
+  const LOW = plot * 1.25, HIGH = MAP_H - plot * 0.2 - 44, LEFT = plot * 0.55, RIGHT = MAP_W - plot * 0.55;
+  function place(list, props) {
+    const placed = [], midX = (LEFT + RIGHT) / 2, midY = (LOW + HIGH) / 2;
     // The era's props come after the sessions, so they never move a building; one with
     // no clear spot left is left out.
-    for (const b of [...[...list].sort((a, c) => rank(a) - rank(c)), ...props]) {
+    for (const b of [...sorted(list), ...props]) {
       const rnd = rng(hash(b.id));
       let best = null, bestScore = Infinity;
       for (let t = 0; t < 200; t++) {
-        const x = plot * 0.55 + rnd() * (w - plot * 1.1), y = low + rnd() * Math.max(0, high - low);
+        const x = midX + (rnd() + rnd() - 1) * (RIGHT - LEFT) / 2, y = midY + (rnd() + rnd() - 1) * (HIGH - LOW) / 2;
         const r = room(x, y, b.prop), n = placed.reduce((sum, q) => sum + (clash(r, q.r) ? 1 : 0), 0);
         if (n >= bestScore) continue;
         const score = n + (wet(x, y) ? 100 : 0);
         if (score < bestScore) { best = {x, y, r}; bestScore = score; }
         if (!score) break;
       }
-      // No luck: the first free spot, row by row from the top, so a crowded camp stays short.
-      for (let y = low; bestScore && y <= high; y += plot * 0.25)
-        for (let x = plot * 0.55; bestScore && x <= w - plot * 0.55; x += plot * 0.25) {
-          const r = room(x, y, b.prop);
-          if (!placed.some(q => clash(r, q.r)) && !wet(x, y)) { best = {x, y, r}; bestScore = 0; }
-        }
       if (bestScore && b.prop) continue;
-      if (bestScore) ok = false;
       placed.push({...best, b});
     }
-    return {placed, ok};
+    return placed;
   }
-  // The camp's height and everyone's place: the window's height if they fit, otherwise
-  // taller, and it scrolls. Worked out only when who is there or the size changes.
-  let layoutKey = '', layoutMemo = null;
-  function layout(list, w, roomy, props) {
-    const key = JSON.stringify([list.map(b => b.id), w, roomy, props.map(b => b.id), amc.order]);
-    if (key !== layoutKey) {
-      let h = Math.max(roomy, plot * 3), res;
-      for (let n = 0; n < 40; n++, h += plot * 0.6) {
-        river = riverPath(w, h);
-        res = place(list, w, h, props);
-        if (res.ok) break;
+  // A city's roads, grown like a real town's: a plaza, avenues from it out through the wall,
+  // a road along each river bank, then side streets branching off those. A street stops where
+  // it meets another (a T), at the river, or after a while, so no two blocks are the same.
+  // Only avenues cross the river. Distances are on the ground: KY squashes y as the picture does.
+  // The same every time, as the map never changes size.
+  const KY = 0.62, PLAZA = {x: MAP_W * 0.64, y: MAP_H * 0.62};
+  const AVENUES = [
+    [[0, 0.42], [0.2, 0.47], [0.4, 0.53], [0.64, 0.62], [0.82, 0.59], [1, 0.66]],
+    [[0.88, 0.13], [0.8, 0.35], [0.64, 0.62], [0.59, 0.82], [0.66, 1]],
+    [[0.34, 0.13], [0.44, 0.27], [0.64, 0.62], [0.84, 0.8], [1, 0.93]],
+    [[0.64, 0.62], [0.46, 0.84], [0.3, 1]],
+    [[0.3, 0.13], [0.22, 0.34], [0.26, 0.62], [0.17, 0.82], [0.2, 1]]];
+  const groundGap = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) / KY);
+  // Evenly spaced points along a smooth line through the given ones (Catmull-Rom).
+  function spline(ctrl, step = 20) {
+    const line = [ctrl[0]];
+    for (let i = 0; i < ctrl.length - 1; i++) {
+      const p0 = ctrl[Math.max(0, i - 1)], p1 = ctrl[i], p2 = ctrl[i + 1], p3 = ctrl[Math.min(ctrl.length - 1, i + 2)];
+      for (let k = 1; k <= 40; k++) {
+        const t = k / 40, t2 = t * t, t3 = t2 * t;
+        const at = v => 0.5 * (2 * p1[v] + (p2[v] - p0[v]) * t + (2 * p0[v] - 5 * p1[v] + 4 * p2[v] - p3[v]) * t2 + (3 * p1[v] - p0[v] - 3 * p2[v] + p3[v]) * t3);
+        const q = {x: at('x'), y: at('y')};
+        if (groundGap(q, line[line.length - 1]) >= step) line.push(q);
       }
-      layoutKey = key;
-      layoutMemo = {h, at: new Map(res.placed.map(p => [p.b.id, p]))};
     }
-    const byId = new Map([...list, ...props].map(b => [b.id, b]));
-    river = riverPath(w, layoutMemo.h);
-    return {h: layoutMemo.h, placed: [...layoutMemo.at.values()].filter(p => byId.has(p.b.id)).map(p => ({...p, b: byId.get(p.b.id)}))};
+    return line;
+  }
+  function growStreets() {
+    const rnd = rng(23), all = [], pts = [];
+    const add = (line, width, gen) => {
+      const r = {line, width, gen};
+      all.push(r);
+      for (const q of line) pts.push({x: q.x, y: q.y, r, half: width * plot / 2});
+      return r;
+    };
+    for (const a of AVENUES) add(spline(a.map(([x, y]) => ({x: x * MAP_W, y: y * MAP_H}))), 0.22, 0);
+    // Along each bank, from below the mountains down.
+    for (const side of [-1, 1]) {
+      const bank = river.map((q, i) => {
+        const p = river[Math.max(0, i - 1)], n = river[Math.min(river.length - 1, i + 1)], d = Math.hypot(n.x - p.x, n.y - p.y);
+        return {x: q.x - (n.y - p.y) / d * 42 * side, y: q.y + (n.x - p.x) / d * 42 * side};
+      }).filter(q => q.y > plot * 1.1 && q.y < MAP_H - 15 && q.x > 15 && q.x < MAP_W - 15);
+      add(spline(bank), 0.13, 0);
+    }
+    const outside = q => q.x < 25 || q.x > MAP_W - 25 || q.y < plot * 1.1 || q.y > MAP_H - 25;
+    // One street from a point on the road it leaves, or null if it would get nowhere.
+    const walk = (from, h, most, parent) => {
+      const line = [from];
+      let q = from, turn = 0;
+      for (let len = 20; len <= most; len += 20) {
+        turn = turn * 0.8 + (rnd() - 0.5) * 0.09;
+        h += turn;
+        q = {x: q.x + Math.cos(h) * 20, y: q.y + Math.sin(h) * 20 * KY};
+        if (outside(q) || riverGap(q.x, q.y) < 48) return len > 140 ? line : null;
+        let best = null, gap = Infinity;
+        for (const p of pts) {
+          if (len < 100 && p.r === parent) continue;
+          const d = groundGap(p, q);
+          if (d < gap) { gap = d; best = p; }
+        }
+        if (gap < 80) {
+          if (len < 100) return null;                    // too near another road to make a block
+          let a = Math.atan2((best.y - q.y) / KY, best.x - q.x) - h;
+          a = Math.atan2(Math.sin(a), Math.cos(a));
+          if (Math.abs(a) < 1.1) { line.push(q, {x: best.x, y: best.y}); return line; }
+          return len > 140 ? line : null;                // alongside another road: stop here
+        }
+        line.push(q);
+      }
+      return line;
+    };
+    for (let n = 0; n < all.length; n++) {
+      const r = all[n];
+      if (r.gen > 2) continue;
+      for (const side of [-1, 1]) {
+        for (let i = 5 + Math.floor(rnd() * 6); i < r.line.length - 4; i += 8 + Math.floor(rnd() * 6)) {
+          const q = r.line[i], p = r.line[i - 1], m = r.line[i + 1];
+          if (rnd() > 1.2 - groundGap(q, PLAZA) / 1100) continue;   // fewer further out
+          const h = Math.atan2((m.y - p.y) / KY, m.x - p.x) + side * (Math.PI / 2 + (rnd() - 0.5) * 0.7);
+          const line = walk(q, h, [700, 460, 300][r.gen], r);
+          if (line) add(line, 0.12, r.gen + 1);
+        }
+      }
+    }
+    return {all, pts};
+  }
+  // Where a building can stand: side by side along both sides of every road, avenues first.
+  function streetLots({all, pts}) {
+    const rx = plot * 0.36, ry = plot * 0.2, lots = [];
+    for (const r of all) for (const side of [-1, 1]) for (let i = 2; i < r.line.length - 2; i++) {
+      const a = r.line[i - 1], c = r.line[i + 1], d = Math.hypot(c.x - a.x, c.y - a.y) || 1;
+      const nx = -(c.y - a.y) / d * side, ny = (c.x - a.x) / d * side;
+      const off = plot * r.width / 2 + 6 + Math.hypot(rx * nx, ry * ny);
+      const x = r.line[i].x + nx * off, y = r.line[i].y + ny * off;
+      if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || wet(x, y)) continue;
+      if (Math.hypot((x - PLAZA.x) / 170, (y - PLAZA.y) / 100) < 1) continue;
+      if (pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1)) continue;
+      if (lots.some(l => groundGap(l, {x, y}) < 118)) continue;
+      lots.push({x, y, n: lots.length, far: groundGap({x, y}, PLAZA) / 1100});
+    }
+    return lots;
+  }
+  let cityMemo = null;
+  function cityPlan() {
+    if (cityMemo) return cityMemo;
+    const grown = growStreets(), edges = [];
+    // In stretches, for the lanterns and trees beside them.
+    for (const r of grown.all)
+      for (let i = 0; i < r.line.length - 1; i += 15)
+        edges.push({line: r.line.slice(i, i + 16), width: r.width});
+    return (cityMemo = {edges, lots: streetLots(grown)});
+  }
+  // The fountain stands on the plaza. The sessions and props each take the first free lot,
+  // nearest the plaza give or take a little (from the id); then houses fill most of the lots
+  // left, the fewer the further out.
+  function city(list, props) {
+    const lots = cityPlan().lots, placed = [], used = new Set();
+    for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: room(PLAZA.x, PLAZA.y, true), b});
+    for (const b of [...sorted(list), ...props.filter(q => q.kind !== 'fountain')]) {
+      const rnd = rng(hash(b.id));
+      const order = lots.map(l => [l.far + rnd() * 0.25, l]).sort((a, c) => a[0] - c[0]);
+      const found = order.find(([, l]) => !used.has(l) && !placed.some(q => clash(room(l.x, l.y, b.prop), q.r)));
+      if (!found) { if (!b.prop) placed.push({...order[0][1], r: room(order[0][1].x, order[0][1].y), b}); continue; }
+      const l = found[1];
+      used.add(l);
+      placed.push({x: l.x, y: l.y, r: room(l.x, l.y, b.prop), b});
+    }
+    const named = [...placed], houses = [];
+    for (const l of lots) {
+      if (used.has(l)) continue;
+      const rnd = rng(hash(`lot${l.n}`));
+      if (rnd() > 1.4 - l.far) continue;
+      const kind = ['level2', 'level2', 'level3', 'level3', l.far < 0.4 ? 'level4' : 'level3'][Math.floor(rnd() * 5)];
+      const tall = (ANCHOR - TOP[kind]) * plot * 1.5;
+      const r = {base: [l.x - plot * 0.36, l.y - plot * 0.24, l.x + plot * 0.36, l.y + plot * 0.16],
+                 body: [l.x - plot * 0.3, l.y - tall, l.x + plot * 0.3, l.y - plot * 0.24]};
+      // A house may stand behind a session's, but never hide its door or its person.
+      if (named.some(q => clash(r, q.r)) || houses.some(h => hits(r.base, h))) continue;
+      houses.push(r.base);
+      placed.push({x: l.x, y: l.y, r, b: {id: `~h${l.n}`, prop: true, house: true, kind}});
+    }
+    return placed;
+  }
+  // Everyone's place, worked out again only when who is there or the era changes.
+  let layoutKey = '', layoutMemo = [];
+  function layout(list, e) {
+    const props = e[7].map((kind, i) => ({id: '~' + kind + i, kind, prop: true}));
+    const key = JSON.stringify([list.map(b => b.id), e[1], amc.order]);
+    if (key !== layoutKey) {
+      layoutKey = key;
+      layoutMemo = e[1] === 'City' ? city(list, props) : place(list, props);
+    }
+    const byId = new Map(list.map(b => [b.id, b]));
+    return layoutMemo.map(p => (byId.has(p.b.id) ? {...p, b: byId.get(p.b.id)} : p));
   }
 
   // Trees and rocks, the same ones every time (a fixed seed), not on a building's ground.
@@ -233,15 +370,15 @@ const relax = (() => {
   // as planks (a town's and a city's: stone) with a rail on each side.
   function bridges(g, edges, e) {
     const half = riverWidth() / 2 + plot * 0.05, wood = e[1] === 'Village';
-    for (const {line} of edges) {
+    for (const {line, width} of edges) {
       let part = [];
       const flush = () => {
         if (part.length > 1) {
-          const width = plot * e[4];
-          strokeLine(g, part, wood ? '#4f3a22' : '#55534d', width + plot * 0.05, 'butt');
-          strokeLine(g, part, wood ? '#a57c4c' : '#b9b5a8', width, 'butt');
+          const wide = plot * (width || e[4]);
+          strokeLine(g, part, wood ? '#4f3a22' : '#55534d', wide + plot * 0.05, 'butt');
+          strokeLine(g, part, wood ? '#a57c4c' : '#b9b5a8', wide, 'butt');
           g.setLineDash([2, 6]);
-          strokeLine(g, part, 'rgba(0, 0, 0, 0.28)', width, 'butt');
+          strokeLine(g, part, 'rgba(0, 0, 0, 0.28)', wide, 'butt');
           g.setLineDash([]);
         }
         part = [];
@@ -271,19 +408,14 @@ const relax = (() => {
   }
 
   function draw(list) {
-    const box = $('relax'), cv = $('relax-canvas'), w = box.clientWidth;
-    const cols = Math.max(2, Math.floor(w / 150));
-    plot = w / cols;
-    const e = era(camp);
-    const {h, placed} = layout(list, w, box.clientHeight - $('relax-top').offsetHeight,
-                               e[7].map((kind, i) => ({id: '~' + kind + i, kind, prop: true})));
-    dpr = window.devicePixelRatio || 1;
-    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    const w = MAP_W, h = MAP_H, e = era(camp);
+    if (!river.length) river = riverPath(w, h);
+    const placed = layout(list, e);
+    res = Math.min(window.devicePixelRatio || 1, 1.5);
     bg = bg || document.createElement('canvas');
-    bg.width = cv.width; bg.height = cv.height;
+    bg.width = Math.round(w * res); bg.height = Math.round(h * res);
     const g = bg.getContext('2d');
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.setTransform(res, 0, 0, res, 0, 0);
     g.fillStyle = e[2];
     g.fillRect(0, 0, w, h);
     land(g, w, h, e);
@@ -294,8 +426,7 @@ const relax = (() => {
     scenery(g, w, h, placed, plot, e, edges);
     if (e[1] === 'City') wall(g, w, h);
     spots = [];
-    badges = [];
-    const labels = [], clear = [];
+    tags = [];
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
     for (const {x: cx, y: ground, b} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
@@ -315,48 +446,117 @@ const relax = (() => {
       if (pic) g.drawImage(pic, cx - s / 2, ground - s * ANCHOR, s, s);
       if (building) scaffold(g, cx, ground, level, true);
       const top = ground - s * (ANCHOR - TOP[level]);
-      labels.push(() => {
-      // Status: busy a tool sign, waiting a "!" flag; ended is the wreck.
-      if ((b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting') badge(g, cx + plot * 0.18, top - 4, '⚒', STATUS_COLORS.busy);
-      if (b.status === 'waiting') badge(g, cx + plot * 0.18, top - 4, '!', STATUS_COLORS.waiting);
-      // The name, with the tool's colour as a dot, and the status under it; an ended
-      // session's name is dark grey on a pale label, with no status.
-      g.font = "bold 12px 'DejaVu Sans Mono', Consolas, monospace";
-      const name = b.name.length > 16 ? b.name.slice(0, 15) + '…' : b.name;
-      const nw = g.measureText(name).width, ended = b.status === 'ended';
-      g.fillStyle = ended ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.55)';
-      const ly = ground + plot * 0.2;
-      g.fillRect(cx - nw / 2 - 14, ly, nw + 22, ended ? 18 : 30);
-      clear.push([cx - nw / 2 - 14, ly, nw + 22, ended ? 18 : 30]);
-      g.fillStyle = TOOL_COLORS[b.tool] || TOOL_COLORS.claude;
-      if (b.kind === 'meeting') { g.font = "12px 'DejaVu Sans Mono', Consolas, monospace"; g.fillText('⚖', cx - nw / 2 - 5, ly + 13);
-                                  g.font = "bold 12px 'DejaVu Sans Mono', Consolas, monospace"; }
-      else { g.beginPath(); g.arc(cx - nw / 2 - 5, ly + 9, 4, 0, Math.PI * 2); g.fill(); }
-      g.fillStyle = ended ? '#3a3a3a' : '#ffffff';
-      g.fillText(name, cx + 4, ly + 13);
-      if (!ended) {
-        g.font = "11px 'DejaVu Sans Mono', Consolas, monospace";
-        g.fillStyle = STATUS_COLORS[b.status] || STATUS_COLORS.ended;
-        g.fillText(b.status || '-', cx, ly + 26);
-      }
-      spots.unshift({x: cx - plot / 2, y: ground - plot * 0.9, w: plot, h: ly + 32 - (ground - plot * 0.9), b});
-      });
+      tags.push({cx, ground, top, b});
+      spots.unshift({x: cx - plot / 2, y: ground - plot * 0.9, w: plot, h: plot * 1.1 + 34, b});
     }
-    // The names and status badges go over everything, so no building or lantern hides one.
-    for (const f of labels) f();
-    const label = eraLabel(g, e);
     // What is lit at night: each building with someone in it, the fires, the lanterns.
     lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
               ...lamps.filter(l => l.b.kind === 'lantern').map(l => ({x: l.x, y: l.y - plot * 0.25, r: plot * 0.5}))];
-    plain = [...clear, label];
-    sky(w, h);
+    eraNow = e;
     settle(placed.filter(p => !p.b.prop));
+    skySig = '';
+    compose();
+    sky();
+  }
+
+  // --- the view: which part of the map shows, and how big
+  function fitZoom() { return Math.min(viewW / MAP_W, viewH / MAP_H); }
+  // Within the map; a map smaller than the window sits in its middle.
+  function clampView() {
+    const fit = fitZoom();
+    zoom = Math.max(fit, Math.min(ZOOM_MAX, zoom || fit));
+    ox = MAP_W * zoom <= viewW ? -(viewW / zoom - MAP_W) / 2 : Math.max(0, Math.min(MAP_W - viewW / zoom, ox));
+    oy = MAP_H * zoom <= viewH ? -(viewH / zoom - MAP_H) / 2 : Math.max(0, Math.min(MAP_H - viewH / zoom, oy));
+  }
+  function measure() {
+    const box = $('relax');
+    const w = box.clientWidth, h = box.clientHeight - $('relax-top').offsetHeight;
+    if (w === viewW && h === viewH) return false;
+    const wasFit = !zoom || Math.abs(zoom - fitZoom()) < 0.001;
+    viewW = w; viewH = h;
+    if (wasFit) zoom = fitZoom();
+    return true;
+  }
+  function worldOn(g) { const k = dpr * zoom; g.setTransform(k, 0, 0, k, -ox * k, -oy * k); }
+  // The window's picture of the map, then the flames, people, names and night over it.
+  function compose() {
+    if (!bg) return;
+    measure();
+    if (viewW <= 0 || viewH <= 0) return;
+    clampView();
+    dpr = window.devicePixelRatio || 1;
+    const cv = $('relax-canvas'), W = Math.round(viewW * dpr), H = Math.round(viewH * dpr);
+    view = view || document.createElement('canvas');
+    if (view.width !== W || view.height !== H) {
+      view.width = W; view.height = H;
+      cv.width = W; cv.height = H;
+      cv.style.width = viewW + 'px'; cv.style.height = viewH + 'px';
+    }
+    const v = view.getContext('2d'), k = dpr * zoom;
+    v.setTransform(1, 0, 0, 1, 0, 0);
+    v.fillStyle = '#3f6a3b';
+    v.fillRect(0, 0, W, H);
+    v.imageSmoothingQuality = 'high';
+    v.drawImage(bg, -ox * k, -oy * k, MAP_W * k, MAP_H * k);
     const out = cv.getContext('2d');
     out.setTransform(1, 0, 0, 1, 0, 0);
-    out.drawImage(bg, 0, 0);
-    out.setTransform(dpr, 0, 0, dpr, 0, 0);
+    out.drawImage(view, 0, 0);
+    worldOn(out);
     for (const f of fires) flames(out, f);
     for (const p of [...people.values()].sort((a, c) => a.y - c.y)) person(out, p);
+    drawTags();
+    drawNight();
+  }
+  // One compose for any number of wheel and drag events.
+  function viewChanged() {
+    if (viewDirty) return;
+    viewDirty = true;
+    setTimeout(() => { viewDirty = false; compose(); }, 16);
+  }
+  // The names and status badges, the same size at any zoom. Those that need you come first;
+  // one that would land on another is left out until you zoom in (hovering still names it).
+  function drawTags() {
+    const cv = $('relax-labels'), W = Math.round(viewW * dpr), H = Math.round(viewH * dpr);
+    if (cv.width !== W || cv.height !== H) {
+      cv.width = W; cv.height = H;
+      cv.style.width = viewW + 'px'; cv.style.height = viewH + 'px';
+    }
+    const g = cv.getContext('2d'), full = zoom >= 0.8, taken = [];
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, viewW, viewH);
+    g.textAlign = 'center';
+    const need = t => (t.b.status === 'waiting' ? 0 : t.b.status === 'busy' || t.b.status === 'running' ? 1 : t.b.status === 'ended' ? 3 : 2);
+    for (const {cx, ground, top, b} of [...tags].sort((a, c) => need(a) - need(c))) {
+      const x = (cx - ox) * zoom, y = (ground + plot * 0.2 - oy) * zoom;
+      if (x < -80 || x > viewW + 80 || y < -40 || y > viewH + 40) continue;
+      const ended = b.status === 'ended', most = full ? 16 : 13;
+      const name = b.name.length > most ? b.name.slice(0, most - 1) + '…' : b.name;
+      g.font = "bold 12px 'DejaVu Sans Mono', Consolas, monospace";
+      const nw = g.measureText(name).width, high = ended || !full ? 18 : 30;
+      const rect = [x - nw / 2 - 14, y, nw + 22, high];
+      const busy = (b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting';
+      // Status: busy a tool sign, waiting a "!" flag; ended is the wreck.
+      if (busy) badge(g, (cx + plot * 0.18 - ox) * zoom, (top - oy) * zoom - 4, '⚒', STATUS_COLORS.busy);
+      if (b.status === 'waiting') badge(g, (cx + plot * 0.18 - ox) * zoom, (top - oy) * zoom - 4, '!', STATUS_COLORS.waiting);
+      if (taken.some(q => rect[0] < q[0] + q[2] && q[0] < rect[0] + rect[2] && rect[1] < q[1] + q[3] && q[1] < rect[1] + rect[3])) continue;
+      taken.push(rect);
+      // The name, with the tool's colour as a dot, and the status under it; an ended
+      // session's name is dark grey on a pale label, with no status.
+      g.fillStyle = ended ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.55)';
+      g.fillRect(...rect);
+      g.fillStyle = TOOL_COLORS[b.tool] || TOOL_COLORS.claude;
+      if (b.kind === 'meeting') { g.font = "12px 'DejaVu Sans Mono', Consolas, monospace"; g.fillText('⚖', x - nw / 2 - 5, y + 13);
+                                  g.font = "bold 12px 'DejaVu Sans Mono', Consolas, monospace"; }
+      else { g.beginPath(); g.arc(x - nw / 2 - 5, y + 9, 4, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = ended ? '#3a3a3a' : '#ffffff';
+      g.fillText(name, x + 4, y + 13);
+      if (!ended && full) {
+        g.font = "11px 'DejaVu Sans Mono', Consolas, monospace";
+        g.fillStyle = STATUS_COLORS[b.status] || STATUS_COLORS.ended;
+        g.fillText(b.status || '-', x, y + 26);
+      }
+    }
+    if (eraNow) eraLabel(g, eraNow);
   }
 
   // A busy session's building is under construction: wooden scaffolding around it, up to
@@ -392,11 +592,11 @@ const relax = (() => {
   // buildings so they stand in front of or behind them, and the roads, which trees avoid.
   function roads(g, placed, e) {
     const joins = placed.filter(p => p.b.kind !== 'fence');
-    if (!e[3] || joins.length < 2) return {lamps: [], edges: []};
+    if (!e[3] || (joins.length < 2 && e[1] !== 'City')) return {lamps: [], edges: []};
     // Each road ends in front of the door (on the lower left), outside the footprint.
     const pts = joins.map(p => ({x: p.x - plot * 0.18, y: p.y + plot * 0.16, id: p.b.id}));
-    const joined = [0], edges = [];
-    while (joined.length < pts.length) {
+    const joined = [0], edges = e[1] === 'City' ? cityPlan().edges : [];
+    while (e[1] !== 'City' && joined.length < pts.length) {
       let best = null;
       for (const i of joined) for (let j = 0; j < pts.length; j++) {
         if (joined.includes(j)) continue;
@@ -409,22 +609,23 @@ const relax = (() => {
     g.lineCap = 'round'; g.lineJoin = 'round';
     for (const [color, extra] of [[e[5], plot * 0.035], [e[3], 0]]) {
       if (!color) continue;
-      g.strokeStyle = color; g.lineWidth = plot * e[4] + extra;
-      g.beginPath();
-      for (const {line} of edges) { g.moveTo(line[0].x, line[0].y); for (const q of line) g.lineTo(q.x, q.y); }
-      g.stroke();
+      g.strokeStyle = color;
+      for (const {line, width} of edges) {
+        g.lineWidth = plot * (width || e[4]) + extra;
+        g.beginPath(); g.moveTo(line[0].x, line[0].y); for (const q of line) g.lineTo(q.x, q.y);
+        g.stroke();
+      }
     }
-    if (e[1] === 'City') {                 // a city's roads are brick: joints across them
-      g.lineCap = 'butt'; g.strokeStyle = 'rgba(0, 0, 0, 0.22)'; g.lineWidth = plot * e[4];
-      g.setLineDash([1.5, 11]);
-      g.beginPath();
-      for (const {line} of edges) { g.moveTo(line[0].x, line[0].y); for (const q of line) g.lineTo(q.x, q.y); }
-      g.stroke();
-      g.setLineDash([]);
+    if (e[1] === 'City') {                 // a paved plaza where the avenues meet
+      g.fillStyle = e[5];
+      g.beginPath(); g.ellipse(PLAZA.x, PLAZA.y, 128, 76, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = e[3];
+      g.beginPath(); g.ellipse(PLAZA.x, PLAZA.y, 124, 73, 0, 0, Math.PI * 2); g.fill();
     }
     if (e[1] !== 'Town' && e[1] !== 'City') return {lamps: [], edges};
     const lamps = [];
-    for (const r of edges) {
+    for (const [n, r] of edges.entries()) {
+      if (e[1] === 'City' && n % 4) continue;   // a city has many streets: a lantern on every fourth stretch
       // Beside the road's middle.
       const m = along(r, 0.5), t = Math.hypot(m.dx, m.dy) || 1, a = r.line[0], b = r.line[r.line.length - 1];
       const d = Math.hypot(b.x - a.x, b.y - a.y), side = plot * (e[4] / 2 + 0.08);
@@ -445,7 +646,7 @@ const relax = (() => {
   // A city's street trees: beside its roads, a third of the way along each, where there is
   // room: clear of every road, building and lantern, and of each other.
   function streetTrees(edges, placed, lamps, e, w, h) {
-    const road = roadPoints(edges), trees = [], side = plot * (e[4] / 2 + 0.17), most = Math.ceil(edges.length * 0.4);
+    const road = roadPoints(edges), trees = [], side = plot * (e[4] / 2 + 0.17), most = Math.min(24, Math.ceil(edges.length * 0.4));
     for (const r of edges) for (const [t, way] of [[0.33, 1], [0.67, -1], [0.33, -1], [0.67, 1]]) {
       if (trees.length >= most) return trees;
       const p = along(r, t), d = Math.hypot(p.dx, p.dy) || 1;
@@ -505,6 +706,7 @@ const relax = (() => {
     for (let x = 4; x < w; x += 16) g.fillRect(x, h - t - 3, 8, t + 3);
   }
   // Top left: what the camp is now, and how far the next one is.
+  let eraNow = null;
   function eraLabel(g, e) {
     const next = ERAS[ERAS.indexOf(e) - 1];
     const text = `${ICON[e[1]]} ${e[1]} · ${camp} messages` + (next ? ` · ${next[1]} at ${next[0]}` : '');
@@ -516,7 +718,6 @@ const relax = (() => {
     g.fillStyle = '#ffffff';
     g.fillText(text, 20, 19);
     g.textAlign = 'center';
-    return [14, 6, tw + 12, 18];
   }
 
   // --- the people: one per building that is not ended, and one per participant around
@@ -638,12 +839,12 @@ const relax = (() => {
   }
 
   // Day and night, by this computer's clock: a colour multiplied over the whole camp (a
-  // canvas of its own, drawn once and again only as the hour moves on, so the people's 5 Hz
-  // redraw does not pay for it), pale around the lights. Nothing at all in full daylight.
+  // canvas of its own, drawn once and again only as the hour moves on or the view changes,
+  // so the people's 5 Hz redraw does not pay for it), pale around the lights. Nothing at all
+  // in full daylight. The names are above it, as bright as by day, to be read.
   const SKY = [[0, [84, 96, 150]], [5, [84, 96, 150]], [6.5, [255, 200, 165]], [8, [255, 255, 255]], [16.5, [255, 255, 255]],
                [18, [255, 170, 120]], [19.5, [84, 96, 150]], [24, [84, 96, 150]]];
-  // `plain`: the names, status badges and the era's label stay as bright as by day, to be read.
-  let lights = [], plain = [], badges = [], skyW = 0, skyH = 0, skySig = '', hourForTest = null;
+  let lights = [], skySig = '', hourForTest = null, nightOn = false, nightColor = '', nightMap = null;
   function hourNow() {
     const d = new Date();
     return hourForTest !== null ? hourForTest : d.getHours() + d.getMinutes() / 60;
@@ -652,39 +853,49 @@ const relax = (() => {
     const n = SKY.findIndex(([h]) => h > hour), [h0, a] = SKY[n - 1], [h1, b] = SKY[n], t = (hour - h0) / (h1 - h0);
     return a.map((v, i) => Math.round(v + (b[i] - v) * t));
   }
-  function sky(w, h) {
-    if (w) { skyW = w; skyH = h; skySig = ''; }
-    const c = skyColor(hourNow()), sig = c.join(), cv = $('relax-night');
-    if (sig === skySig || !skyW) return;
+  function sky() {
+    const c = skyColor(hourNow()), sig = c.join();
+    if (sig === skySig) return;
     skySig = sig;
-    if (sig === '255,255,255') { cv.style.display = 'none'; return; }
-    cv.width = skyW; cv.height = skyH;
-    cv.style.width = skyW + 'px'; cv.style.height = skyH + 'px';
-    cv.style.display = 'block';
-    const g = cv.getContext('2d'), dark = 1 - Math.min(...c) / 255;
-    g.fillStyle = `rgb(${c})`;
-    g.fillRect(0, 0, skyW, skyH);
-    // The lights come on as it gets dark.
-    for (const {x, y, r} of lights) {
-      const glow = g.createRadialGradient(x, y, 0, x, y, r);
-      glow.addColorStop(0, `rgba(255, 228, 180, ${Math.min(0.85, dark * 1.3)})`);
-      glow.addColorStop(0.4, `rgba(255, 222, 170, ${Math.min(0.5, dark * 0.75)})`);
-      glow.addColorStop(0.75, `rgba(255, 215, 160, ${Math.min(0.14, dark * 0.2)})`);
-      glow.addColorStop(1, 'rgba(255, 210, 150, 0)');
-      g.fillStyle = glow;
-      g.fillRect(x - r, y - r, r * 2, r * 2);
+    nightOn = sig !== '255,255,255';
+    if (nightOn) {
+      nightColor = `rgb(${c})`;
+      nightMap = nightMap || document.createElement('canvas');
+      nightMap.width = MAP_W; nightMap.height = MAP_H;
+      const g = nightMap.getContext('2d'), dark = 1 - Math.min(...c) / 255;
+      g.fillStyle = nightColor;
+      g.fillRect(0, 0, MAP_W, MAP_H);
+      // The lights come on as it gets dark.
+      for (const {x, y, r} of lights) {
+        const glow = g.createRadialGradient(x, y, 0, x, y, r);
+        glow.addColorStop(0, `rgba(255, 228, 180, ${Math.min(0.85, dark * 1.3)})`);
+        glow.addColorStop(0.4, `rgba(255, 222, 170, ${Math.min(0.5, dark * 0.75)})`);
+        glow.addColorStop(0.75, `rgba(255, 215, 160, ${Math.min(0.14, dark * 0.2)})`);
+        glow.addColorStop(1, 'rgba(255, 210, 150, 0)');
+        g.fillStyle = glow;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
     }
-    for (const [x, y, w, h] of plain) g.clearRect(x, y, w, h);
-    g.globalCompositeOperation = 'destination-out';
-    g.fillStyle = '#000';
-    for (const [x, y] of badges) { g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.fill(); }
-    g.globalCompositeOperation = 'source-over';
+    drawNight();
+  }
+  function drawNight() {
+    const cv = $('relax-night');
+    if (!nightOn || !nightMap || viewW <= 0) { cv.style.display = 'none'; return; }
+    if (cv.width !== viewW || cv.height !== viewH) {
+      cv.width = viewW; cv.height = viewH;
+      cv.style.width = viewW + 'px'; cv.style.height = viewH + 'px';
+    }
+    cv.style.display = 'block';
+    const g = cv.getContext('2d');
+    g.fillStyle = nightColor;
+    g.fillRect(0, 0, viewW, viewH);
+    g.drawImage(nightMap, -ox * zoom, -oy * zoom, MAP_W * zoom, MAP_H * zoom);
   }
 
   // One step for everyone. Only the squares that changed are drawn again, from the
   // background, then the flames and people on top.
   function tick() {
-    if (!bg) return;
+    if (!view || viewDirty) return;        // the picture is about to change: the next compose draws them
     const cv = $('relax-canvas'), g = cv.getContext('2d'), dirty = [], dt = TICK / 1000;
     for (const p of people.values()) {
       const before = box(p);
@@ -698,12 +909,13 @@ const relax = (() => {
     for (const f of fires) dirty.push(flameBox(f));
     if (!dirty.length) return;
     g.setTransform(1, 0, 0, 1, 0, 0);
+    const k = dpr * zoom;
     for (const [x, y, w, h] of dirty) {
-      const sx = Math.max(0, Math.floor(x * dpr)), sy = Math.max(0, Math.floor(y * dpr));
-      const sw = Math.min(bg.width - sx, Math.ceil(w * dpr)), sh = Math.min(bg.height - sy, Math.ceil(h * dpr));
-      if (sw > 0 && sh > 0) g.drawImage(bg, sx, sy, sw, sh, sx, sy, sw, sh);
+      const sx = Math.max(0, Math.floor((x - ox) * k) - 1), sy = Math.max(0, Math.floor((y - oy) * k) - 1);
+      const sw = Math.min(view.width - sx, Math.ceil(w * k) + 3), sh = Math.min(view.height - sy, Math.ceil(h * k) + 3);
+      if (sw > 0 && sh > 0) g.drawImage(view, sx, sy, sw, sh, sx, sy, sw, sh);
     }
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    worldOn(g);
     const hit = ([x, y, w, h]) => dirty.some(([a, b, c, d]) => x < a + c && a < x + w && y < b + d && b < y + h);
     for (const f of fires) if (hit(flameBox(f))) flames(g, f);
     for (const p of [...people.values()].filter(p => hit(box(p))).sort((a, c) => a.y - c.y)) person(g, p);
@@ -716,7 +928,6 @@ const relax = (() => {
   }
 
   function badge(g, x, y, text, color) {
-    badges.push([x, y]);
     g.fillStyle = 'rgba(0, 0, 0, 0.6)';
     g.beginPath(); g.arc(x, y, 11, 0, Math.PI * 2); g.fill();
     g.strokeStyle = color; g.lineWidth = 2; g.stroke();
@@ -726,7 +937,8 @@ const relax = (() => {
   }
 
   function at(e) {
-    const r = $('relax-canvas').getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const r = $('relax-canvas').getBoundingClientRect();
+    const x = (e.clientX - r.left) / zoom + ox, y = (e.clientY - r.top) / zoom + oy;
     const s = spots.find(s => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h);
     return s ? s.b : null;
   }
@@ -741,10 +953,9 @@ const relax = (() => {
     if (turns !== undefined) camp = turns;
     if (!on || document.hidden) return;
     sky();
-    const list = buildings(), box = $('relax');
-    const now = JSON.stringify([camp, box.clientWidth, box.clientHeight, $('relax-top').offsetHeight,
-                                list.map(b => [b.id, b.name, b.tool, b.status, b.level, b.people])]);
-    if (now === sig && !force) return;
+    const list = buildings();
+    const now = JSON.stringify([camp, list.map(b => [b.id, b.name, b.tool, b.status, b.level, b.people])]);
+    if (now === sig && !force) { if (measure()) compose(); return; }
     sig = now;
     draw(list);
   }
@@ -823,11 +1034,29 @@ const relax = (() => {
       const b = at(e);
       rowMenu(b ? b.row : null, e);
     });
+    // The wheel zooms around the pointer; dragging moves the map.
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+      const wx = mx / zoom + ox, wy = my / zoom + oy, steps = e.deltaY * (e.deltaMode === 1 ? 16 : 1);
+      zoom = Math.max(fitZoom(), Math.min(ZOOM_MAX, zoom * Math.exp(-steps * 0.0015)));
+      ox = wx - mx / zoom; oy = wy - my / zoom;
+      viewChanged();
+    }, {passive: false});
+    let drag = null;
+    cv.addEventListener('mousedown', e => { if (e.button === 0) drag = {x: e.clientX, y: e.clientY, ox, oy}; });
+    window.addEventListener('mousemove', e => {
+      if (!drag) return;
+      ox = drag.ox - (e.clientX - drag.x) / zoom; oy = drag.oy - (e.clientY - drag.y) / zoom;
+      viewChanged();
+    });
+    window.addEventListener('mouseup', () => { drag = null; });
     cv.addEventListener('mousemove', e => {
+      if (drag) return;
       const b = at(e);
       if (b === hover) return;
       hover = b;
-      cv.style.cursor = b ? 'pointer' : '';
+      cv.style.cursor = b ? 'pointer' : 'grab';
       cv.title = !b ? '' : b.kind === 'meeting' ? `⚖ ${b.name} · ${b.status === 'busy' ? 'under way' : 'done'} (double-click to open)`
         : b.status === 'ended' ? `${b.name} · ended (double-click to start)`
         : `${b.name} · ${b.status} · ${b.tool === 'agy' ? (b.row.up || '') + ' open' : (b.row.turns || 0) + ' messages'}`;
@@ -862,5 +1091,5 @@ const relax = (() => {
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
           _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
           _hour: h => { hourForTest = h; skySig = ''; sky(); },
-          _layout: () => layoutMemo && {h: layoutMemo.h, things: [...layoutMemo.at.values()].map(p => ({id: p.b.id, prop: !!p.b.prop, x: p.x, y: p.y}))}};
+          _layout: () => ({zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : []})};
 })();

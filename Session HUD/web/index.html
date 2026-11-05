@@ -15,11 +15,13 @@
   body.dragging { cursor: col-resize; user-select: none; }
   /* Relax mode (relax.js): one canvas in place of the Tasks and Sessions columns. */
   #relax { display: none; grid-column: 1 / 4; grid-row: 1; position: relative; min-width: 0; min-height: 0;
-           overflow-y: auto; overflow-x: hidden; background: #4b7a46; }
+           overflow: hidden; background: #3f6a3b; }
   #relax-canvas { display: block; }
   /* Day and night: laid over the camp, multiplying it; the lights are the pale parts. */
   #relax-scene { position: relative; isolation: isolate; line-height: 0; }
   #relax-night { position: absolute; left: 0; top: 0; pointer-events: none; mix-blend-mode: multiply; display: none; }
+  /* The names, the same size at any zoom. */
+  #relax-labels { position: absolute; left: 0; top: 0; pointer-events: none; }
   /* Above the camp, staying there as it scrolls: the task board and the stamina bars. */
   #relax-top { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; padding: 6px; font-size: 12px;
                background: #6b4a2b; border-bottom: 3px solid #4a3019; color: #fff3d6; }
@@ -301,7 +303,7 @@
 <div class="menu" id="restore-menu"><div>Restore → Pending</div></div>
 <div class="menu" id="add-menu"></div>
 <div id="relax"><div id="relax-top"><div id="board"></div><div id="stamina"></div><div class="chat" id="relax-chat"></div></div>
-  <div id="relax-scene"><canvas id="relax-canvas"></canvas><canvas id="relax-night"></canvas></div><div id="relax-msg"></div></div>
+  <div id="relax-scene"><canvas id="relax-canvas"></canvas><canvas id="relax-night"></canvas><canvas id="relax-labels"></canvas></div><div id="relax-msg"></div></div>
 <div class="menu" id="set-menu"></div>
 <div class="menu" id="send-menu"></div>
 <div id="xc">
