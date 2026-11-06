@@ -22,6 +22,7 @@ const relax = (() => {
   const PACKS = {
     Metropolis: [...PICS_METRO, 'metro-meeting', ...LIT_NAMES],
     City: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'shop', 'tavern', 'smithy', 'warehouse', 'sawmill', 'church', 'townhall', 'farm', 'windmill', 'watermill', 'level2', 'level3', 'level4'].map(k => `med-${k}`)};
+  PACKS.City.push(...PACKS.City.filter(k => k !== 'med-farm').map(k => k + '-lit'));   // tools/relax_lit.py's
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
   // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
@@ -752,7 +753,7 @@ const relax = (() => {
       pensMade.push(pen);
       // Its four sides, as lines of posts on the ground (drawn after the warp, so they follow it).
       const line = (k, f) => Array.from({length: k + 1}, (_, i) => inPen(pen, ...f(i / k))), across = pen.n * 2, deep = pen.n;
-      rails.push(line(across, t => [t, 0]), line(deep, t => [0, t]), line(deep, t => [1, t]), line(across, t => [t, 1]));
+      rails.push(line(across, t => [t, 0]), line(deep, t => [0, t]), line(deep, t => [1, t]), Object.assign(line(across, t => [t, 1]), {front: true}));
       group.forEach((kind, i) => { const q = inPen(pen, 0.25 + rnd() * 0.5, 0.25 + rnd() * 0.5); herd.push({kind, x: q.x, y: q.y, pen}); });
     }
     // Nothing grows in a paddock: the woods placed before it are cleared out of it.
@@ -854,6 +855,16 @@ const relax = (() => {
     g.fillStyle = air;
     g.fillRect(0, top, MAP_W, MAP_H - top);
     fences(g);
+    // The paddocks' front fences again, on a layer of their own over the people and animals,
+    // so an animal in a paddock is behind its front fence.
+    frontFence = null;
+    if (rails.length) {
+      frontFence = document.createElement('canvas');
+      frontFence.width = bg.width; frontFence.height = bg.height;
+      const f = frontFence.getContext('2d');
+      f.setTransform(res, 0, 0, res, 0, 0);
+      fences(f, true);
+    }
     for (const [pic, x, y, sz, flip] of woods) onGround(g, x, y, () => castShadow(g, pic, x, y, sz, flip));
     for (const [pic, x, y, sz, flip] of woods.sort((a, c) => a[2] - c[2])) onGround(g, x, y, () => put(g, pic, x, y, sz, flip));
     spots = [];
@@ -869,7 +880,7 @@ const relax = (() => {
         const s = plot * 1.5 * (b.scale || scaleOf(b.kind)) * (b.house ? DECOR_SIZE : 1);
         castShadow(g, img[b.kind], cx, ground, s, flip);
         if (img[b.kind]) put(g, img[b.kind], cx, ground, s, flip);
-        if (metro(e)) litList.push([b.kind, cx, ground, s, flip, cx, ground]);
+        if (urban(e)) litList.push([b.kind, cx, ground, s, flip, cx, ground]);
         continue;
       }
       // An ended session is a wreck.
@@ -885,13 +896,13 @@ const relax = (() => {
         const side = (i ? 1 : -1) * (flip ? -1 : 1), ks = plot * 1.5 * scaleOf(k) * big * (YARD_SIZE[k.replace(/^med-/, '')] || 0.55);
         castShadow(g, img[k], cx + side * plot * 0.5 * big, ground - plot * 0.2 * big, ks, flip);
         put(g, img[k], cx + side * plot * 0.5 * big, ground - plot * 0.2 * big, ks, flip);
-        if (metro(e)) litList.push([k, cx + side * plot * 0.5 * big, ground - plot * 0.2 * big, ks, flip, cx, ground]);
+        if (urban(e)) litList.push([k, cx + side * plot * 0.5 * big, ground - plot * 0.2 * big, ks, flip, cx, ground]);
       });
       const building = (b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting';
       if (building) scaffold(g, cx, ground, level, false);
       if (pic) put(g, pic, cx, ground, s, flip);
       if (building) scaffold(g, cx, ground, level, true);
-      if (metro(e)) litList.push([level, cx, ground, s, flip, cx, ground]);
+      if (urban(e)) litList.push([level, cx, ground, s, flip, cx, ground]);
       const top = ground - s * (ANCHOR - TOP[level]);
       tags.push({cx, ground, top, b});
       // Where a click finds it, in the warped picture.
@@ -972,8 +983,21 @@ const relax = (() => {
     worldOn(out);
     for (const f of fires) onGround(out, f.x, f.y, () => flames(out, f));
     for (const p of [...people.values()].sort((a, c) => a.y - c.y)) onGround(out, p.x, p.y, () => person(out, p));
+    frontOver(out, null);
     drawTags();
     drawNight();
+  }
+  // The front fence over each animal in a paddock (only there, so a tree in front of the fence
+  // keeps its place): of those whose box `hit` takes, or all of them.
+  function frontOver(g, hit) {
+    if (!frontFence) return;
+    for (const p of people.values()) {
+      if (!p.pen) continue;
+      const b = warpBox(box(p));
+      if (hit && !hit(b)) continue;
+      const x = Math.max(0, b[0]), y = Math.max(0, b[1]), w = Math.min(MAP_W, b[0] + b[2]) - x, h = Math.min(MAP_H, b[1] + b[3]) - y;
+      if (w > 0 && h > 0) g.drawImage(frontFence, x * res, y * res, w * res, h * res, x, y, w, h);
+    }
   }
   // One compose for any number of wheel and drag events.
   function viewChanged() {
@@ -1239,18 +1263,20 @@ const relax = (() => {
   const penHas = (o, x, y, more = 0) => Math.abs(x - o.x) < PEN_W * o.n / 2 + more && Math.abs(y - o.y) < PEN_D * o.n / 2 + more;
   const FAST = new Set([BEAST.fox, BEAST.wolf, BEAST.husky, BEAST.shiba]);
   let herd = [];                            // this draw's animals: {kind, x, y}, x and y their home
-  let rails = [];                           // this draw's paddock fences: lines of post points
+  let rails = [], frontFence = null;        // this draw's paddock fences: lines of post points; the front ones' layer
   // A paddock's fence, after the warp: a post at each point, two rails between them, and their
   // shadow on the ground, all sized for how far away they stand. Back sides first.
-  function fences(g) {
-    const H = 22, W = p => warp(p.x, p.y), sorted = [...rails].sort((a, c) => (a[0].y + a[a.length - 1].y) - (c[0].y + c[c.length - 1].y));
+  function fences(g, only) {
+    const H = 22, W = p => warp(p.x, p.y), sorted = rails.filter(l => !only || l.front).sort((a, c) => (a[0].y + a[a.length - 1].y) - (c[0].y + c[c.length - 1].y));
     g.lineCap = 'round';
     for (const line of sorted) {
       const pts = line.map(p => { const [X, Y] = W(p), m = depth(p.y); return {X, Y, h: H * m, m}; });
+      if (!only) {
       g.strokeStyle = 'rgba(12, 28, 12, 0.25)';
       g.beginPath();
       pts.forEach((q, i) => { const x = q.X + q.h * 0.35, y = q.Y - q.h * 0.15; i ? g.lineTo(x, y) : g.moveTo(x, y); });
       g.lineWidth = 3 * pts[0].m; g.stroke();
+      }
       for (const [lift, color, wide] of [[0.45, '#a8673f', 2.4], [0.85, '#c98a5e', 2.6]]) {
         g.strokeStyle = color;
         g.beginPath();
@@ -1525,6 +1551,7 @@ const relax = (() => {
     const hit = ([x, y, w, h]) => dirty.some(([a, b, c, d]) => x < a + c && a < x + w && y < b + d && b < y + h);
     for (const f of fires) if (hit(warpBox(flameBox(f)))) onGround(g, f.x, f.y, () => flames(g, f));
     for (const p of [...people.values()].filter(p => hit(warpBox(box(p)))).sort((a, c) => a.y - c.y)) onGround(g, p.x, p.y, () => person(g, p));
+    frontOver(g, hit);
   }
   // The timer runs only while it has something to move and someone to see it.
   function clock() {

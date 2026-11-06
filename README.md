@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.1.1` (current) | `v4.1` plus animals in Relax mode: wild ones in a tribe, cows and horses in fenced paddocks from a village on (a city's outside its wall), dogs in a city and a metropolis; shadows for people and animals. See `CHANGELOG.md`. |
+| `v4.1.2` (current) | `v4.1.1` plus Relax mode fixes: a city's windows light at night, and a paddock's front fence stands in front of its animals. See `CHANGELOG.md`. |
+| `v4.1.1` | `v4.1` plus animals in Relax mode: wild ones in a tribe, cows and horses in fenced paddocks from a village on (a city's outside its wall), dogs in a city and a metropolis; shadows for people and animals. See `CHANGELOG.md`. |
 | `v4.1` | `v4.0.2` plus a Relax mode camp seen in perspective: the far side narrower, haze with distance, shadows cast from each picture's outline, and the view framing the buildings; sessions' buildings as trades (smithy, church, tavern…) with a yard of smaller buildings; hills and woods beyond the map's sides. See `CHANGELOG.md`. |
 | `v4.0.2` | `v4.0.1` plus a new Relax mode landscape: two continuous mountain ranges with snow on the tops, a sky with clouds, wooded foothills, and ponds, woods and wild flowers on the grass. See `CHANGELOG.md`. |
 | `v4.0.1` | `v4.0` plus Relax mode fixes: buildings face the road beside them, street lights only from a city on (lanterns, then modern lamps in a metropolis), and the bar beside the camp resizes it again. See `CHANGELOG.md`. |
@@ -270,7 +271,7 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   ended ones included: a tribe from 0, a village from 100, a town from 500, a city from 1000,
   a metropolis from 5000 and a megacity from 10000. Roads go from dirt paths to stone to a
   city's plaza, avenues, side streets and wall, then asphalt with the wall gone; at night a
-  metropolis's windows light up. The top left of the camp shows what it is now and when the
+  city's and a metropolis's windows light up. The top left of the camp shows what it is now and when the
   next one comes. Deleting a session from `agents.json` takes its messages off the count,
   so the camp can shrink back.
 - **Buildings that are nobody's** appear as it grows, one for each 100 messages up to 1000,
@@ -312,7 +313,8 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   at the biggest era, measured only on a test page without terminals, about 5%.
 - The pictures come from Kenney's *Survival Kit*, *Fantasy Town Kit*, *City Kit (Commercial)*
   and *Car Kit* (CC0, [kenney.nl](https://www.kenney.nl)) and Quaternius' *Medieval Village
-  MegaKit* and *Ultimate Animated Animal Pack* (CC0, [quaternius.com](https://quaternius.com)), some of them recoloured or stretched; `Session HUD/tools/relax_art.py` makes them, once.
+  MegaKit* and *Ultimate Animated Animal Pack* (CC0, [quaternius.com](https://quaternius.com)), some of them recoloured or stretched; `Session HUD/tools/relax_art.py` makes them, once
+  (`relax_lit.py` then makes the city's lit windows from them).
 
 ## Task list
 
@@ -531,7 +533,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.1.1`（目前） | `v4.1` 再加上 Relax mode 的動物：部落有野生動物，從村莊起牛和馬養在有籬笆的牧場（城市的在城牆外），城市和大都會有狗；小人和動物也有影子。詳見 `CHANGELOG.md`。 |
+| `v4.1.2`（目前） | `v4.1.1` 再加上 Relax mode 的修正：城市的窗戶晚上會亮，牧場前排的籬笆會擋在動物前面。詳見 `CHANGELOG.md`。 |
+| `v4.1.1` | `v4.1` 再加上 Relax mode 的動物：部落有野生動物，從村莊起牛和馬養在有籬笆的牧場（城市的在城牆外），城市和大都會有狗；小人和動物也有影子。詳見 `CHANGELOG.md`。 |
 | `v4.1` | `v4.0.2` 再加上：Relax mode 的營地改成透視，遠處變窄、越遠越朦朧、每樣東西照自己的輪廓投下影子，預設視角框住有建築的範圍；session 的建築改成各種行業（鐵匠鋪、教堂、酒館等），後面配小建築組成建築群；地圖兩側外面有丘陵和樹林。詳見 `CHANGELOG.md`。 |
 | `v4.0.2` | `v4.0.1` 再加上 Relax mode 的新景色：兩排連綿的山脈且山頂有積雪、有雲的天空、長滿樹的丘陵，草地上還有池塘、樹林和野花。詳見 `CHANGELOG.md`。 |
 | `v4.0.1` | `v4.0` 再加上 Relax mode 的修正：建築的門朝向旁邊的路、路燈從城市才開始出現（提燈，到大都會換成現代路燈），營地旁的分隔條又能拖曳調整寬度。詳見 `CHANGELOG.md`。 |
@@ -729,7 +732,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **整個營地也會成長**，依 `agents.json` 裡所有 session 的訊息總數計算，已結束的也算：
   0 則起是部落，100 則起是村莊，500 則起是小鎮，1000 則起是城市，5000 則起是大都會，10000 則起
   是超級都市。路從泥土路、石板路，變成城市的廣場、大道、支路和城牆，再變成柏油路並拆掉城牆；
-  大都會的窗戶晚上會亮。營地左上角會顯示目前的階段和下一階段的門檻。從 `agents.json` 刪除
+  城市和大都會的窗戶晚上會亮。營地左上角會顯示目前的階段和下一階段的門檻。從 `agents.json` 刪除
   session 會扣掉它的訊息數，所以營地可能退回前一階段。
 - **不屬於任何 session 的建築**會隨著成長出現，1000 則以前每 100 則一棟，之後每 500 則一棟：
   住宅、商店、農場、磨坊、教堂、市政廳，之後是高樓和公園。每進入新階段，隨機挑現有的一半升一級，
@@ -760,7 +763,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - 圖片來自 Kenney 的 *Survival Kit*、*Fantasy Town Kit*、*City Kit (Commercial)*、*Car Kit*
   （CC0，[kenney.nl](https://www.kenney.nl)）和 Quaternius 的 *Medieval Village MegaKit*、*Ultimate Animated Animal Pack*
   （CC0，[quaternius.com](https://quaternius.com)），部分重新上色或拉長，由
-  `Session HUD/tools/relax_art.py` 產生一次。
+  `Session HUD/tools/relax_art.py` 產生一次（城市亮著的窗戶再由 `relax_lit.py` 從這些圖片產生）。
 
 ## 任務清單
 

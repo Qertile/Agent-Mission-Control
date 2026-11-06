@@ -2,6 +2,23 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-07 – v4.1.2: Relax mode: a city's windows at night, fences in front of animals
+
+### Fixed
+- Relax mode: a city's windows did not light at night; only a metropolis's and a megacity's
+  did. New `tools/relax_lit.py` makes `med-*-lit.png` (20 pictures, 80 KB) from the
+  medieval pictures: their dark glass, away from the roofs, seven panes in ten on. A city
+  loads them with its pictures and lights them as a metropolis does.
+- Relax mode: an animal in a paddock was drawn over its front fence, so it looked outside it.
+  The front fences are now on a layer of their own, drawn again over each penned animal
+  (only there, so a tree in front of a fence keeps its place).
+- README: a city's lit windows, `relax_lit.py` (both languages).
+- Versions: `v4.1.2`.
+- Tagged `v4.1.2`.
+
+### Known
+- A few door edges in a city light up with the windows.
+
 ## 2026-11-07 – v4.1.1: Relax mode's animals and paddocks
 
 ### Added
