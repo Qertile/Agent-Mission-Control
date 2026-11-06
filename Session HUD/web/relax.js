@@ -432,39 +432,89 @@ const relax = (() => {
     line.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
     g.stroke();
   }
-  // A low-poly mountain, lit from the left like the kits' pictures: a lit and a shaded face,
-  // and snow on the tall ones.
-  function mountain(g, x, base, wide, high) {
-    const peak = {x: x - wide * 0.06, y: base - high};
-    const face = (pts, color) => { g.fillStyle = color; g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.fill(); };
-    const left = [x - wide / 2, base], right = [x + wide / 2, base], foot = [x + wide * 0.08, base + wide * 0.05];
-    face([left, [peak.x, peak.y], foot], '#93a08f');
-    face([right, [peak.x, peak.y], foot], '#6a7a6b');
-    if (high > plot * 0.5) {
-      const k = 0.3, at = ([a, b]) => [peak.x + (a - peak.x) * k, peak.y + (b - peak.y) * k];
-      const l = at(left), f = at(foot), r = at(right);
-      face([l, [peak.x, peak.y], f, [(l[0] + f[0]) / 2, (l[1] + f[1]) / 2 - high * 0.03]], '#f4f6f4');
-      face([r, [peak.x, peak.y], f, [(r[0] + f[0]) / 2, (r[1] + f[1]) / 2 - high * 0.03]], '#c9d2d6');
+  // A mountain range as one ridge line, lit from the left like the kits' pictures. The line is
+  // smooth noise in three sizes, so no two stretches look alike. From every top a spur runs
+  // down to the right: the face left of it is lit, the face right of it, down to the next
+  // valley, is in shade. Snow lies above the snow line, its lower edge ragged.
+  // `tone`: [lit, lit low, shade, shade low, snow lit, snow shade]. `high(x)` is how high
+  // the range's peaks are about x.
+  function ridge(g, w, base, high, tone, rnd, snowAt) {
+    const bottom = plot * 0.9;   // filled down to the ground, so no sky shows under a range
+    const octave = size => { const v = Array.from({length: Math.ceil(w / size) + 3}, rnd), o = rnd();
+      return x => { const t = x / size + o, i = Math.floor(t), f = t - i, s = f * f * (3 - 2 * f); return v[i + 1] * (1 - s) + v[i + 2] * s; }; };
+    const big = octave(plot * 1.7), mid = octave(plot * 0.74), small = octave(plot * 0.29);
+    const pts = [];
+    for (let x = -plot * 0.2; x < w + plot * 0.2; x += plot * 0.07) {
+      const n = big(x) * 0.55 + mid(x) * 0.3 + small(x) * 0.15;
+      pts.push([x, base - high(x) * (0.35 + 0.75 * n)]);
     }
+    const shape = () => { g.beginPath(); g.moveTo(pts[0][0], bottom); pts.forEach(p => g.lineTo(...p)); g.lineTo(pts[pts.length - 1][0], bottom); g.closePath(); };
+    const fill = (a, b) => { const gr = g.createLinearGradient(0, base - plot * 0.7, 0, base); gr.addColorStop(0, a); gr.addColorStop(1, b); return gr; };
+    // The shaded faces: from each top, along the ridge to the next valley, back along the spur.
+    const shades = [];
+    for (let i = 1; i < pts.length - 1; i++) {
+      if (!(pts[i][1] < pts[i - 1][1] && pts[i][1] <= pts[i + 1][1])) continue;
+      let j = i + 1;
+      while (j < pts.length - 1 && pts[j + 1][1] >= pts[j][1]) j++;
+      const top = pts[i], foot = Math.min(pts[j][0], top[0] + (base - top[1]) * (0.35 + rnd() * 0.25));
+      shades.push([...pts.slice(i, j + 1), [pts[j][0], bottom], [foot, bottom]]);
+    }
+    const shadeAll = color => { g.fillStyle = color; for (const s of shades) { g.beginPath(); s.forEach((p, k) => (k ? g.lineTo(...p) : g.moveTo(...p))); g.closePath(); g.fill(); } };
+    g.save();
+    shape(); g.fillStyle = fill(tone[0], tone[1]); g.fill(); g.clip();
+    shadeAll(fill(tone[2], tone[3]));
+    // Snow: everything above a ragged line about the snow line.
+    g.beginPath(); g.moveTo(-plot, 0);
+    for (let x = -plot * 0.2; x < w + plot * 0.2; x += plot * 0.05) g.lineTo(x, base - snowAt - (small(x * 2.3) - 0.5) * plot * 0.1);
+    g.lineTo(w + plot, 0); g.closePath(); g.clip();
+    g.fillStyle = tone[4]; g.fillRect(0, 0, w, base);
+    shadeAll(tone[5]);
+    g.restore();
   }
+  const FAR = ['#b4c2cd', '#a9b8c4', '#93a5b5', '#8a9dae', '#eef2f5', '#d3dce3'];
+  const NEAR = ['#94a38c', '#8a9a83', '#6f7f6e', '#677766', '#f4f6f4', '#c9d2d6'];
   function land(g, w, h, e) {
-    const rnd = rng(11);
-    // The mountains along the top, back to front, the river's source among them.
-    const source = river[0].x, peaks = [];
-    for (let x = -plot * 0.2; x < w + plot * 0.4; x += plot * (0.55 + rnd() * 0.4)) {
-      const near = 1 - Math.min(1, Math.abs(x - source) / (w * 0.42));   // highest around the source
-      peaks.push([x, plot * (0.3 + near * 0.42 + rnd() * 0.12)]);
+    const rnd = rng(11), source = river[0].x, idx = eraIndex(camp);
+    // The sky behind the mountains, a few clouds in it; hazier over a metropolis.
+    const sky = g.createLinearGradient(0, 0, 0, plot * 0.7);
+    sky.addColorStop(0, metro(e) ? '#a9bccb' : '#9cc8e6');
+    sky.addColorStop(1, metro(e) ? '#dfe3e2' : '#e3eff3');
+    g.fillStyle = sky;
+    g.fillRect(0, 0, w, plot * 0.75);
+    for (let i = 0; i < 7; i++) {
+      const cx = rnd() * w, cy = plot * (0.08 + rnd() * 0.22), cw = plot * (0.5 + rnd() * 0.7);
+      g.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      for (let j = 0; j < 4; j++) { g.beginPath(); g.ellipse(cx + (j - 1.5) * cw * 0.28, cy - (j % 2) * cw * 0.08, cw * 0.26, cw * 0.11, 0, 0, Math.PI * 2); g.fill(); }
     }
-    for (const [x, high] of peaks) mountain(g, x, plot * 0.76 + rnd() * plot * 0.08, high * 1.7, high);
-    // Their feet melt into the grass.
-    const foot = g.createLinearGradient(0, plot * 0.62, 0, plot * 0.98);
+    // Two ranges, the far one pale with the distance, both highest round the river's source.
+    const peakAt = (low, top) => x => plot * (low + (1 - Math.min(1, Math.abs(x - source) / (w * 0.42))) * top);
+    ridge(g, w, plot * 0.66, peakAt(0.34, 0.36), FAR, rnd, plot * 0.14);
+    ridge(g, w, plot * 0.84, peakAt(0.22, 0.32), NEAR, rnd, plot * 0.2);
+    // Their feet in a band of grass, then wooded foothills in front of them.
+    const foot = g.createLinearGradient(0, plot * 0.66, 0, plot * 0.96);
     foot.addColorStop(0, 'rgba(79, 125, 68, 0)');
+    foot.addColorStop(0.6, e[2]);
     foot.addColorStop(1, e[2]);
     g.fillStyle = foot;
-    g.fillRect(0, plot * 0.62, w, plot * 0.36);
+    g.fillRect(0, plot * 0.66, w, plot * 0.32);
+    g.fillStyle = e[2];
+    g.fillRect(0, plot * 0.96, w, h - plot * 0.96);
+    for (let x = -plot * 0.3; x < w + plot * 0.3; x += plot * (0.45 + rnd() * 0.5)) {
+      const hw = plot * (0.4 + rnd() * 0.35), hh = plot * (0.1 + rnd() * 0.07), cy = plot * (0.93 + rnd() * 0.05);
+      const fill = g.createLinearGradient(0, cy - hh, 0, cy);
+      fill.addColorStop(0, '#6a9659');
+      fill.addColorStop(1, e[2]);
+      g.fillStyle = fill;
+      g.beginPath(); g.ellipse(x, cy, hw, hh, 0, Math.PI, 0); g.fill();
+      // Pines on them, fewer as the camp grows.
+      if (img.tree) for (let t = 0, n = Math.round((3 - idx * 0.4) * rnd()); t < n; t++) {
+        const tx = x + (rnd() - 0.5) * hw * 1.4, ty = cy - hh * (0.3 + rnd() * 0.5), sz = plot * (0.28 + rnd() * 0.12);
+        if (Math.abs(tx - source) > plot * 0.3) g.drawImage(img.tree, tx - sz / 2, ty - sz * ANCHOR, sz, sz);
+      }
+    }
     // Soft patches, so the grass is not one flat colour: each fades out to nothing, no edge.
     for (let i = 0, n = Math.round(w * h / 45000); i < n; i++) {
-      const tint = rnd() < 0.5 ? '255, 255, 190' : '0, 50, 20', x = rnd() * w, y = plot * 0.9 + rnd() * (h - plot * 0.9);
+      const tint = rnd() < 0.5 ? '255, 255, 190' : '0, 50, 20', x = rnd() * w, y = plot * 0.95 + rnd() * (h - plot * 0.95);
       const rx = plot * (0.8 + rnd() * 1.2), ry = plot * (0.35 + rnd() * 0.5);
       const fade = g.createRadialGradient(0, 0, 0, 0, 0, 1);
       fade.addColorStop(0, `rgba(${tint}, 0.1)`);
@@ -475,10 +525,36 @@ const relax = (() => {
       g.fillRect(-1, -1, 2, 2);
       g.restore();
     }
-    // Banks, then water with a paler line down its middle; a city's river runs between stone.
-    strokeLine(g, river, urban(e) ? '#8b887d' : '#c7b27a', riverWidth() + plot * 0.07);
-    strokeLine(g, river, '#3c86bd', riverWidth());
-    strokeLine(g, river, 'rgba(160, 215, 240, 0.35)', riverWidth() * 0.34);
+    // Tufts of grass, and wild flowers in drifts: many in a tribe, few in a megacity.
+    g.lineCap = 'round';
+    for (let i = 0, n = Math.round(w * h / 1400); i < n; i++) {
+      const x = rnd() * w, y = plot * 1.0 + rnd() * (h - plot * 1.0), l = 3 + rnd() * 4;
+      g.strokeStyle = rnd() < 0.6 ? 'rgba(28, 64, 26, 0.35)' : 'rgba(150, 190, 110, 0.35)';
+      g.lineWidth = 1.2;
+      g.beginPath();
+      for (const dx of [-2, 0, 2]) { g.moveTo(x, y); g.lineTo(x + dx * 0.8, y - l * (dx ? 0.75 : 1)); }
+      g.stroke();
+    }
+    const PETALS = ['#ffffff', '#fff27a', '#ffb3c7', '#c9a7ff', '#ffd08a'];
+    for (let d = 0, drifts = Math.round(26 * (1 - idx * 0.16)); d < drifts; d++) {
+      const cx = rnd() * w, cy = plot * 1.05 + rnd() * (h - plot * 1.05), col = PETALS[Math.floor(rnd() * PETALS.length)];
+      for (let i = 0; i < 26; i++) {
+        const x = cx + (rnd() + rnd() - 1) * plot * 0.6, y = cy + (rnd() + rnd() - 1) * plot * 0.3;
+        g.fillStyle = col;
+        g.beginPath(); g.arc(x, y, 1.4 + rnd() * 0.8, 0, Math.PI * 2); g.fill();
+      }
+    }
+    // The river comes out from under the foothills: banks, then water with a paler line down its
+    // middle; a city's river runs between stone.
+    const out = river.filter(q => q.y > plot * 0.86);
+    strokeLine(g, out, urban(e) ? '#8b887d' : '#c7b27a', riverWidth() + plot * 0.07);
+    strokeLine(g, out, '#3c86bd', riverWidth());
+    strokeLine(g, out, 'rgba(160, 215, 240, 0.35)', riverWidth() * 0.34);
+    const spring = g.createRadialGradient(out[0].x, out[0].y, 0, out[0].x, out[0].y, plot * 0.28);
+    spring.addColorStop(0, 'rgba(70, 110, 60, 0.9)');
+    spring.addColorStop(1, 'rgba(70, 110, 60, 0)');
+    g.fillStyle = spring;
+    g.fillRect(out[0].x - plot * 0.3, out[0].y - plot * 0.3, plot * 0.6, plot * 0.6);
   }
   // A bridge wherever a road crosses the river: the road's part over the water, drawn again
   // as planks (a town's and a city's: stone) with a rail on each side.
@@ -505,21 +581,51 @@ const relax = (() => {
     }
   }
   function scenery(g, w, h, placed, plot, e, edges) {
-    const rnd = rng(7);
+    const rnd = rng(7), idx = eraIndex(camp);
     // Points along the roads, so nothing grows on one.
     const road = roadPoints(edges);
     const clear = plot * (e[4] / 2 + 0.12);
-    const n = Math.max(6, Math.round(w * h / 22000));
-    for (let i = 0; i < n; i++) {
-      const kind = ['tree', 'tree', 'tree-autumn', 'rock'][Math.floor(rnd() * 4)];
-      const x = rnd() * w, y = 30 + rnd() * (h - 30), s = 70 + rnd() * 30, keep = rnd() < e[6];
-      const pic = img[urban(e) ? (kind === 'rock' ? 'rock' : 'tree-city') : kind];
-      if (road.some(p => Math.hypot(p.x - x, p.y - y) < clear)) continue;
-      if (riverGap(x, y) < riverWidth() / 2 + s * 0.2 || y < plot * 0.45) continue;   // nor in the river or on the mountains
-      if (!keep || !pic || placed.some(p => Math.abs(p.x - x) < plot * 0.6 && y > p.y - plot * 0.9 && y < p.y + plot * 0.45 + s * 0.8)) continue;
-      g.drawImage(pic, x - s / 2, y - s * ANCHOR, s, s);
+    const onBuilding = (x, y, s) => placed.some(p => Math.abs(p.x - x) < plot * 0.6 && y > p.y - plot * 0.9 && y < p.y + plot * 0.45 + s * 0.8);
+    const free = (x, y, s) => !road.some(p => Math.hypot(p.x - x, p.y - y) < clear) && riverGap(x, y) > riverWidth() / 2 + s * 0.2
+      && y > plot * 0.98 && y < h - 10 && !onBuilding(x, y, s) && !ponds.some(q => Math.hypot((q.x - x) / (q.rx + 12), (q.y - y) / (q.ry + 8)) < 1);
+    // Ponds where there is room, a reed or two at their edge; fewer as the camp grows.
+    const ponds = [];
+    for (let t = 0; t < 40 && ponds.length < 3 - Math.min(2, idx >> 1); t++) {
+      const x = plot + rnd() * (w - plot * 2), y = plot * 1.4 + rnd() * (h - plot * 1.8), rx = plot * (0.35 + rnd() * 0.3), ry = rx * 0.5;
+      const near = (px, py) => Math.hypot((px - x) / (rx + plot * 0.25), (py - y) / (ry + plot * 0.2)) < 1;
+      if (road.some(p => near(p.x, p.y)) || riverGap(x, y) < rx + plot * 0.4) continue;
+      if (placed.some(p => near(p.x, p.y) || near(p.x, p.y - plot * 0.3)) || ponds.some(q => Math.hypot(q.x - x, q.y - y) < plot * 3)) continue;
+      ponds.push({x, y, rx, ry});
     }
+    for (const {x, y, rx, ry} of ponds) {
+      g.fillStyle = urban(e) ? '#8b887d' : '#b9a36f';
+      g.beginPath(); g.ellipse(x, y, rx + 5, ry + 4, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#3c86bd';
+      g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(180, 225, 245, 0.35)';
+      g.beginPath(); g.ellipse(x - rx * 0.25, y - ry * 0.3, rx * 0.45, ry * 0.25, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#4f6e35'; g.lineWidth = 1.6;
+      for (let i = 0; i < 9; i++) {
+        const a = Math.PI * (0.15 + rnd() * 0.7), rxp = x + Math.cos(a) * rx * 0.97, ryp = y + Math.sin(a) * ry * 0.97;
+        g.beginPath(); g.moveTo(rxp, ryp); g.lineTo(rxp + (rnd() - 0.5) * 3, ryp - 6 - rnd() * 6); g.stroke();
+      }
+    }
+    const tree = (kind, x, y, s) => {
+      const pic = img[urban(e) ? (kind === 'rock' ? 'rock' : 'tree-city') : kind];
+      if (pic && free(x, y, s)) g.drawImage(pic, x - s / 2, y - s * ANCHOR, s, s);
+    };
+    // Woods: trees close together round a few spots, more of them in the early eras; then a
+    // few on their own and some rocks.
+    const groves = [];
+    for (let i = 0, n = Math.round(9 * e[6]) + 1; i < n; i++) {
+      const cx = rnd() * w, cy = plot * 1.1 + rnd() * (h - plot * 1.3), count = Math.round(6 + rnd() * 10 * e[6]);
+      for (let j = 0; j < count; j++) groves.push([cx + (rnd() + rnd() - 1) * plot * 0.9, cy + (rnd() + rnd() - 1) * plot * 0.45, rnd() < 0.7 ? 'tree' : 'tree-autumn']);
+    }
+    for (let i = 0, n = Math.round(w * h / 60000); i < n; i++)
+      if (rnd() < e[6]) groves.push([rnd() * w, plot * 1.0 + rnd() * (h - plot * 1.0), ['tree', 'tree-autumn', 'rock', 'rock'][Math.floor(rnd() * 4)]]);
+    for (const [x, y, kind] of groves.sort((a, c) => a[1] - c[1])) tree(kind, x, y, kind === 'rock' ? 45 + rnd() * 25 : 62 + rnd() * 34);
   }
+
 
   // A picture with its ground point at (cx, ground), mirrored if flip.
   function put(g, im, cx, ground, s, flip) {

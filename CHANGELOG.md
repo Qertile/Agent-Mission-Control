@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-06 – v4.0.2: Relax mode's landscape: mountain ranges, sky, woods and ponds
+
+### Changed
+- Relax mode: the mountains are two continuous ranges instead of a row of separate peaks: a
+  pale far range and a green near one, their ridge line smooth noise so no two stretches
+  look alike, lit from the left with a shaded face down from every top, and snow on the
+  tops. Both ranges fill down to the ground, so no sky shows under them.
+- Relax mode: a sky with clouds behind the mountains, hazier over a metropolis; wooded
+  foothills with pines in front of them; the river comes out from under the foothills.
+- Relax mode: the grass has patches, tufts and drifts of wild flowers; ponds, woods, single
+  trees and rocks where there is room. All of these are many in a tribe and fewer as the
+  camp grows into a city.
+- Versions: `v4.0.2`.
+- Tagged `v4.0.2`.
+
 ## 2026-11-06 – v4.0.1: Relax mode's buildings face the road, street lights by era
 
 ### Fixed

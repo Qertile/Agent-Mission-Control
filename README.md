@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.0.1` (current) | `v4.0` plus Relax mode fixes: buildings face the road beside them, street lights only from a city on (lanterns, then modern lamps in a metropolis), and the bar beside the camp resizes it again. See `CHANGELOG.md`. |
+| `v4.0.2` (current) | `v4.0.1` plus a new Relax mode landscape: two continuous mountain ranges with snow on the tops, a sky with clouds, wooded foothills, and ponds, woods and wild flowers on the grass. See `CHANGELOG.md`. |
+| `v4.0.1` | `v4.0` plus Relax mode fixes: buildings face the road beside them, street lights only from a city on (lanterns, then modern lamps in a metropolis), and the bar beside the camp resizes it again. See `CHANGELOG.md`. |
 | `v4.0` | `v3.5.18` plus a new Relax mode camp: terrain with a river and mountains, a fixed map with wheel zoom, six eras up to a megacity, buildings under construction while a session is busy, and a camp that shows after dark. See `CHANGELOG.md`. |
 | `v3.5.18` | `v3.5.17` plus a popup once after *Update*'s restart, listing what the update brought. See `CHANGELOG.md`. |
 | `v3.5.17` | `v3.5.16` plus the Relax mode camp growing from a tribe to a city, due dates and history on its board, day and night; Cross-check follow-ups showing what was asked; paths and web links in terminals opening on a click; and *Update* going only to tagged versions. See `CHANGELOG.md`. |
@@ -516,7 +517,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.0.1`（目前） | `v4.0` 再加上 Relax mode 的修正：建築的門朝向旁邊的路、路燈從城市才開始出現（提燈，到大都會換成現代路燈），營地旁的分隔條又能拖曳調整寬度。詳見 `CHANGELOG.md`。 |
+| `v4.0.2`（目前） | `v4.0.1` 再加上 Relax mode 的新景色：兩排連綿的山脈且山頂有積雪、有雲的天空、長滿樹的丘陵，草地上還有池塘、樹林和野花。詳見 `CHANGELOG.md`。 |
+| `v4.0.1` | `v4.0` 再加上 Relax mode 的修正：建築的門朝向旁邊的路、路燈從城市才開始出現（提燈，到大都會換成現代路燈），營地旁的分隔條又能拖曳調整寬度。詳見 `CHANGELOG.md`。 |
 | `v4.0` | `v3.5.18` 再加上：全新的 Relax mode 營地，有河流和山的地形、可用滾輪縮放的固定地圖、六個時代直到超級都市、session 忙碌時建築顯示施工中，以及天黑後營地不再被蓋住。詳見 `CHANGELOG.md`。 |
 | `v3.5.18` | `v3.5.17` 再加上：*Update* 重開後跳出一次視窗，列出這次更新的內容。詳見 `CHANGELOG.md`。 |
 | `v3.5.17` | `v3.5.16` 再加上：Relax mode 的營地從部落長成城市、看板上的到期日和歷史紀錄、日夜變化；Cross-check 的追問會顯示問了什麼；終端機裡的路徑和網址點一下就能開；*Update* 只更新到有 tag 的版本。詳見 `CHANGELOG.md`。 |
