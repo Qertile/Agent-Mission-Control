@@ -57,8 +57,36 @@ const relax = (() => {
   const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏯', Metropolis: '🏙', Megacity: '🌃'};
   const metro = e => e[1] === 'Metropolis' || e[1] === 'Megacity';
   const urban = e => e[1] === 'City' || metro(e);
-  const shown = (e, level) => (metro(e) && /^(level|ruin|meeting)/.test(level) ? 'metro-' + level     // a session's picture
-    : e[1] === 'City' && /^level[234]/.test(level) ? 'med-' + level : level);
+  // A session's house or tower is, from a village on, one of the camp's trades instead, fixed
+  // per session: its first pick (0) keeps the plain house or tower.
+  const TRADES = {
+    level3: {base: ['shop', 'smithy', 'tavern', 'sawmill', 'warehouse'], City: ['med-shop', 'med-smithy', 'med-tavern', 'med-sawmill', 'med-warehouse'], metro: ['metro-cafe', 'metro-mall', 'metro-c']},
+    level4: {base: ['church', 'townhall', 'windmill'], City: ['med-church', 'med-townhall', 'med-windmill'], metro: ['metro-tower-a', 'metro-tower-c', 'metro-tower-d']}};
+  // A session's yard: one or two smaller buildings behind its own, by what it is, so it reads
+  // as a compound. Names are base pictures; a city takes its medieval one where there is one.
+  const YARD = {level2: ['farm'], level3: ['farm', 'house-a'], level4: ['house-b', 'house-d'],
+    shop: ['stall', 'stall-green'], smithy: ['warehouse', 'rock'], tavern: ['stall', 'house-c'], sawmill: ['warehouse', 'farm'],
+    warehouse: ['farm', 'stall'], church: ['house-a', 'tree'], townhall: ['fountain', 'house-d'], windmill: ['farm', 'warehouse']};
+  const YARD_METRO = {'metro-level2': ['metro-park'], 'metro-level3': ['metro-lot', 'metro-park'], 'metro-level4': ['metro-park', 'metro-h'],
+    'metro-cafe': ['metro-park'], 'metro-mall': ['metro-lot', 'metro-g'], 'metro-c': ['metro-lot'],
+    'metro-tower-a': ['metro-park', 'metro-a'], 'metro-tower-c': ['metro-lot', 'metro-h'], 'metro-tower-d': ['metro-park', 'metro-g']};
+  const YARD_SIZE = {tree: 0.75, rock: 0.6, fountain: 0.6, stall: 0.7, 'stall-green': 0.7, 'metro-park': 0.6, 'metro-lot': 0.6};
+  function yard(e, pic, id) {
+    const key = pic.replace(/^med-/, ''), list = metro(e) ? YARD_METRO[pic] : YARD[key];
+    if (!list || e[1] === 'Tribe') return [];
+    const h = hashOf(id + 'yard'), n = list.length > 1 && h % 3 ? 2 : 1;
+    const city = k => { const m = e[1] === 'City' && ('med-' + k.replace(/^house-([a-h])$/, '$1')); return m && img[m] ? m : k; };
+    return (h & 4 ? [...list].reverse() : list).slice(0, n).map(city);
+  }
+  const hashOf = id => [...String(id)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const shown = (e, level, id) => {     // a session's picture
+    const plain = metro(e) && /^(level|ruin|meeting)/.test(level) ? 'metro-' + level
+      : e[1] === 'City' && /^level[234]/.test(level) ? 'med-' + level : level;
+    const t = TRADES[level];
+    if (!t || id == null || e[1] === 'Tribe') return plain;
+    const list = metro(e) ? t.metro : t[e[1]] || t.base, k = hashOf(id) % (list.length + 1);
+    return k ? list[k - 1] : plain;
+  };
   const scaleOf = kind => (/^(metro|med)-/.test(kind || '') ? 2 : 1);     // these pictures show twice the world
   const BOARD_MAX = 8;                     // tasks on the board; the rest are counted
   const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
@@ -66,7 +94,49 @@ const relax = (() => {
   const img = {};
   let on = false, sig = '', spots = [], hover = null, msgTimer = 0;
   const plot = 150;
-  let bg = null, view = null, res = 1, dpr = 1, timer = 0, camp = 0;
+  // The camera looks down at a slant: the far side of the map (its top) is drawn smaller than
+  // the near side. The world is drawn flat on a canvas a margin bigger than the map (PAD each
+  // side, PADY above, so the narrowed far side still fills the width), then warped row by row
+  // onto the map's own canvas. Everything drawn over it later (people, names, night) goes
+  // through warp() the same way; clicks are tested in the warped picture's own terms.
+  // The far side is narrowed more than it is shortened (FAR_SCALE across, FAR_V up and down),
+  // so the lines that run away from the camera close in strongly without the map losing much
+  // of its height to the sky. A thing standing on the ground is sized by the narrowing.
+  const PAD = 760, PADY = 260, FAR_SCALE = 0.55, FAR_V = 0.75, HORIZON = plot * 0.9;
+  const farness = y => Math.min(1, Math.max(0, (y - HORIZON) / (MAP_H - HORIZON)));
+  const depth = y => FAR_SCALE + (1 - FAR_SCALE) * farness(y);
+  const Y_H = MAP_H - (MAP_H - HORIZON) * (1 + FAR_V) / 2;     // where the horizon lands
+  function warpY(y) {
+    if (y < HORIZON) return Y_H - FAR_V * (HORIZON - y);
+    const d = Math.min(y, MAP_H) - HORIZON;
+    return Y_H + FAR_V * d + (1 - FAR_V) * d * d / (2 * (MAP_H - HORIZON)) + Math.max(0, y - MAP_H);
+  }
+  const warp = (x, y) => [MAP_W / 2 + (x - MAP_W / 2) * depth(y), warpY(y)];
+  // A flat world canvas (at `sr` pixels a unit, the margin included) onto a map-sized one, in
+  // strips two units high, each rounded to whole pixels so none overlap (night is see-through).
+  function warpCanvas(src, sr, dst, dr) {
+    dst.width = Math.round(MAP_W * dr); dst.height = Math.round(MAP_H * dr);
+    const g = dst.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    for (let y = -PADY; y < MAP_H; y += 2) {
+      const y1 = Math.round(warpY(y) * dr), y2 = Math.round(warpY(y + 2) * dr);
+      if (y2 <= 0 || y2 === y1) continue;
+      const m = depth(y + 1), left = MAP_W / 2 + (-PAD - MAP_W / 2) * m;
+      g.drawImage(src, 0, (y + PADY) * sr, src.width, 2 * sr, left * dr, y1, (MAP_W + 2 * PAD) * m * dr, y2 - y1);
+    }
+  }
+  // Something upright standing at (x, y) on the ground: drawn as if flat at (x, y), but moved
+  // to where the warp puts that point and sized for its distance.
+  function onGround(g, x, y, fn) {
+    const [X, Y] = warp(x, y), m = depth(y);
+    g.save(); g.translate(X, Y); g.scale(m, m); g.translate(-x, -y); fn(); g.restore();
+  }
+  // A box [x, y, w, h] round something standing at the bottom middle, in the warped picture.
+  function warpBox([x, y, w, h]) {
+    const [X, Y] = warp(x + w / 2, y + h), m = depth(y + h);
+    return [Math.floor(X - w * m / 2) - 1, Math.floor(Y - h * m) - 1, Math.ceil(w * m) + 2, Math.ceil(h * m) + 2];
+  }
+  let bg = null, flat = null, view = null, res = 1, dpr = 1, timer = 0, camp = 0;
   let zoom = 0, ox = 0, oy = 0, viewW = 0, viewH = 0, viewDirty = false, tags = [];
   const people = new Map();                // session id (a participant: discussion id#i) -> its person
   let fires = [];                          // the discussions under way: {x, y} of their fire
@@ -426,11 +496,18 @@ const relax = (() => {
     return [[0, 0], [-0.45, 0], [0.45, 0], [0, 0.42], [-0.3, 0.42], [0.3, 0.42]]
       .some(([dx, dy]) => riverGap(x + dx * plot, y + dy * plot) < clear);
   }
-  function strokeLine(g, line, color, width, cap = 'round') {
-    g.strokeStyle = color; g.lineWidth = width; g.lineCap = cap; g.lineJoin = 'round';
+  // A line on the ground, seen at the camera's tilt: the path is laid where it is, but the pen
+  // is squashed like the ground (a path keeps the transform it was laid with; the pen takes
+  // the one at stroke()), so a road across the screen is thinner than one up it.
+  function groundPath(g, line) {
     g.beginPath();
     line.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
-    g.stroke();
+  }
+  function groundStroke(g) { g.save(); g.scale(1, KY); g.stroke(); g.restore(); }
+  function strokeLine(g, line, color, width, cap = 'round') {
+    g.strokeStyle = color; g.lineWidth = width; g.lineCap = cap; g.lineJoin = 'round';
+    groundPath(g, line);
+    groundStroke(g);
   }
   // A mountain range as one ridge line, lit from the left like the kits' pictures. The line is
   // smooth noise in three sizes, so no two stretches look alike. From every top a spur runs
@@ -442,14 +519,15 @@ const relax = (() => {
     const bottom = plot * 0.9;   // filled down to the ground, so no sky shows under a range
     const octave = size => { const v = Array.from({length: Math.ceil(w / size) + 3}, rnd), o = rnd();
       return x => { const t = x / size + o, i = Math.floor(t), f = t - i, s = f * f * (3 - 2 * f); return v[i + 1] * (1 - s) + v[i + 2] * s; }; };
-    const big = octave(plot * 1.7), mid = octave(plot * 0.74), small = octave(plot * 0.29);
+    // Wider than they look: the far side is narrowed to FAR_SCALE across but only FAR_V up.
+    const wide = FAR_V / FAR_SCALE, big = octave(plot * 1.7 * wide), mid = octave(plot * 0.74 * wide), small = octave(plot * 0.29 * wide);
     const pts = [];
     for (let x = -plot * 0.2; x < w + plot * 0.2; x += plot * 0.07) {
       const n = big(x) * 0.55 + mid(x) * 0.3 + small(x) * 0.15;
       pts.push([x, base - high(x) * (0.35 + 0.75 * n)]);
     }
     const shape = () => { g.beginPath(); g.moveTo(pts[0][0], bottom); pts.forEach(p => g.lineTo(...p)); g.lineTo(pts[pts.length - 1][0], bottom); g.closePath(); };
-    const fill = (a, b) => { const gr = g.createLinearGradient(0, base - plot * 0.7, 0, base); gr.addColorStop(0, a); gr.addColorStop(1, b); return gr; };
+    const fill = (a, b) => { const gr = g.createLinearGradient(0, base - plot * 1.4, 0, base); gr.addColorStop(0, a); gr.addColorStop(1, b); return gr; };
     // The shaded faces: from each top, along the ridge to the next valley, back along the spur.
     const shades = [];
     for (let i = 1; i < pts.length - 1; i++) {
@@ -464,10 +542,10 @@ const relax = (() => {
     shape(); g.fillStyle = fill(tone[0], tone[1]); g.fill(); g.clip();
     shadeAll(fill(tone[2], tone[3]));
     // Snow: everything above a ragged line about the snow line.
-    g.beginPath(); g.moveTo(-plot, 0);
+    g.beginPath(); g.moveTo(-plot, -PADY);
     for (let x = -plot * 0.2; x < w + plot * 0.2; x += plot * 0.05) g.lineTo(x, base - snowAt - (small(x * 2.3) - 0.5) * plot * 0.1);
-    g.lineTo(w + plot, 0); g.closePath(); g.clip();
-    g.fillStyle = tone[4]; g.fillRect(0, 0, w, base);
+    g.lineTo(w + plot, -PADY); g.closePath(); g.clip();
+    g.fillStyle = tone[4]; g.fillRect(0, -PADY, w, base + PADY);
     shadeAll(tone[5]);
     g.restore();
   }
@@ -476,30 +554,34 @@ const relax = (() => {
   function land(g, w, h, e) {
     const rnd = rng(11), source = river[0].x, idx = eraIndex(camp);
     // The sky behind the mountains, a few clouds in it; hazier over a metropolis.
-    const sky = g.createLinearGradient(0, 0, 0, plot * 0.7);
+    const X0 = -PAD, WW = w + 2 * PAD;      // the margin round the map is land too
+    const sky = g.createLinearGradient(0, -PADY, 0, plot * 0.7);
     sky.addColorStop(0, metro(e) ? '#a9bccb' : '#9cc8e6');
     sky.addColorStop(1, metro(e) ? '#dfe3e2' : '#e3eff3');
     g.fillStyle = sky;
-    g.fillRect(0, 0, w, plot * 0.75);
-    for (let i = 0; i < 7; i++) {
-      const cx = rnd() * w, cy = plot * (0.08 + rnd() * 0.22), cw = plot * (0.5 + rnd() * 0.7);
+    g.fillRect(X0, -PADY, WW, PADY + plot * 0.75);
+    for (let i = 0; i < 11; i++) {
+      const cx = X0 + rnd() * WW, cy = -PADY * 0.8 + rnd() * (PADY * 0.8 + plot * 0.3), cw = plot * (0.5 + rnd() * 0.7);
       g.fillStyle = 'rgba(255, 255, 255, 0.55)';
       for (let j = 0; j < 4; j++) { g.beginPath(); g.ellipse(cx + (j - 1.5) * cw * 0.28, cy - (j % 2) * cw * 0.08, cw * 0.26, cw * 0.11, 0, 0, Math.PI * 2); g.fill(); }
     }
     // Two ranges, the far one pale with the distance, both highest round the river's source.
     const peakAt = (low, top) => x => plot * (low + (1 - Math.min(1, Math.abs(x - source) / (w * 0.42))) * top);
-    ridge(g, w, plot * 0.66, peakAt(0.34, 0.36), FAR, rnd, plot * 0.14);
-    ridge(g, w, plot * 0.84, peakAt(0.22, 0.32), NEAR, rnd, plot * 0.2);
+    g.save(); g.translate(X0, 0);
+    // Twice as high as before the camera tilted: the far side is drawn at 3/4 size.
+    ridge(g, WW, plot * 0.66, x => 2 * peakAt(0.34, 0.36)(x + X0), FAR, rnd, plot * 0.28);
+    ridge(g, WW, plot * 0.84, x => 2 * peakAt(0.22, 0.32)(x + X0), NEAR, rnd, plot * 0.4);
+    g.restore();
     // Their feet in a band of grass, then wooded foothills in front of them.
     const foot = g.createLinearGradient(0, plot * 0.66, 0, plot * 0.96);
     foot.addColorStop(0, 'rgba(79, 125, 68, 0)');
     foot.addColorStop(0.6, e[2]);
     foot.addColorStop(1, e[2]);
     g.fillStyle = foot;
-    g.fillRect(0, plot * 0.66, w, plot * 0.32);
+    g.fillRect(X0, plot * 0.66, WW, plot * 0.32);
     g.fillStyle = e[2];
-    g.fillRect(0, plot * 0.96, w, h - plot * 0.96);
-    for (let x = -plot * 0.3; x < w + plot * 0.3; x += plot * (0.45 + rnd() * 0.5)) {
+    g.fillRect(X0, plot * 0.96, WW, h - plot * 0.96);
+    for (let x = X0 - plot * 0.3; x < X0 + WW + plot * 0.3; x += plot * (0.45 + rnd() * 0.5)) {
       const hw = plot * (0.4 + rnd() * 0.35), hh = plot * (0.1 + rnd() * 0.07), cy = plot * (0.93 + rnd() * 0.05);
       const fill = g.createLinearGradient(0, cy - hh, 0, cy);
       fill.addColorStop(0, '#6a9659');
@@ -513,8 +595,8 @@ const relax = (() => {
       }
     }
     // Soft patches, so the grass is not one flat colour: each fades out to nothing, no edge.
-    for (let i = 0, n = Math.round(w * h / 45000); i < n; i++) {
-      const tint = rnd() < 0.5 ? '255, 255, 190' : '0, 50, 20', x = rnd() * w, y = plot * 0.95 + rnd() * (h - plot * 0.95);
+    for (let i = 0, n = Math.round(WW * h / 45000); i < n; i++) {
+      const tint = rnd() < 0.5 ? '255, 255, 190' : '0, 50, 20', x = X0 + rnd() * WW, y = plot * 0.95 + rnd() * (h - plot * 0.95);
       const rx = plot * (0.8 + rnd() * 1.2), ry = plot * (0.35 + rnd() * 0.5);
       const fade = g.createRadialGradient(0, 0, 0, 0, 0, 1);
       fade.addColorStop(0, `rgba(${tint}, 0.1)`);
@@ -527,8 +609,8 @@ const relax = (() => {
     }
     // Tufts of grass, and wild flowers in drifts: many in a tribe, few in a megacity.
     g.lineCap = 'round';
-    for (let i = 0, n = Math.round(w * h / 1400); i < n; i++) {
-      const x = rnd() * w, y = plot * 1.0 + rnd() * (h - plot * 1.0), l = 3 + rnd() * 4;
+    for (let i = 0, n = Math.round(WW * h / 1400); i < n; i++) {
+      const x = X0 + rnd() * WW, y = plot * 1.0 + rnd() * (h - plot * 1.0), l = 3 + rnd() * 4;
       g.strokeStyle = rnd() < 0.6 ? 'rgba(28, 64, 26, 0.35)' : 'rgba(150, 190, 110, 0.35)';
       g.lineWidth = 1.2;
       g.beginPath();
@@ -537,7 +619,7 @@ const relax = (() => {
     }
     const PETALS = ['#ffffff', '#fff27a', '#ffb3c7', '#c9a7ff', '#ffd08a'];
     for (let d = 0, drifts = Math.round(26 * (1 - idx * 0.16)); d < drifts; d++) {
-      const cx = rnd() * w, cy = plot * 1.05 + rnd() * (h - plot * 1.05), col = PETALS[Math.floor(rnd() * PETALS.length)];
+      const cx = X0 + rnd() * WW, cy = plot * 1.05 + rnd() * (h - plot * 1.05), col = PETALS[Math.floor(rnd() * PETALS.length)];
       for (let i = 0; i < 26; i++) {
         const x = cx + (rnd() + rnd() - 1) * plot * 0.6, y = cy + (rnd() + rnd() - 1) * plot * 0.3;
         g.fillStyle = col;
@@ -580,7 +662,7 @@ const relax = (() => {
       flush();
     }
   }
-  function scenery(g, w, h, placed, plot, e, edges) {
+  function scenery(g, w, h, placed, plot, e, edges, woods) {
     const rnd = rng(7), idx = eraIndex(camp);
     // Points along the roads, so nothing grows on one.
     const road = roadPoints(edges);
@@ -612,7 +694,7 @@ const relax = (() => {
     }
     const tree = (kind, x, y, s) => {
       const pic = img[urban(e) ? (kind === 'rock' ? 'rock' : 'tree-city') : kind];
-      if (pic && free(x, y, s)) g.drawImage(pic, x - s / 2, y - s * ANCHOR, s, s);
+      if (pic && free(x, y, s)) woods.push([pic, x, y, s]);     // stood up after the warp
     };
     // Woods: trees close together round a few spots, more of them in the early eras; then a
     // few on their own and some rocks.
@@ -624,9 +706,64 @@ const relax = (() => {
     for (let i = 0, n = Math.round(w * h / 60000); i < n; i++)
       if (rnd() < e[6]) groves.push([rnd() * w, plot * 1.0 + rnd() * (h - plot * 1.0), ['tree', 'tree-autumn', 'rock', 'rock'][Math.floor(rnd() * 4)]]);
     for (const [x, y, kind] of groves.sort((a, c) => a[1] - c[1])) tree(kind, x, y, kind === 'rock' ? 45 + rnd() * 25 : 62 + rnd() * 34);
+    // Past the sides of the map, where the tilt shows the land beyond: rolling hills, then
+    // woods on them, thick, and rocks. Only as far out as the window can show at that depth.
+    const beyond = y => MAP_W / 2 * (1 / depth(y) - 1);       // how far out is in view
+    for (let y = plot * 1.0; y < h; y += plot * (0.25 + rnd() * 0.2)) {
+      const out = beyond(y);
+      if (out < 20) break;
+      for (const side of [-1, 1]) {
+        const x = side < 0 ? -rnd() * out : w + rnd() * out, hw = plot * (0.5 + rnd() * 0.6), hh = plot * (0.12 + rnd() * 0.1);
+        const fill = g.createLinearGradient(0, y - hh, 0, y);
+        fill.addColorStop(0, '#6a9659'); fill.addColorStop(1, e[2]);
+        g.fillStyle = fill;
+        g.beginPath(); g.ellipse(x, y, hw, hh, 0, Math.PI, 0); g.fill();
+      }
+    }
+    for (let y = plot * 1.0; y < h; y += 20 + rnd() * 16) {
+      const out = beyond(y);
+      if (out < 10) break;
+      for (let k = 0, n = Math.ceil((out + 30) / 170); k < n * 2; k++) {
+        const side = k % 2 ? 1 : -1, x = side < 0 ? -rnd() * (out + 30) : w + rnd() * (out + 30), kind = rnd() < 0.1 ? 'rock' : rnd() < 0.85 ? 'tree' : 'tree-autumn';
+        const pic = img[kind];
+        if (pic) woods.push([pic, x, y, kind === 'rock' ? 40 + rnd() * 25 : 60 + rnd() * 40]);
+      }
+    }
+    // And inside the map, a fringe of trees along both sides wherever there is room.
+    for (let i = 0, n = Math.round(h / 40); i < n; i++) {
+      const y = plot * 1.0 + rnd() * (h - plot * 1.0), d = rnd() * plot * 0.7, x = rnd() < 0.5 ? d : w - d;
+      tree(rnd() < 0.15 ? 'rock' : rnd() < 0.7 ? 'tree' : 'tree-autumn', x, y, 58 + rnd() * 34);
+    }
   }
 
 
+  // The shadow a picture casts on the ground: its own outline, laid down away from the light
+  // (the pictures are lit from the left), so a tower's is long, a wreck's or a tent's short.
+  // A point h up the picture falls 0.6 h to the right and 0.25 h back.
+  const outlines = new Map();
+  function outline(im) {
+    let c = outlines.get(im);
+    if (!c) {
+      c = document.createElement('canvas');
+      c.width = im.naturalWidth || im.width; c.height = im.naturalHeight || im.height;
+      const o = c.getContext('2d');
+      o.drawImage(im, 0, 0);
+      o.globalCompositeOperation = 'source-in';
+      o.fillStyle = 'rgb(12, 28, 12)';
+      o.fillRect(0, 0, c.width, c.height);
+      outlines.set(im, c);
+    }
+    return c;
+  }
+  function castShadow(g, im, cx, ground, s, flip) {
+    if (!im) return;
+    g.save();
+    g.globalAlpha = 0.28;
+    g.translate(cx, ground); g.transform(1, 0, -0.6, 0.25, 0, 0);
+    if (flip) g.scale(-1, 1);
+    g.drawImage(outline(im), -s / 2, -s * ANCHOR, s, s);
+    g.restore();
+  }
   // A picture with its ground point at (cx, ground), mirrored if flip.
   function put(g, im, cx, ground, s, flip) {
     if (!flip) { g.drawImage(im, cx - s / 2, ground - s * ANCHOR, s, s); return; }
@@ -648,50 +785,90 @@ const relax = (() => {
     if (!river.length) river = riverPath(w, h);
     const placed = layout(list, e);
     res = Math.min(window.devicePixelRatio || 1, 1.5);
-    bg = bg || document.createElement('canvas');
-    bg.width = Math.round(w * res); bg.height = Math.round(h * res);
-    const g = bg.getContext('2d');
-    g.setTransform(res, 0, 0, res, 0, 0);
+    flat = flat || document.createElement('canvas');
+    flat.width = Math.round((w + 2 * PAD) * res); flat.height = Math.round((h + PADY) * res);
+    let g = flat.getContext('2d');
+    g.setTransform(res, 0, 0, res, PAD * res, PADY * res);
     g.fillStyle = e[2];
-    g.fillRect(0, 0, w, h);
+    g.fillRect(-PAD, -PADY, w + 2 * PAD, h + PADY);
     land(g, w, h, e);
     const {lamps: allLamps, edges} = roads(g, placed, e);
     const lamps = allLamps.filter(l => riverGap(l.x, l.y) > riverWidth() / 2 + plot * 0.04);
     lampCount = lamps.length;
     bridges(g, edges, e);
     const trees = urban(e) ? streetTrees(edges, placed, lamps, e, w, h) : [];
-    scenery(g, w, h, placed, plot, e, edges);
+    const woods = [];
+    scenery(g, w, h, placed, plot, e, edges, woods);
     if (e[1] === 'City') wall(g, w, h);
+    // The ground is done: warp it, then stand everything upright on it. Each thing is drawn
+    // flat about its ground point, moved and sized there, so its walls stay straight up.
+    bg = bg || document.createElement('canvas');
+    warpCanvas(flat, res, bg, res);
+    g = bg.getContext('2d');
+    g.setTransform(res, 0, 0, res, 0, 0);
+    // Depth in the air: the far ground paler and bluer, the near ground a little darker.
+    const top = Y_H - plot * 0.4, air = g.createLinearGradient(0, top, 0, MAP_H), haze = metro(e) ? '205, 215, 225' : '200, 222, 240';
+    air.addColorStop(0, `rgba(${haze}, 0)`);
+    air.addColorStop(0.06, `rgba(${haze}, 0.4)`);
+    air.addColorStop(0.45, `rgba(${haze}, 0)`);
+    air.addColorStop(0.75, 'rgba(0, 20, 0, 0)');
+    air.addColorStop(1, 'rgba(0, 20, 0, 0.16)');
+    g.fillStyle = air;
+    g.fillRect(0, top, MAP_W, MAP_H - top);
+    for (const [pic, x, y, sz] of woods) onGround(g, x, y, () => castShadow(g, pic, x, y, sz, false));
+    for (const [pic, x, y, sz] of woods.sort((a, c) => a[2] - c[2])) onGround(g, x, y, () => g.drawImage(pic, x - sz / 2, y - sz * ANCHOR, sz, sz));
     spots = [];
     tags = [];
     litList = [];
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
     for (const {x: cx, y: ground, b, flip} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
+      const [GX, GY] = warp(cx, ground), gm = depth(ground);
+      g.save(); g.translate(GX, GY); g.scale(gm, gm); g.translate(-cx, -ground);
+      try {
       if (b.prop) {
         const s = plot * 1.5 * (b.scale || scaleOf(b.kind)) * (b.house ? DECOR_SIZE : 1);
+        castShadow(g, img[b.kind], cx, ground, s, flip);
         if (img[b.kind]) put(g, img[b.kind], cx, ground, s, flip);
-        if (metro(e)) litList.push([b.kind, cx, ground, s, flip]);
+        if (metro(e)) litList.push([b.kind, cx, ground, s, flip, cx, ground]);
         continue;
       }
       // An ended session is a wreck.
-      const level = shown(e, b.status === 'ended' ? 'ruin' : b.level);
+      const level = shown(e, b.status === 'ended' ? 'ruin' : b.level, b.id);
       const big = b.kind === 'meeting' ? 1 : SESSION_SIZE, s = plot * 1.5 * scaleOf(level) * big, pic = img[level];
+      castShadow(g, pic, cx, ground, s, flip);
       // A patch of earth under each building.
       g.fillStyle = 'rgba(120, 90, 50, 0.35)';
       g.beginPath(); g.ellipse(cx, ground - 4, plot * 0.4 * big, plot * 0.14 * big, 0, 0, Math.PI * 2); g.fill();
+      // Its yard, behind it: back left, then back right (mirrored with it).
+      if (b.kind !== 'meeting' && b.status !== 'ended') yard(e, level, b.id).forEach((k, i) => {
+        if (!img[k]) return;
+        const side = (i ? 1 : -1) * (flip ? -1 : 1), ks = plot * 1.5 * scaleOf(k) * big * (YARD_SIZE[k.replace(/^med-/, '')] || 0.55);
+        castShadow(g, img[k], cx + side * plot * 0.5 * big, ground - plot * 0.2 * big, ks, flip);
+        put(g, img[k], cx + side * plot * 0.5 * big, ground - plot * 0.2 * big, ks, flip);
+        if (metro(e)) litList.push([k, cx + side * plot * 0.5 * big, ground - plot * 0.2 * big, ks, flip, cx, ground]);
+      });
       const building = (b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting';
       if (building) scaffold(g, cx, ground, level, false);
       if (pic) put(g, pic, cx, ground, s, flip);
       if (building) scaffold(g, cx, ground, level, true);
-      if (metro(e)) litList.push([level, cx, ground, s, flip]);
+      if (metro(e)) litList.push([level, cx, ground, s, flip, cx, ground]);
       const top = ground - s * (ANCHOR - TOP[level]);
       tags.push({cx, ground, top, b});
-      spots.unshift({x: cx - plot / 2 * big, y: ground - plot * 0.9 * big, w: plot * big, h: plot * 1.1 * big + 34, b});
+      // Where a click finds it, in the warped picture.
+      const [hx, hy, hw, hh] = warpBox([cx - plot / 2 * big, ground - plot * 0.9 * big, plot * big, plot * 0.9 * big]);
+      spots.unshift({x: hx, y: hy, w: hw, h: hh + (plot * 0.2 * big) * depth(ground) + 34, b});
+      } finally { g.restore(); }
     }
     // What is lit at night: each building with someone in it, the fires, the lanterns.
     lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
               ...lamps.filter(l => /^(lantern|lamp)/.test(l.b.kind)).map(l => ({x: l.x, y: l.y - plot * 0.25, r: plot * 0.5}))];
+    const xs = placed.map(p => warp(p.x, p.y)[0]);
+    const left = Math.max(0, Math.min(...xs, MAP_W * 0.3) - plot * 0.9), right = Math.min(MAP_W, Math.max(...xs, MAP_W * 0.7) + plot * 0.9);
+    const wasFit = !zoom || zoom - fitZoom() < 0.001;
+    const bottom = Math.min(MAP_H, Math.max(...placed.map(p => warp(p.x, p.y)[1])) + plot * 0.55);
+    FIT = {x: left, y: 120, w: right - left, h: bottom - 120};
+    if (wasFit && zoom) zoom = fitZoom();      // still all the way out
     eraNow = e;
     settle(placed.filter(p => !p.b.prop));
     skySig = '';
@@ -700,11 +877,21 @@ const relax = (() => {
   }
 
   // --- the view: which part of the map shows, and how big
-  function fitZoom() { return Math.min(viewW / MAP_W, viewH / MAP_H); }
+  // Zoomed out all the way, the window shows the part of the map where the camp is: not the
+  // empty corners the tilt leaves either side of the far end, nor most of the sky. Zoomed in,
+  // the whole map can be dragged into view.
+  // FIT is set by each draw: from the mountain tops down, across what stands on the map.
+  let FIT = {x: 0, y: 0, w: MAP_W, h: MAP_H};
+  function fitZoom() { return Math.min(viewW / FIT.w, viewH / FIT.h); }
   // Within the map; a map smaller than the window sits in its middle.
   function clampView() {
     const fit = fitZoom();
     zoom = Math.max(fit, Math.min(ZOOM_MAX, zoom || fit));
+    if (zoom - fit < 0.001) {             // all the way out: FIT in the middle, but not past the map's edge
+      const vw = viewW / zoom, vh = viewH / zoom, keep = (o, v, M) => (v >= M ? (M - v) / 2 : Math.max(0, Math.min(M - v, o)));
+      ox = keep(FIT.x + (FIT.w - vw) / 2, vw, MAP_W); oy = keep(FIT.y + (FIT.h - vh) / 2, vh, MAP_H);
+      return;
+    }
     ox = MAP_W * zoom <= viewW ? -(viewW / zoom - MAP_W) / 2 : Math.max(0, Math.min(MAP_W - viewW / zoom, ox));
     oy = MAP_H * zoom <= viewH ? -(viewH / zoom - MAP_H) / 2 : Math.max(0, Math.min(MAP_H - viewH / zoom, oy));
   }
@@ -742,8 +929,8 @@ const relax = (() => {
     out.setTransform(1, 0, 0, 1, 0, 0);
     out.drawImage(view, 0, 0);
     worldOn(out);
-    for (const f of fires) flames(out, f);
-    for (const p of [...people.values()].sort((a, c) => a.y - c.y)) person(out, p);
+    for (const f of fires) onGround(out, f.x, f.y, () => flames(out, f));
+    for (const p of [...people.values()].sort((a, c) => a.y - c.y)) onGround(out, p.x, p.y, () => person(out, p));
     drawTags();
     drawNight();
   }
@@ -767,7 +954,8 @@ const relax = (() => {
     g.textAlign = 'center';
     const need = t => (t.b.status === 'waiting' ? 0 : t.b.status === 'busy' || t.b.status === 'running' ? 1 : t.b.status === 'ended' ? 3 : 2);
     for (const {cx, ground, top, b} of [...tags].sort((a, c) => need(a) - need(c))) {
-      const x = (cx - ox) * zoom, y = (ground + plot * 0.2 - oy) * zoom;
+      const [X, Y] = warp(cx, ground), m = depth(ground);
+      const x = (X - ox) * zoom, y = (Y + plot * 0.2 * m - oy) * zoom, bx = (X + plot * 0.18 * m - ox) * zoom, by = (Y - (ground - top) * m - oy) * zoom - 4;
       if (x < -80 || x > viewW + 80 || y < -40 || y > viewH + 40) continue;
       const ended = b.status === 'ended', most = full ? 16 : 13;
       const name = b.name.length > most ? b.name.slice(0, most - 1) + '…' : b.name;
@@ -776,8 +964,8 @@ const relax = (() => {
       const rect = [x - nw / 2 - 14, y, nw + 22, high];
       const busy = (b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting';
       // Status: busy a tool sign, waiting a "!" flag; ended is the wreck.
-      if (busy) badge(g, (cx + plot * 0.18 - ox) * zoom, (top - oy) * zoom - 4, '⚒', STATUS_COLORS.busy);
-      if (b.status === 'waiting') badge(g, (cx + plot * 0.18 - ox) * zoom, (top - oy) * zoom - 4, '!', STATUS_COLORS.waiting);
+      if (busy) badge(g, bx, by, '⚒', STATUS_COLORS.busy);
+      if (b.status === 'waiting') badge(g, bx, by, '!', STATUS_COLORS.waiting);
       if (taken.some(q => rect[0] < q[0] + q[2] && q[0] < rect[0] + rect[2] && rect[1] < q[1] + q[3] && q[1] < rect[1] + rect[3])) continue;
       taken.push(rect);
       // The name, with the tool's colour as a dot, and the status under it; an ended
@@ -852,8 +1040,8 @@ const relax = (() => {
       g.strokeStyle = color;
       for (const {line, width} of edges) {
         g.lineWidth = plot * (width || e[4]) + extra;
-        g.beginPath(); g.moveTo(line[0].x, line[0].y); for (const q of line) g.lineTo(q.x, q.y);
-        g.stroke();
+        groundPath(g, line);
+        groundStroke(g);
       }
     }
     if (metro(e)) {                        // the white line down an avenue
@@ -861,8 +1049,8 @@ const relax = (() => {
       g.setLineDash([plot * 0.1, plot * 0.12]);
       for (const {line, width} of edges) {
         if (width < 0.2) continue;
-        g.beginPath(); g.moveTo(line[0].x, line[0].y); for (const q of line) g.lineTo(q.x, q.y);
-        g.stroke();
+        groundPath(g, line);
+        groundStroke(g);
       }
       g.setLineDash([]);
     }
@@ -956,9 +1144,10 @@ const relax = (() => {
   function wall(g, w, h) {
     const t = 9;
     g.fillStyle = '#6e6a62';
-    g.fillRect(0, 0, t, h); g.fillRect(w - t, 0, t, h); g.fillRect(0, h - t, w, t);
+    const y0 = plot * 0.95;                // from the foot of the hills, not up the sky
+    g.fillRect(0, y0, t, h - y0); g.fillRect(w - t, y0, t, h - y0); g.fillRect(0, h - t, w, t);
     g.fillStyle = '#57534c';
-    for (let y = 4; y < h - t; y += 16) { g.fillRect(0, y, t + 3, 8); g.fillRect(w - t - 3, y, t + 3, 8); }
+    for (let y = y0 + 4; y < h - t; y += 16) { g.fillRect(0, y, t + 3, 8); g.fillRect(w - t - 3, y, t + 3, 8); }
     for (let x = 4; x < w; x += 16) g.fillRect(x, h - t - 3, 8, t + 3);
   }
   // Top left: what the camp is now, and how far the next one is.
@@ -1124,12 +1313,13 @@ const relax = (() => {
       const dark = 1 - Math.min(...c) / 255;
       const tint = c.map(v => Math.round((v - (1 - dark) * 255) / dark * 0.6));   // less: dark things stay dark
       nightColor = `rgba(${tint}, ${dark})`;
-      nightMap = nightMap || document.createElement('canvas');
-      nightMap.width = MAP_W; nightMap.height = MAP_H;
-      const g = nightMap.getContext('2d');
+      const flatNight = document.createElement('canvas');
+      flatNight.width = MAP_W + 2 * PAD; flatNight.height = MAP_H + PADY;
+      const g = flatNight.getContext('2d');
+      g.setTransform(1, 0, 0, 1, PAD, PADY);
       g.globalCompositeOperation = 'source-over';
       g.fillStyle = nightColor;
-      g.fillRect(0, 0, MAP_W, MAP_H);
+      g.fillRect(-PAD, -PADY, MAP_W + 2 * PAD, MAP_H + PADY);
       // The lights come on as it gets dark: each lets the daylight through around it.
       g.globalCompositeOperation = 'destination-out';
       for (const {x, y, r} of lights) {
@@ -1141,6 +1331,8 @@ const relax = (() => {
         g.fillStyle = glow;
         g.fillRect(x - r, y - r, r * 2, r * 2);
       }
+      nightMap = nightMap || document.createElement('canvas');
+      warpCanvas(flatNight, 1, nightMap, 1);
     }
     // A metropolis's windows, warm, on a canvas of their own over the dark: each building
     // first wipes out what it stands in front of. Only while it is dark at all.
@@ -1151,11 +1343,11 @@ const relax = (() => {
       litMap = litMap || document.createElement('canvas');
       litMap.width = MAP_W; litMap.height = MAP_H;
       const g = litMap.getContext('2d');
-      for (const [kind, x, y, s, flip] of litList) {
+      for (const [kind, x, y, s, flip, gx, gy] of litList) onGround(g, gx, gy, () => {
         if (img[kind]) { g.globalCompositeOperation = 'destination-out'; put(g, img[kind], x, y, s, flip); }
         g.globalCompositeOperation = 'source-over';
         if (img[kind + '-lit']) put(g, img[kind + '-lit'], x, y, s, flip);
-      }
+      });
       litOn = true;
     }
     drawNight();
@@ -1199,9 +1391,9 @@ const relax = (() => {
         if (frame === p.frame) continue;
         p.frame = frame;
       } else if (!step(p, dt)) continue;
-      dirty.push(before, box(p));
+      dirty.push(warpBox(before), warpBox(box(p)));
     }
-    for (const f of fires) dirty.push(flameBox(f));
+    for (const f of fires) dirty.push(warpBox(flameBox(f)));
     if (!dirty.length) return;
     g.setTransform(1, 0, 0, 1, 0, 0);
     const k = dpr * zoom;
@@ -1212,8 +1404,8 @@ const relax = (() => {
     }
     worldOn(g);
     const hit = ([x, y, w, h]) => dirty.some(([a, b, c, d]) => x < a + c && a < x + w && y < b + d && b < y + h);
-    for (const f of fires) if (hit(flameBox(f))) flames(g, f);
-    for (const p of [...people.values()].filter(p => hit(box(p))).sort((a, c) => a.y - c.y)) person(g, p);
+    for (const f of fires) if (hit(warpBox(flameBox(f)))) onGround(g, f.x, f.y, () => flames(g, f));
+    for (const p of [...people.values()].filter(p => hit(warpBox(box(p)))).sort((a, c) => a.y - c.y)) onGround(g, p.x, p.y, () => person(g, p));
   }
   // The timer runs only while it has something to move and someone to see it.
   function clock() {
@@ -1386,5 +1578,5 @@ const relax = (() => {
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
           _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
           _hour: h => { hourForTest = h; skySig = ''; sky(); },
-          _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
+          _warp: warp, _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
 })();

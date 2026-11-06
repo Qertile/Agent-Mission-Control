@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.0.2` (current) | `v4.0.1` plus a new Relax mode landscape: two continuous mountain ranges with snow on the tops, a sky with clouds, wooded foothills, and ponds, woods and wild flowers on the grass. See `CHANGELOG.md`. |
+| `v4.1` (current) | `v4.0.2` plus a Relax mode camp seen in perspective: the far side narrower, haze with distance, shadows cast from each picture's outline, and the view framing the buildings; sessions' buildings as trades (smithy, church, tavern…) with a yard of smaller buildings; hills and woods beyond the map's sides. See `CHANGELOG.md`. |
+| `v4.0.2` | `v4.0.1` plus a new Relax mode landscape: two continuous mountain ranges with snow on the tops, a sky with clouds, wooded foothills, and ponds, woods and wild flowers on the grass. See `CHANGELOG.md`. |
 | `v4.0.1` | `v4.0` plus Relax mode fixes: buildings face the road beside them, street lights only from a city on (lanterns, then modern lamps in a metropolis), and the bar beside the camp resizes it again. See `CHANGELOG.md`. |
 | `v4.0` | `v3.5.18` plus a new Relax mode camp: terrain with a river and mountains, a fixed map with wheel zoom, six eras up to a megacity, buildings under construction while a session is busy, and a camp that shows after dark. See `CHANGELOG.md`. |
 | `v3.5.18` | `v3.5.17` plus a popup once after *Update*'s restart, listing what the update brought. See `CHANGELOG.md`. |
@@ -257,7 +258,7 @@ Tailscale network and token as the phone page.
 
 ## Relax mode
 
-The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *Layout* →
+The Tasks and Sessions columns can be a camp seen from a tilted camera instead: ⚙ → *Layout* →
 *Relax* (*Office* goes back). The choice is kept per computer; the terminals stay as they are.
 
 - **A building per session**, scattered about the camp, its name under it. It grows with
@@ -277,10 +278,17 @@ The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *L
   stand together. Everyone keeps their place from one era to the next.
 - **The sessions' buildings** always take on the new era's style, and are drawn bigger than
   the rest: in a metropolis a stall, a shop, flats, an office and a skyscraper, with teal or
-  red roofs so that they stand out.
-- **The map** is the same size in every window. The wheel zooms around the pointer and
+  red roofs so that they stand out. From a village on, a session's house or tower may be a
+  trade instead, fixed per session: a shop, smithy, tavern, sawmill or warehouse for a house,
+  a church, town hall or windmill for a tower (in a metropolis a café, a mall or other
+  towers). Each also has a yard of one or two smaller buildings behind it, such as a farm, a
+  stall or a shed.
+- **The map** is the same size in every window, seen in perspective: its far side (the top)
+  is drawn at about half the width of the near side, the ground hazier with distance, and
+  every building and tree casts the shadow of its own outline. Zoomed all the way out the
+  window shows the part where the buildings are; the wheel zooms around the pointer and
   dragging moves the map; names stay one size, and those that would overlap wait for you
-  to zoom in.
+  to zoom in. Hills and woods lie beyond its sides.
 - **Its person**, near it: working while the session is busy, waving while it waits for
   you, sitting or strolling about while idle.
 - **A Cross-check discussion** is a campfire with its models on the logs around it; the one
@@ -294,7 +302,7 @@ The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *L
   from 19:30 to 5:00 with the sessions' buildings and, from a city on, the street lights lit, then dawn. Names
   and status badges stay as bright as by day.
 - It draws only what changes, and nothing while the window is hidden or in Office mode. In
-  the full window at a town it took about 9% of one CPU core, as much as Office mode did then;
+  the full window at a town (measured at `v4.0.1`) it took about 9% of one CPU core, as much as Office mode did then;
   at the biggest era, measured only on a test page without terminals, about 5%.
 - The pictures come from Kenney's *Survival Kit*, *Fantasy Town Kit*, *City Kit (Commercial)*
   and *Car Kit* (CC0, [kenney.nl](https://www.kenney.nl)) and Quaternius' *Medieval Village
@@ -517,7 +525,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.0.2`（目前） | `v4.0.1` 再加上 Relax mode 的新景色：兩排連綿的山脈且山頂有積雪、有雲的天空、長滿樹的丘陵，草地上還有池塘、樹林和野花。詳見 `CHANGELOG.md`。 |
+| `v4.1`（目前） | `v4.0.2` 再加上：Relax mode 的營地改成透視，遠處變窄、越遠越朦朧、每樣東西照自己的輪廓投下影子，預設視角框住有建築的範圍；session 的建築改成各種行業（鐵匠鋪、教堂、酒館等），後面配小建築組成建築群；地圖兩側外面有丘陵和樹林。詳見 `CHANGELOG.md`。 |
+| `v4.0.2` | `v4.0.1` 再加上 Relax mode 的新景色：兩排連綿的山脈且山頂有積雪、有雲的天空、長滿樹的丘陵，草地上還有池塘、樹林和野花。詳見 `CHANGELOG.md`。 |
 | `v4.0.1` | `v4.0` 再加上 Relax mode 的修正：建築的門朝向旁邊的路、路燈從城市才開始出現（提燈，到大都會換成現代路燈），營地旁的分隔條又能拖曳調整寬度。詳見 `CHANGELOG.md`。 |
 | `v4.0` | `v3.5.18` 再加上：全新的 Relax mode 營地，有河流和山的地形、可用滾輪縮放的固定地圖、六個時代直到超級都市、session 忙碌時建築顯示施工中，以及天黑後營地不再被蓋住。詳見 `CHANGELOG.md`。 |
 | `v3.5.18` | `v3.5.17` 再加上：*Update* 重開後跳出一次視窗，列出這次更新的內容。詳見 `CHANGELOG.md`。 |
@@ -703,7 +712,7 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 ## Relax 模式
 
-Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layout* → *Relax*（選 *Office*
+Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *Layout* → *Relax*（選 *Office*
 換回來）。每台電腦各自記住選擇；終端機分頁不受影響。
 
 - **每個 session 一棟建築**，散布在營地裡，名字寫在下面。打進 session 的訊息越多，建築
@@ -719,9 +728,14 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   住宅、商店、農場、磨坊、教堂、市政廳，之後是高樓和公園。每進入新階段，隨機挑現有的一半升一級，
   所以新舊風格並存。所有建築換階段時都留在原位。
 - **session 的建築**一定升級成新階段的風格，而且畫得比其他建築大：大都會裡是路邊攤、小店、公寓、
-  辦公樓和摩天樓，屋頂是青綠或紅色，一眼就能認出來。
-- **地圖**在所有視窗都一樣大。滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，
-  會重疊的要放大才顯示。
+  辦公樓和摩天樓，屋頂是青綠或紅色，一眼就能認出來。從村莊起，session 的房子或高塔可能改成
+  一種行業，每個 session 固定：房子可能是商店、鐵匠鋪、酒館、鋸木廠或倉庫，高塔可能是教堂、
+  市政廳或風車（大都會裡是咖啡廳、商場或其他高樓）。每棟後面還有一兩棟小建築，例如農田、
+  攤販或倉庫，組成一個建築群。
+- **地圖**在所有視窗都一樣大，有透視：遠的一邊（上方）寬度大約只有近處的一半，遠處的地面
+  比較朦朧，每棟建築和每棵樹都有照自己輪廓投下的影子。縮到最小時，視窗框住有建築的範圍；
+  滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，會重疊的要放大才顯示。地圖兩側
+  外面是丘陵和樹林。
 - **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒著時坐著或四處走走。
 - **Cross-check 討論**是一堆營火，參與的模型坐在周圍的木頭上；正在回答的站著，步驟進行
   中時有火焰。
@@ -731,7 +745,7 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
   和已捨棄的任務，點狀態可以還原），*⚡ Stamina* 顯示各工具剩下的用量，下面是給 Task Reminder 的輸入框。
 - **日夜**：依這台電腦的時鐘，8:00 到 16:30 是白天，接著是黃昏，19:30 到 5:00 是夜晚，有人的建築和
   路燈（城市以後才有）會亮，再來是清晨。名字和狀態標記維持白天的亮度。
-- 只重畫有變的部分，視窗隱藏或在 Office 模式時完全不跑。完整視窗在小鎮階段約占一個 CPU 核心的 9%，
+- 只重畫有變的部分，視窗隱藏或在 Office 模式時完全不跑。完整視窗在小鎮階段（`v4.0.1` 時量的）約占一個 CPU 核心的 9%，
   和當時的 Office 模式一樣；最大時代只在沒有終端機的測試頁量過，約 5%。
 - 圖片來自 Kenney 的 *Survival Kit*、*Fantasy Town Kit*、*City Kit (Commercial)*、*Car Kit*
   （CC0，[kenney.nl](https://www.kenney.nl)）和 Quaternius 的 *Medieval Village MegaKit*

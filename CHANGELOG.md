@@ -2,6 +2,37 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-06 – v4.1: Relax mode in perspective, sessions as trades with yards
+
+### Changed
+- Relax mode: the camp is seen in perspective. The world is drawn flat with a margin round
+  the map, then the ground is warped row by row: its far side (the top) is drawn at 55% of
+  the width of the near side and 75% of the height. Buildings, lamps and trees are stood up
+  after the warp, straight, sized for where they stand. Names, people, fires, the night's
+  lights, a metropolis's lit windows and clicks follow the same warp.
+- Relax mode: roads, the river and bridges are stroked with a pen squashed like the ground,
+  so a road across the screen is thinner than one up it.
+- Relax mode: the far ground is hazier and the near ground a little darker; every building,
+  yard, lamp, tree and rock casts the shadow of its own outline to the right (a tower's long,
+  a wreck's short).
+- Relax mode: zoomed all the way out, the view frames the buildings (and the mountains above
+  them) instead of the whole map, so the empty corners the tilt leaves stay out of it.
+- Relax mode: hills, scattered woods and rocks beyond the map's sides, and a fringe of trees
+  along them inside it. The mountains are twice as high, to stand above the far side.
+- Relax mode: from a village on, a session's house (50 messages) or tower (200) may be a
+  trade instead, fixed per session: shop, smithy, tavern, sawmill or warehouse; church, town
+  hall or windmill; in a metropolis a café, a mall or other towers. Each session's building
+  has a yard of one or two smaller ones behind it (a farm, stall, shed, fountain…).
+- README: Relax mode (both languages).
+- Versions: `v4.1`.
+- Tagged `v4.1`.
+
+### Known
+- Redrawing (only when a building, status or the time of day changes) takes about 150–450 ms
+  on the test pages, up from 70–270 ms; dragging and zooming do not redraw. The flat canvas
+  with its margin is about 4980×2415 pixels at 1.5× screens. Not yet measured in the real
+  window.
+
 ## 2026-11-06 – v4.0.2: Relax mode's landscape: mountain ranges, sky, woods and ponds
 
 ### Changed
