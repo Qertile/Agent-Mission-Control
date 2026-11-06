@@ -556,15 +556,26 @@ const relax = (() => {
     const rnd = rng(11), source = river[0].x, idx = eraIndex(camp);
     // The sky behind the mountains, a few clouds in it; hazier over a metropolis.
     const X0 = -PAD, WW = w + 2 * PAD;      // the margin round the map is land too
-    const sky = g.createLinearGradient(0, -PADY, 0, plot * 0.7);
-    sky.addColorStop(0, metro(e) ? '#a9bccb' : '#9cc8e6');
-    sky.addColorStop(1, metro(e) ? '#dfe3e2' : '#e3eff3');
+    const sky = g.createLinearGradient(0, -PADY, 0, plot * 0.7), wk = weatherDrawn;
+    const tops = {cloudy: '#a3b1bf', rain: '#7f8c9a', snow: '#b9c3cc', fog: '#c9d0d6'}, lows = {cloudy: '#dde2e6', rain: '#b8c0c7', snow: '#e8ecef', fog: '#e4e7ea'};
+    sky.addColorStop(0, tops[wk] || (metro(e) ? '#a9bccb' : '#9cc8e6'));
+    sky.addColorStop(1, lows[wk] || (metro(e) ? '#dfe3e2' : '#e3eff3'));
     g.fillStyle = sky;
     g.fillRect(X0, -PADY, WW, PADY + plot * 0.75);
     for (let i = 0; i < 11; i++) {
       const cx = X0 + rnd() * WW, cy = -PADY * 0.8 + rnd() * (PADY * 0.8 + plot * 0.3), cw = plot * (0.5 + rnd() * 0.7);
       g.fillStyle = 'rgba(255, 255, 255, 0.55)';
       for (let j = 0; j < 4; j++) { g.beginPath(); g.ellipse(cx + (j - 1.5) * cw * 0.28, cy - (j % 2) * cw * 0.08, cw * 0.26, cw * 0.11, 0, 0, Math.PI * 2); g.fill(); }
+    }
+    // More cloud, and greyer, as the weather turns: a sky full of it in rain.
+    const more = {cloudy: [34, '235, 238, 242', 0.8], rain: [46, '128, 136, 148', 0.85], snow: [30, '214, 220, 228', 0.8], fog: [14, '230, 233, 236', 0.6]}[wk];
+    if (more) {
+      const wr = rng(23), [n, tint, alpha] = more;
+      for (let i = 0; i < n; i++) {
+        const cx = X0 + wr() * WW, cy = -PADY * 0.9 + wr() * (PADY * 0.9 + plot * 0.35), cw = plot * (0.7 + wr() * 1.1), shade = wr() * 0.25;
+        g.fillStyle = `rgba(${tint}, ${alpha - shade * 0.4})`;
+        for (let j = 0; j < 5; j++) { g.beginPath(); g.ellipse(cx + (j - 2) * cw * 0.24, cy - (j % 2) * cw * 0.09, cw * 0.27, cw * 0.12, 0, 0, Math.PI * 2); g.fill(); }
+      }
     }
     // Two ranges, the far one pale with the distance, both highest round the river's source.
     const peakAt = (low, top) => x => plot * (low + (1 - Math.min(1, Math.abs(x - source) / (w * 0.42))) * top);
@@ -625,6 +636,19 @@ const relax = (() => {
         const x = cx + (rnd() + rnd() - 1) * plot * 0.6, y = cy + (rnd() + rnd() - 1) * plot * 0.3;
         g.fillStyle = col;
         g.beginPath(); g.arc(x, y, 1.4 + rnd() * 0.8, 0, Math.PI * 2); g.fill();
+      }
+    }
+    // Snow lying on the ground: a white cover with drifts, blue in their hollows; the river
+    // still runs through it and the roads are cleared on top of it.
+    if (wk === 'snow') {
+      g.fillStyle = 'rgba(246, 248, 252, 0.86)';
+      g.fillRect(X0, plot * 0.8, WW, h - plot * 0.8);
+      const sr = rng(29);
+      for (let i = 0, n = Math.round(WW * h / 9000); i < n; i++) {
+        const x = X0 + sr() * WW, y = plot * 0.95 + sr() * (h - plot * 0.95), rx = plot * (0.25 + sr() * 0.6), ry = rx * (0.22 + sr() * 0.12);
+        const d = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+        d.addColorStop(0, sr() < 0.5 ? 'rgba(200, 214, 232, 0.35)' : 'rgba(255, 255, 255, 0.6)'); d.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        g.save(); g.translate(x, y); g.scale(rx, ry); g.fillStyle = d; g.fillRect(-1, -1, 2, 2); g.restore();
       }
     }
     // The river comes out from under the foothills: banks, then water with a paler line down its
@@ -716,7 +740,8 @@ const relax = (() => {
       for (const side of [-1, 1]) {
         const x = side < 0 ? -rnd() * out : w + rnd() * out, hw = plot * (0.5 + rnd() * 0.6), hh = plot * (0.12 + rnd() * 0.1);
         const fill = g.createLinearGradient(0, y - hh, 0, y);
-        fill.addColorStop(0, '#6a9659'); fill.addColorStop(1, e[2]);
+        if (weatherDrawn === 'snow') { fill.addColorStop(0, '#ffffff'); fill.addColorStop(1, '#e6ecf3'); }
+        else { fill.addColorStop(0, '#6a9659'); fill.addColorStop(1, e[2]); }
         g.fillStyle = fill;
         g.beginPath(); g.ellipse(x, y, hw, hh, 0, Math.PI, 0); g.fill();
       }
@@ -813,6 +838,7 @@ const relax = (() => {
   }
   function draw(list) {
     const w = MAP_W, h = MAP_H, e = era(camp);
+    weatherDrawn = weatherNow().kind;
     // The pictures of this era and those before it first, then draw: a city's old houses
     // stand on in a metropolis.
     const need = [eraIndex(camp) >= 3 ? 'City' : '', eraIndex(camp) >= 4 ? 'Metropolis' : ''].filter(Boolean);
@@ -854,6 +880,13 @@ const relax = (() => {
     air.addColorStop(1, 'rgba(0, 20, 0, 0.16)');
     g.fillStyle = air;
     g.fillRect(0, top, MAP_W, MAP_H - top);
+    // The weather on the ground: wet and darker in rain, white under snow.
+    const wet = {rain: [30, 45, 65, 0.2], snow: [240, 244, 250, 0.3]}[weatherDrawn];
+    if (wet) {
+      const [r, gr, b, a] = wet, top = Y_H - plot * 0.45, fade = g.createLinearGradient(0, top, 0, Y_H + plot * 0.1);
+      fade.addColorStop(0, `rgba(${r}, ${gr}, ${b}, 0)`); fade.addColorStop(1, `rgba(${r}, ${gr}, ${b}, ${a})`);
+      g.fillStyle = fade; g.fillRect(0, top, MAP_W, MAP_H - top);
+    }
     fences(g);
     // The paddocks' front fences again, on a layer of their own over the people and animals,
     // so an animal in a paddock is behind its front fence.
@@ -909,6 +942,15 @@ const relax = (() => {
       const [hx, hy, hw, hh] = warpBox([cx - plot / 2 * big, ground - plot * 0.9 * big, plot * big, plot * 0.9 * big]);
       spots.unshift({x: hx, y: hy, w: hw, h: hh + (plot * 0.2 * big) * depth(ground) + 34, b});
       } finally { g.restore(); }
+    }
+    // And over everything: grey under cloud and rain, white with fog (thicker far off).
+    if (weatherDrawn === 'fog') {
+      const f = g.createLinearGradient(0, 0, 0, MAP_H);
+      f.addColorStop(0, 'rgba(226, 230, 235, 0.6)'); f.addColorStop(0.35, 'rgba(226, 230, 235, 0.35)'); f.addColorStop(1, 'rgba(226, 230, 235, 0.15)');
+      g.fillStyle = f; g.fillRect(0, 0, MAP_W, MAP_H);
+    } else {
+      const tint = {cloudy: 'rgba(60, 70, 85, 0.12)', rain: 'rgba(40, 50, 70, 0.22)', snow: 'rgba(225, 232, 242, 0.12)'}[weatherDrawn];
+      if (tint) { g.fillStyle = tint; g.fillRect(0, 0, MAP_W, MAP_H); }
     }
     // What is lit at night: each building with someone in it, the fires, the lanterns.
     lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
@@ -976,7 +1018,10 @@ const relax = (() => {
     v.fillStyle = '#3f6a3b';
     v.fillRect(0, 0, W, H);
     v.imageSmoothingQuality = 'high';
+    const fade = bgPrev ? weatherNow().t : 1;
+    if (fade < 1) { v.drawImage(bgPrev, -ox * k, -oy * k, MAP_W * k, MAP_H * k); v.globalAlpha = fade; }
     v.drawImage(bg, -ox * k, -oy * k, MAP_W * k, MAP_H * k);
+    v.globalAlpha = 1;
     const out = cv.getContext('2d');
     out.setTransform(1, 0, 0, 1, 0, 0);
     out.drawImage(view, 0, 0);
@@ -1219,7 +1264,7 @@ const relax = (() => {
   let eraNow = null;
   function eraLabel(g, e) {
     const next = ERAS[ERAS.indexOf(e) - 1];
-    const text = `${ICON[e[1]]} ${e[1]} · ${camp} messages` + (next ? ` · ${next[1]} at ${next[0]}` : '');
+    const text = `${ICON[e[1]]} ${e[1]} · ${camp} messages` + (next ? ` · ${next[1]} at ${next[0]}` : '') + ` · ${WEATHER_ICON[weatherDrawn]} ${weatherDrawn}`;
     g.font = "11px 'DejaVu Sans Mono', Consolas, monospace";
     g.textAlign = 'left';
     const tw = g.measureText(text).width;
@@ -1359,7 +1404,7 @@ const relax = (() => {
   // One step of an animal. Returns whether it looks different now.
   function animalStep(p, dt) {
     const before = [p.x, p.y, p.dir, p.frame].join(), h = hourNow();
-    if (h >= 20 || h < 5.5) { p.frame = 0; return before !== [p.x, p.y, p.dir, p.frame].join(); }   // asleep on its feet
+    if (h >= 20 || h < 5.5 || weatherDrawn === 'rain') { p.frame = 0; return before !== [p.x, p.y, p.dir, p.frame].join(); }   // asleep, or sheltering, on its feet
     p.tick++;
     if (p.mode === 'walk') {
       const speed = plot * (FAST.has(p.kind) ? 0.22 : 0.1) * dt, dx = p.goal.x - p.x, dy = p.goal.y - p.y, d = Math.hypot(dx, dy);
@@ -1554,6 +1599,100 @@ const relax = (() => {
     frontOver(g, hit);
   }
   // The timer runs only while it has something to move and someone to see it.
+  // --- the weather, from the clock, the same in every window. Each half hour is cut in two
+  // at a random point, 10 to 20 minutes in, so the weather lasts 10 to 20 minutes; each
+  // part's weather differs from the one before it. Snow only from
+  // November to February. A change fades in over FADE: the old picture under the new one,
+  // the new one growing clearer, the rain or snow thinning or thickening. Rain and snow fall
+  // in the world, on a canvas of their own over the camp, 20 times a second, only while it
+  // shows; the rest is in the picture.
+  const HALF = 30 * 60 * 1000, FADE = 3 * 60 * 1000;
+  const WEATHER_ICON = {clear: '☀', cloudy: '☁', rain: '🌧', fog: '🌫', snow: '❄'};
+  let weatherForTest = null, weatherDrawn = 'clear', fallTimer = 0, fadeTimer = 0, flakes = [], bgPrev = null;
+  const cut = q => (10 + rng(q * 104729 + 7)() * 10) * 60 * 1000;        // where half hour q is cut
+  const partStart = i => Math.floor(i / 2) * HALF + (i % 2 ? cut(Math.floor(i / 2)) : 0);
+  function partOf(t) { const q = Math.floor(t / HALF); return q * 2 + (t - q * HALF >= cut(q) ? 1 : 0); }
+  function weatherOf(part, month, not) {
+    const r = rng(part * 7919 + 13);
+    r(); const v = r();
+    const table = (month >= 10 || month <= 1 ? [['clear', 0.3], ['cloudy', 0.25], ['snow', 0.2], ['rain', 0.1], ['fog', 0.15]]
+      : [['clear', 0.4], ['cloudy', 0.27], ['rain', 0.2], ['fog', 0.13]]).filter(([k]) => k !== not);
+    const all = table.reduce((a, [, p]) => a + p, 0);
+    let sum = 0;
+    for (const [k, p] of table) if (v * all < (sum += p)) return k;
+    return table[0][0];
+  }
+  // A day of parts back, each unlike the one before; the result is the same every time.
+  function weatherAt(part, month) {
+    let w = weatherOf(part - 200, month);
+    for (let i = part - 199; i <= part; i++) w = weatherOf(i, month, w);
+    return w;
+  }
+  // {kind: now, from: the part before's, t: how far the fade has come, 0 to 1}
+  function weatherNow() {
+    if (weatherForTest) return weatherForTest;
+    const t = Date.now(), i = partOf(t), m = new Date(t).getMonth();
+    if (weatherNow.part !== i) { weatherNow.part = i; weatherNow.kind = weatherAt(i, m); weatherNow.from = weatherAt(i - 1, m); }
+    return {kind: weatherNow.kind, from: weatherNow.from, t: Math.min(1, (t - partStart(i)) / FADE)};
+  }
+  function fallCanvas() {
+    let cv = $('relax-weather');
+    if (!cv) {
+      cv = document.createElement('canvas');
+      cv.id = 'relax-weather';
+      cv.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none';
+      $('relax-labels').before(cv);
+    }
+    return cv;
+  }
+  function weatherClock() {
+    const w = weatherNow(), cv = fallCanvas();
+    // What falls, and how much of it: the new weather's, growing, or the old one's, going.
+    const wet = k => k === 'rain' || k === 'snow';
+    const kind = wet(w.kind) ? w.kind : wet(w.from) && w.t < 1 ? w.from : null, share = kind === w.kind ? w.t : 1 - w.t;
+    const want = on && !document.hidden && kind && share > 0.02;
+    // While a fade runs, the picture is composed again every 3 s; afterwards the old one goes.
+    const fading = on && !document.hidden && w.t < 1 && bgPrev;
+    if (fading && !fadeTimer) fadeTimer = setInterval(() => { compose(); weatherClock(); }, 3000);
+    if (!fading && fadeTimer) { clearInterval(fadeTimer); fadeTimer = 0; }
+    if (w.t >= 1 && bgPrev) { bgPrev = null; compose(); }
+    if (!want) {
+      if (fallTimer) { clearInterval(fallTimer); fallTimer = 0; }
+      cv.style.display = 'none';
+      return;
+    }
+    cv.style.display = 'block';
+    if (cv.width !== viewW || cv.height !== viewH) { cv.width = viewW; cv.height = viewH; cv.style.width = viewW + 'px'; cv.style.height = viewH + 'px'; }
+    const n = Math.round((kind === 'rain' ? 650 : 550) * share);
+    if (flakes.kind !== kind) flakes = Object.assign([], {kind});
+    while (flakes.length < n) flakes.push(drop({}, true));
+    flakes.length = n;
+    if (!fallTimer) fallTimer = setInterval(fall, 50);
+  }
+  // A drop or a flake: over a point on the ground (in the world, so the far ones are smaller
+  // and slower, and zooming in brings them close), some way up, falling to it.
+  function drop(f, anywhere) {
+    const y = HORIZON + Math.random() * (MAP_H - HORIZON), out = MAP_W / 2 * (1 / depth(y) - 1);
+    f.x = -out + Math.random() * (MAP_W + 2 * out); f.y = y; f.z = 0.6 + Math.random() * 0.4; f.s = Math.random() * 6.28;
+    f.h = (anywhere ? Math.random() : 1) * plot * 3;
+    return f;
+  }
+  function fall() {
+    const cv = $('relax-weather'), g = cv.getContext('2d'), rain = flakes.kind === 'rain', dt = 0.05;
+    g.clearRect(0, 0, cv.width, cv.height);
+    g.strokeStyle = 'rgba(200, 215, 235, 0.45)'; g.fillStyle = 'rgba(255, 255, 255, 0.9)'; g.lineWidth = 1;
+    if (rain) g.beginPath();
+    for (const f of flakes) {
+      if (rain) f.h -= plot * 6 * f.z * dt;
+      else { f.h -= plot * 0.35 * f.z * dt; f.s += dt; f.x += Math.sin(f.s * 1.3) * 10 * dt; }
+      if (f.h <= 0) { drop(f, false); continue; }
+      const [X, Y] = warp(f.x, f.y), m = depth(f.y), sx = (X - ox) * zoom, sy = (Y - f.h * m - oy) * zoom;
+      if (sx < -10 || sx > cv.width + 10 || sy < -30 || sy > cv.height + 10) continue;
+      if (rain) { const l = 22 * m * zoom * f.z; g.moveTo(sx, sy); g.lineTo(sx + l * 0.16, sy - l); }
+      else { g.beginPath(); g.arc(sx, sy, (1.6 + 2 * f.z) * m * zoom, 0, Math.PI * 2); g.fill(); }
+    }
+    if (rain) g.stroke();
+  }
   function clock() {
     const want = on && !document.hidden && (people.size > 0 || fires.length > 0);
     if (want && !timer) timer = setInterval(tick, TICK);
@@ -1587,10 +1726,18 @@ const relax = (() => {
     if (!on || document.hidden) return;
     sky();
     const list = buildings();
-    const now = JSON.stringify([camp, list.map(b => [b.id, b.name, b.tool, b.status, b.level, b.people])]);
-    if (now === sig && !force) { if (measure()) compose(); return; }
+    const now = JSON.stringify([camp, weatherNow().kind, list.map(b => [b.id, b.name, b.tool, b.status, b.level, b.people])]);
+    if (now === sig && !force) { if (measure()) compose(); weatherClock(); return; }
+    // A new kind of weather: keep the picture as it was, to fade the new one in over it.
+    const w = weatherNow();
+    if (bg && w.kind !== weatherDrawn && w.t < 1) {
+      bgPrev = bgPrev || document.createElement('canvas');
+      bgPrev.width = bg.width; bgPrev.height = bg.height;
+      bgPrev.getContext('2d').drawImage(bg, 0, 0);
+    }
     sig = now;
     draw(list);
+    weatherClock();
   }
 
   // --- above the camp: the open tasks on a board, and each tool's limits as stamina
@@ -1649,6 +1796,7 @@ const relax = (() => {
     document.body.classList.toggle('relax', on);
     sig = '';
     clock();
+    weatherClock();
     if (on) { loadTasks(); load().then(() => update(true)); }
   }
 
@@ -1717,12 +1865,13 @@ const relax = (() => {
       e.stopPropagation();
     });
     new ResizeObserver(() => update()).observe($('relax'));
-    document.addEventListener('visibilitychange', () => { update(); clock(); });
+    document.addEventListener('visibilitychange', () => { update(); clock(); weatherClock(); });
     set(saved() === 'relax' ? 'relax' : 'office');
   }
 
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
           _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
           _hour: h => { hourForTest = h; skySig = ''; sky(); },
+          _weather: (kind, from = kind, t = 1) => { weatherForTest = {kind, from, t}; update(true); },
           _warp: warp, _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
 })();

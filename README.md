@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.1.2` (current) | `v4.1.1` plus Relax mode fixes: a city's windows light at night, and a paddock's front fence stands in front of its animals. See `CHANGELOG.md`. |
+| `v4.2` (current) | `v4.1.2` plus weather in Relax mode: clear, cloudy, rain, fog and, in winter, snow lying on the ground, 10 to 20 minutes each with a 3-minute fade between them. See `CHANGELOG.md`. |
+| `v4.1.2` | `v4.1.1` plus Relax mode fixes: a city's windows light at night, and a paddock's front fence stands in front of its animals. See `CHANGELOG.md`. |
 | `v4.1.1` | `v4.1` plus animals in Relax mode: wild ones in a tribe, cows and horses in fenced paddocks from a village on (a city's outside its wall), dogs in a city and a metropolis; shadows for people and animals. See `CHANGELOG.md`. |
 | `v4.1` | `v4.0.2` plus a Relax mode camp seen in perspective: the far side narrower, haze with distance, shadows cast from each picture's outline, and the view framing the buildings; sessions' buildings as trades (smithy, church, tavern…) with a yard of smaller buildings; hills and woods beyond the map's sides. See `CHANGELOG.md`. |
 | `v4.0.2` | `v4.0.1` plus a new Relax mode landscape: two continuous mountain ranges with snow on the tops, a sky with clouds, wooded foothills, and ponds, woods and wild flowers on the grass. See `CHANGELOG.md`. |
@@ -308,6 +309,11 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
 - **Day and night**, by this computer's clock: daylight from 8:00 to 16:30, then dusk, night
   from 19:30 to 5:00 with the sessions' buildings and, from a city on, the street lights lit, then dawn. Names
   and status badges stay as bright as by day.
+- **Weather**, from the clock, the same in every window: clear, cloudy (a sky full of
+  cloud), rain, fog, and from November to February snow (lying white on the ground). Each
+  lasts 10 to 20 minutes, and the next is always different; a change fades in over 3
+  minutes. Rain and snow fall in the world, far drops smaller; animals stand still in rain.
+  The top left shows the weather now.
 - It draws only what changes, and nothing while the window is hidden or in Office mode. In
   the full window at a town (measured at `v4.0.1`) it took about 9% of one CPU core, as much as Office mode did then;
   at the biggest era, measured only on a test page without terminals, about 5%.
@@ -533,7 +539,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.1.2`（目前） | `v4.1.1` 再加上 Relax mode 的修正：城市的窗戶晚上會亮，牧場前排的籬笆會擋在動物前面。詳見 `CHANGELOG.md`。 |
+| `v4.2`（目前） | `v4.1.2` 再加上 Relax mode 的天氣：晴、多雲、雨、霧，冬天會下雪並在地上積雪，每種持續 10 到 20 分鐘，換的時候花 3 分鐘淡入。詳見 `CHANGELOG.md`。 |
+| `v4.1.2` | `v4.1.1` 再加上 Relax mode 的修正：城市的窗戶晚上會亮，牧場前排的籬笆會擋在動物前面。詳見 `CHANGELOG.md`。 |
 | `v4.1.1` | `v4.1` 再加上 Relax mode 的動物：部落有野生動物，從村莊起牛和馬養在有籬笆的牧場（城市的在城牆外），城市和大都會有狗；小人和動物也有影子。詳見 `CHANGELOG.md`。 |
 | `v4.1` | `v4.0.2` 再加上：Relax mode 的營地改成透視，遠處變窄、越遠越朦朧、每樣東西照自己的輪廓投下影子，預設視角框住有建築的範圍；session 的建築改成各種行業（鐵匠鋪、教堂、酒館等），後面配小建築組成建築群；地圖兩側外面有丘陵和樹林。詳見 `CHANGELOG.md`。 |
 | `v4.0.2` | `v4.0.1` 再加上 Relax mode 的新景色：兩排連綿的山脈且山頂有積雪、有雲的天空、長滿樹的丘陵，草地上還有池塘、樹林和野花。詳見 `CHANGELOG.md`。 |
@@ -758,6 +765,9 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   和已捨棄的任務，點狀態可以還原），*⚡ Stamina* 顯示各工具剩下的用量，下面是給 Task Reminder 的輸入框。
 - **日夜**：依這台電腦的時鐘，8:00 到 16:30 是白天，接著是黃昏，19:30 到 5:00 是夜晚，有人的建築和
   路燈（城市以後才有）會亮，再來是清晨。名字和狀態標記維持白天的亮度。
+- **天氣**：依時鐘決定，每個視窗都一樣：晴、多雲（滿天的雲）、雨、霧，11 月到 2 月還會下雪
+  （地上會積雪）。每種天氣持續 10 到 20 分鐘，下一種一定不同，換的時候花 3 分鐘慢慢淡入。雨和雪
+  落在世界裡，遠處的比較小；下雨時動物會停下來站著。左上角會顯示現在的天氣。
 - 只重畫有變的部分，視窗隱藏或在 Office 模式時完全不跑。完整視窗在小鎮階段（`v4.0.1` 時量的）約占一個 CPU 核心的 9%，
   和當時的 Office 模式一樣；最大時代只在沒有終端機的測試頁量過，約 5%。
 - 圖片來自 Kenney 的 *Survival Kit*、*Fantasy Town Kit*、*City Kit (Commercial)*、*Car Kit*

@@ -2,6 +2,31 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-07 – v4.2: Relax mode's weather
+
+### Added
+- Relax mode: weather. Each half hour is cut in two at a random point 10 to 20 minutes in,
+  and each part has its weather, unlike the one before: clear, cloudy, rain or fog, and from
+  November to February snow (a winter's odds: clear 30%, cloudy 25%, snow 20%, fog 15%, rain
+  10%; otherwise clear 40%, cloudy 27%, rain 20%, fog 13%). It comes from the clock, so every
+  window shows the same. No network.
+- Cloudy: a grey sky with 34 more clouds; rain: a dark sky full of grey cloud, the ground
+  darker and wet, animals standing still; fog: white, thicker far off; snow: snow lying on
+  the ground in drifts, the hills beyond the map white.
+- Rain (650 drops) and snow (550 flakes) fall in the world, each to a point on the ground,
+  so far ones are smaller and slower and zooming in brings them close; on a canvas of their
+  own, 20 times a second, only while it rains or snows and the camp shows.
+- A change of weather fades in over 3 minutes: the old picture under the new one, composed
+  every 3 seconds, and the rain or snow thinning or thickening with it.
+- The top left label shows the weather now.
+- README: Relax mode, weather (both languages).
+- Versions: `v4.2`.
+- Tagged `v4.2`.
+
+### Known
+- A full 3-minute change has not been watched end to end; the fade was checked at 25% and
+  60% on test pages.
+
 ## 2026-11-07 – v4.1.2: Relax mode: a city's windows at night, fences in front of animals
 
 ### Fixed
