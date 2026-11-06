@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.2` (current) | `v4.1.2` plus weather in Relax mode: clear, cloudy, rain, fog and, in winter, snow lying on the ground, 10 to 20 minutes each with a 3-minute fade between them. See `CHANGELOG.md`. |
+| `v4.2.1` (current) | `v4.2` plus a Relax mode fix: with many sessions no two buildings stand on each other, so each can be double-clicked. See `CHANGELOG.md`. |
+| `v4.2` | `v4.1.2` plus weather in Relax mode: clear, cloudy, rain, fog and, in winter, snow lying on the ground, 10 to 20 minutes each with a 3-minute fade between them. See `CHANGELOG.md`. |
 | `v4.1.2` | `v4.1.1` plus Relax mode fixes: a city's windows light at night, and a paddock's front fence stands in front of its animals. See `CHANGELOG.md`. |
 | `v4.1.1` | `v4.1` plus animals in Relax mode: wild ones in a tribe, cows and horses in fenced paddocks from a village on (a city's outside its wall), dogs in a city and a metropolis; shadows for people and animals. See `CHANGELOG.md`. |
 | `v4.1` | `v4.0.2` plus a Relax mode camp seen in perspective: the far side narrower, haze with distance, shadows cast from each picture's outline, and the view framing the buildings; sessions' buildings as trades (smithy, church, tavern…) with a yard of smaller buildings; hills and woods beyond the map's sides. See `CHANGELOG.md`. |
@@ -539,7 +540,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.2`（目前） | `v4.1.2` 再加上 Relax mode 的天氣：晴、多雲、雨、霧，冬天會下雪並在地上積雪，每種持續 10 到 20 分鐘，換的時候花 3 分鐘淡入。詳見 `CHANGELOG.md`。 |
+| `v4.2.1`（目前） | `v4.2` 再加上 Relax mode 的修正：session 很多時建築不再疊在一起，每一棟都能雙擊。詳見 `CHANGELOG.md`。 |
+| `v4.2` | `v4.1.2` 再加上 Relax mode 的天氣：晴、多雲、雨、霧，冬天會下雪並在地上積雪，每種持續 10 到 20 分鐘，換的時候花 3 分鐘淡入。詳見 `CHANGELOG.md`。 |
 | `v4.1.2` | `v4.1.1` 再加上 Relax mode 的修正：城市的窗戶晚上會亮，牧場前排的籬笆會擋在動物前面。詳見 `CHANGELOG.md`。 |
 | `v4.1.1` | `v4.1` 再加上 Relax mode 的動物：部落有野生動物，從村莊起牛和馬養在有籬笆的牧場（城市的在城牆外），城市和大都會有狗；小人和動物也有影子。詳見 `CHANGELOG.md`。 |
 | `v4.1` | `v4.0.2` 再加上：Relax mode 的營地改成透視，遠處變窄、越遠越朦朧、每樣東西照自己的輪廓投下影子，預設視角框住有建築的範圍；session 的建築改成各種行業（鐵匠鋪、教堂、酒館等），後面配小建築組成建築群；地圖兩側外面有丘陵和樹林。詳見 `CHANGELOG.md`。 |

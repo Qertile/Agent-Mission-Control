@@ -410,7 +410,7 @@ const relax = (() => {
   // only what stands there changes. The fountain is on the plaza; each session takes the first
   // free wide spot, nearest the plaza give or take a little (from the id); then the era's props;
   // then the buildings, each with room for the tallest it may become.
-  function arrange(list, props, turns) {
+  function arrange(list, props, turns, cap = 2) {
     const {lots, wide, open} = cityPlan(), placed = [], used = new Set(), houses = [];
     for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: {base: [PLAZA.x - plot * 0.45, PLAZA.y - plot * 0.25, PLAZA.x + plot * 0.45, PLAZA.y + plot * 0.16]}, b});
     for (const b of sorted(list)) {
@@ -419,7 +419,7 @@ const relax = (() => {
       // Room for a skyscraper if there is any; with many sessions, for less: a later tower
       // may then stand in front of a neighbour, which is better than on top of it.
       let found = null, high = 2;
-      for (const h of [2, 1.4, 0.7]) {
+      for (const h of [2, 1.4, 0.7].filter(h => h <= cap)) {
         // A skyscraper's room must also be on the map.
         found = order.find(([, l]) => !used.has(l) && l.y - plot * h >= 0 && !placed.some(q => clash(room(l.x, l.y, false, h), q.r)));
         if (found) { high = h; break; }
@@ -469,7 +469,13 @@ const relax = (() => {
     const key = JSON.stringify([list.map(b => b.id), e[1], decorCount(camp), amc.order]);
     if (key !== layoutKey) {
       layoutKey = key;
-      layoutMemo = arrange(list, props, camp);
+      // Room for skyscrapers first; if that leaves any two sessions on each other (many of
+      // them), the whole camp again with less room above each, until none are.
+      for (const cap of [2, 1.4, 0.7]) {
+        layoutMemo = arrange(list, props, camp, cap);
+        const own = layoutMemo.filter(p => !p.b.prop);
+        if (!own.some((a, i) => own.some((c, j) => j > i && clash(a.r, c.r)))) break;
+      }
     }
     const byId = new Map(list.map(b => [b.id, b]));
     return layoutMemo.map(p => (byId.has(p.b.id) ? {...p, b: byId.get(p.b.id)} : p));

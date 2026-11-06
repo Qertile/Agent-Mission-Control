@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-07 – v4.2.1: Relax mode: many sessions no longer overlap
+
+### Fixed
+- Relax mode: with many sessions, a building could stand under the room kept for another
+  one's skyscraper, so its name and click area were under the other's: on the 20-session
+  test pages Session 18 and 19 were under Session 2, and one of 20 could not be
+  double-clicked. Each session still keeps room for a skyscraper (2 building widths high);
+  when that leaves any two on each other, the whole camp is laid out again keeping 1.4, then
+  0.7. With few sessions nothing moves.
+- Versions: `v4.2.1`.
+- Tagged `v4.2.1`.
+
+### Known
+- With many sessions, a session that later grows into a tall tower may hide the one behind it.
+
 ## 2026-11-07 – v4.2: Relax mode's weather
 
 ### Added
