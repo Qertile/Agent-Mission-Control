@@ -609,7 +609,7 @@ const relax = (() => {
       // Pines on them, fewer as the camp grows.
       if (img.tree) for (let t = 0, n = Math.round((3 - idx * 0.4) * rnd()); t < n; t++) {
         const tx = x + (rnd() - 0.5) * hw * 1.4, ty = cy - hh * (0.3 + rnd() * 0.5), sz = plot * (0.28 + rnd() * 0.12);
-        if (Math.abs(tx - source) > plot * 0.3) g.drawImage(img.tree, tx - sz / 2, ty - sz * ANCHOR, sz, sz);
+        if (Math.abs(tx - source) > plot * 0.3) g.drawImage(seasonal(img.tree, tx, ty), tx - sz / 2, ty - sz * ANCHOR, sz, sz);
       }
     }
     // Soft patches, so the grass is not one flat colour: each fades out to nothing, no edge.
@@ -636,7 +636,7 @@ const relax = (() => {
       g.stroke();
     }
     const PETALS = ['#ffffff', '#fff27a', '#ffb3c7', '#c9a7ff', '#ffd08a'];
-    for (let d = 0, drifts = Math.round(26 * (1 - idx * 0.16)); d < drifts; d++) {
+    for (let d = 0, drifts = Math.round(26 * (1 - idx * 0.16) * {spring: 2, summer: 1, autumn: 0.4, winter: 0}[seasonNow()]); d < drifts; d++) {
       const cx = X0 + rnd() * WW, cy = plot * 1.05 + rnd() * (h - plot * 1.05), col = PETALS[Math.floor(rnd() * PETALS.length)];
       for (let i = 0; i < 26; i++) {
         const x = cx + (rnd() + rnd() - 1) * plot * 0.6, y = cy + (rnd() + rnd() - 1) * plot * 0.3;
@@ -886,6 +886,9 @@ const relax = (() => {
     air.addColorStop(1, 'rgba(0, 20, 0, 0.16)');
     g.fillStyle = air;
     g.fillRect(0, top, MAP_W, MAP_H - top);
+    // The season on the grass: golden in autumn, dull in winter, fresher in spring.
+    const tone = {spring: 'rgba(170, 230, 120, 0.08)', autumn: 'rgba(200, 150, 50, 0.16)', winter: 'rgba(150, 160, 150, 0.18)'}[seasonNow()];
+    if (tone) { g.fillStyle = tone; g.fillRect(0, Y_H - plot * 0.3, MAP_W, MAP_H); }
     // The weather on the ground: wet and darker in rain, white under snow.
     const wet = {rain: [30, 45, 65, 0.2], snow: [240, 244, 250, 0.3]}[weatherDrawn];
     if (wet) {
@@ -905,7 +908,7 @@ const relax = (() => {
       fences(f, true);
     }
     for (const [pic, x, y, sz, flip] of woods) onGround(g, x, y, () => castShadow(g, pic, x, y, sz, flip));
-    for (const [pic, x, y, sz, flip] of woods.sort((a, c) => a[2] - c[2])) onGround(g, x, y, () => put(g, pic, x, y, sz, flip));
+    for (const [pic, x, y, sz, flip] of woods.sort((a, c) => a[2] - c[2])) onGround(g, x, y, () => put(g, seasonal(pic, x, y), x, y, sz, flip));
     spots = [];
     tags = [];
     litList = [];
@@ -918,7 +921,8 @@ const relax = (() => {
       if (b.prop) {
         const s = plot * 1.5 * (b.scale || scaleOf(b.kind)) * (b.house ? DECOR_SIZE : 1);
         castShadow(g, img[b.kind], cx, ground, s, flip);
-        if (img[b.kind]) put(g, img[b.kind], cx, ground, s, flip);
+        const pk = /^tree/.test(b.kind) ? seasonal(img[b.kind], cx, ground) : img[b.kind];
+        if (pk) put(g, pk, cx, ground, s, flip);
         if (urban(e)) litList.push([b.kind, cx, ground, s, flip, cx, ground]);
         continue;
       }
@@ -970,6 +974,7 @@ const relax = (() => {
     FIT = {x: left, y: 120, w: right - left, h: bottom - 120};
     if (wasFit && zoom) zoom = fitZoom();      // still all the way out
     eraNow = e;
+    eraCheck(e);
     settle(placed.filter(p => !p.b.prop));
     skySig = '';
     compose();
@@ -1270,7 +1275,7 @@ const relax = (() => {
   let eraNow = null;
   function eraLabel(g, e) {
     const next = ERAS[ERAS.indexOf(e) - 1];
-    const text = `${ICON[e[1]]} ${e[1]} · ${camp} messages` + (next ? ` · ${next[1]} at ${next[0]}` : '') + ` · ${WEATHER_ICON[weatherDrawn]} ${weatherDrawn}`;
+    const text = `${ICON[e[1]]} ${e[1]} · ${camp} messages` + (next ? ` · ${next[1]} at ${next[0]}` : '') + ` · ${SEASON_ICON[seasonNow()]} ${seasonNow()} · ${WEATHER_ICON[weatherDrawn]} ${weatherDrawn}`;
     g.font = "11px 'DejaVu Sans Mono', Consolas, monospace";
     g.textAlign = 'left';
     const tw = g.measureText(text).width;
@@ -1699,6 +1704,115 @@ const relax = (() => {
     }
     if (rain) g.stroke();
   }
+  // --- the season, from this computer's calendar: spring from March, summer from June,
+  // autumn from September, winter from December. The trees change with it: in autumn most
+  // turn orange, red or yellow (some pines stay green), in winter they carry snow and the
+  // round ones are bare, in spring some round ones blossom pink. Each tree keeps its colour
+  // (from where it stands).
+  const SEASON_ICON = {spring: '🌸', summer: '🌿', autumn: '🍂', winter: '⛄'};
+  let seasonForTest = null;
+  function seasonNow() {
+    if (seasonForTest) return seasonForTest;
+    const m = new Date().getMonth();
+    return m >= 2 && m <= 4 ? 'spring' : m >= 5 && m <= 7 ? 'summer' : m >= 8 && m <= 10 ? 'autumn' : 'winter';
+  }
+  const tints = new Map();
+  function tinted(pic, color, snow) {
+    const key = pic.src + color + snow;
+    if (tints.has(key)) return tints.get(key);
+    const c = document.createElement('canvas');
+    c.width = pic.naturalWidth || pic.width; c.height = pic.naturalHeight || pic.height;
+    const g = c.getContext('2d');
+    g.drawImage(pic, 0, 0);
+    let d;
+    try { d = g.getImageData(0, 0, c.width, c.height); } catch (x) { tints.set(key, pic); return pic; }   // a page from file:// may not read it
+    const px = d.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i], gr = px[i + 1], b = px[i + 2];
+      if (px[i + 3] < 20 || !(gr > r + 12 && gr >= b - 25)) continue;      // leaves only, not the trunk
+      const k = (r + gr + b) / 3 / 120;
+      let [nr, ng, nb] = color ? color.map(v => Math.min(255, v * k)) : [r, gr, b];
+      if (snow) { const w = Math.min(1, 0.35 + k * 0.45); nr += (245 - nr) * w; ng += (248 - ng) * w; nb += (252 - nb) * w; }
+      px[i] = nr; px[i + 1] = ng; px[i + 2] = nb;
+    }
+    g.putImageData(d, 0, 0);
+    c.src = key;
+    tints.set(key, c);
+    return c;
+  }
+  const AUTUMN = [[222, 120, 40], [196, 68, 42], [232, 186, 60], [210, 150, 50]];
+  function seasonal(pic, x, y) {
+    if (!pic || !pic.src) return pic;
+    const season = seasonNow(), pine = /\/tree\.png$/.test(pic.src), round = /\/tree-city\.png$/.test(pic.src);
+    if (!pine && !round) return pic;
+    const v = (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453 % 1 + 1) % 1;
+    if (season === 'autumn') return pine && v < 0.35 ? pic : tinted(pic, AUTUMN[Math.floor(v * 4) % 4], false);
+    if (season === 'winter') return tinted(pic, round ? [130, 112, 96] : null, true);
+    if (season === 'spring' && round && v < 0.45) return tinted(pic, [240, 168, 200], false);
+    return pic;
+  }
+
+  // --- fireworks when the camp reaches a new era: rockets from below bursting over it for
+  // about 10 seconds, and the news at the top. Once for each new era, kept per computer, so
+  // a restart does not set them off again; not the first time Relax mode is shown.
+  const ERA_KEY = 'amc-relax-era';
+  let fx = null, fxTimer = 0;
+  function eraCheck(e) {
+    if (!on || document.hidden) return;
+    const now = ERAS.length - 1 - ERAS.indexOf(e);
+    let was = null;
+    try { was = localStorage.getItem(ERA_KEY); } catch (x) {}
+    try { localStorage.setItem(ERA_KEY, String(now)); } catch (x) {}
+    if (was !== null && now > Number(was)) celebrate(ERAS[ERAS.length - 1 - Number(was)][1], e[1]);
+  }
+  function celebrate(from, to) {
+    let cv = $('relax-fx');
+    if (!cv) {
+      cv = document.createElement('canvas');
+      cv.id = 'relax-fx';
+      cv.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none';
+      $('relax-labels').after(cv);
+    }
+    cv.width = viewW; cv.height = viewH; cv.style.width = viewW + 'px'; cv.style.height = viewH + 'px'; cv.style.display = 'block';
+    fx = {t: 0, rockets: [], sparks: [], text: `🎆 ${from} → ${to} 🎆`, next: 0};
+    clearInterval(fxTimer);
+    fxTimer = setInterval(firework, 1000 / 30);
+  }
+  const SPARK = ['#ffd84a', '#ff6b5e', '#7ee0ff', '#b48cff', '#7dff9a', '#ffffff', '#ff9ff3'];
+  function firework() {
+    const cv = $('relax-fx'), g = cv.getContext('2d'), dt = 1 / 30, W = cv.width, H = cv.height;
+    fx.t += dt;
+    if (fx.t < 7.5 && fx.t >= fx.next) {         // a rocket, now and then two
+      fx.next = fx.t + 0.25 + Math.random() * 0.45;
+      for (let k = Math.random() < 0.3 ? 2 : 1; k > 0; k--)
+        fx.rockets.push({x: W * (0.12 + Math.random() * 0.76), y: H, top: H * (0.12 + Math.random() * 0.33), vx: (Math.random() - 0.5) * 40, color: SPARK[Math.floor(Math.random() * SPARK.length)]});
+    }
+    for (const r of fx.rockets) {
+      r.y -= H * 0.95 * dt; r.x += r.vx * dt;
+      if (r.y <= r.top) {
+        r.done = true;
+        const n = 46 + Math.floor(Math.random() * 30), sp = 90 + Math.random() * 90;
+        for (let i = 0; i < n; i++) {
+          const a = i / n * Math.PI * 2, v = sp * (0.6 + Math.random() * 0.4);
+          fx.sparks.push({x: r.x, y: r.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1.3 + Math.random() * 0.6, color: Math.random() < 0.8 ? r.color : '#ffffff'});
+        }
+      }
+    }
+    fx.rockets = fx.rockets.filter(r => !r.done);
+    for (const s of fx.sparks) { s.vy += 70 * dt; s.vx *= 0.985; s.vy *= 0.985; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; }
+    fx.sparks = fx.sparks.filter(s => s.life > 0);
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = '#ffe9a8';
+    for (const r of fx.rockets) { g.beginPath(); g.arc(r.x, r.y, 2, 0, Math.PI * 2); g.fill(); g.fillRect(r.x - 0.6, r.y, 1.2, 10); }
+    for (const s of fx.sparks) { g.globalAlpha = Math.min(1, s.life); g.fillStyle = s.color; g.beginPath(); g.arc(s.x, s.y, 2.1, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = Math.min(1, fx.t * 2, Math.max(0, 10 - fx.t));
+    g.font = "bold 20px 'DejaVu Sans Mono', Consolas, monospace"; g.textAlign = 'center';
+    const tw = g.measureText(fx.text).width;
+    g.fillStyle = 'rgba(0, 0, 0, 0.55)'; g.fillRect(W / 2 - tw / 2 - 16, 40, tw + 32, 36);
+    g.fillStyle = '#ffffff'; g.fillText(fx.text, W / 2, 65);
+    g.globalAlpha = 1;
+    if (fx.t > 10 && !fx.sparks.length) { clearInterval(fxTimer); fxTimer = 0; g.clearRect(0, 0, W, H); cv.style.display = 'none'; fx = null; }
+  }
   function clock() {
     const want = on && !document.hidden && (people.size > 0 || fires.length > 0);
     if (want && !timer) timer = setInterval(tick, TICK);
@@ -1878,6 +1992,8 @@ const relax = (() => {
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
           _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
           _hour: h => { hourForTest = h; skySig = ''; sky(); },
+          _season: k => { seasonForTest = k; update(true); },
+          _celebrate: (a, b) => celebrate(a, b),
           _weather: (kind, from = kind, t = 1) => { weatherForTest = {kind, from, t}; update(true); },
           _warp: warp, _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
 })();

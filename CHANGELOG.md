@@ -2,6 +2,28 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-07 – v4.3.0: Relax mode's seasons and fireworks
+
+### Added
+- Relax mode: seasons, by this computer's calendar (spring from March, summer from June,
+  autumn from September, winter from December). Spring: about half the round trees blossom
+  pink, twice the wild flowers, fresher grass. Autumn: most trees orange, red or yellow
+  (about a third of the pines stay green), golden grass, fewer flowers. Winter: snow on the
+  trees, the round ones bare, duller grass, no flowers. Each tree keeps its colour (from
+  where it stands); the recoloured pictures are made once and kept. The top left label shows
+  the season.
+- Relax mode: fireworks when the camp reaches a new era: rockets from below bursting over the
+  camp for about 10 seconds, at 30 frames a second on a canvas of their own, and "🎆 Town →
+  City 🎆" at the top. The era reached is kept per computer (`amc-relax-era`), so a restart
+  does not set them off again, and the first time Relax mode is shown only notes it.
+- README: Relax mode, seasons and fireworks (both languages).
+- Versions: `v4.3.0`.
+- Tagged `v4.3.0`.
+
+### Known
+- On a page opened from `file://` the trees keep their summer colours (the browser does not
+  let the page read the pictures); Agent Mission Control loads them from its own server.
+
 ## 2026-11-07 – v4.2.1: Relax mode: many sessions no longer overlap
 
 ### Fixed
