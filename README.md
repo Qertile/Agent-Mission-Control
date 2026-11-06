@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.1` (current) | `v4.0.2` plus a Relax mode camp seen in perspective: the far side narrower, haze with distance, shadows cast from each picture's outline, and the view framing the buildings; sessions' buildings as trades (smithy, church, tavern…) with a yard of smaller buildings; hills and woods beyond the map's sides. See `CHANGELOG.md`. |
+| `v4.1.1` (current) | `v4.1` plus animals in Relax mode: wild ones in a tribe, cows and horses in fenced paddocks from a village on (a city's outside its wall), dogs in a city and a metropolis; shadows for people and animals. See `CHANGELOG.md`. |
+| `v4.1` | `v4.0.2` plus a Relax mode camp seen in perspective: the far side narrower, haze with distance, shadows cast from each picture's outline, and the view framing the buildings; sessions' buildings as trades (smithy, church, tavern…) with a yard of smaller buildings; hills and woods beyond the map's sides. See `CHANGELOG.md`. |
 | `v4.0.2` | `v4.0.1` plus a new Relax mode landscape: two continuous mountain ranges with snow on the tops, a sky with clouds, wooded foothills, and ponds, woods and wild flowers on the grass. See `CHANGELOG.md`. |
 | `v4.0.1` | `v4.0` plus Relax mode fixes: buildings face the road beside them, street lights only from a city on (lanterns, then modern lamps in a metropolis), and the bar beside the camp resizes it again. See `CHANGELOG.md`. |
 | `v4.0` | `v3.5.18` plus a new Relax mode camp: terrain with a river and mountains, a fixed map with wheel zoom, six eras up to a megacity, buildings under construction while a session is busy, and a camp that shows after dark. See `CHANGELOG.md`. |
@@ -291,6 +292,11 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   to zoom in. Hills and woods lie beyond its sides.
 - **Its person**, near it: working while the session is busy, waving while it waits for
   you, sitting or strolling about while idle.
+- **Animals:** deer, stags, foxes and wolves in a tribe; from a village on, cows and horses
+  (with a donkey and an alpaca) in fenced paddocks, and some wild ones about; in a city its
+  horses' paddock lies outside the wall, with dogs in the streets; in a metropolis dogs, a
+  deer and a fox. They graze, wander and stand, and keep still at night (20:00 to 5:30).
+  People and animals cast shadows too.
 - **A Cross-check discussion** is a campfire with its models on the logs around it; the one
   answering stands, and the fire burns while a step runs.
 - **Mouse:** hovering shows the name, status and messages; double-click shows the tab
@@ -306,7 +312,7 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   at the biggest era, measured only on a test page without terminals, about 5%.
 - The pictures come from Kenney's *Survival Kit*, *Fantasy Town Kit*, *City Kit (Commercial)*
   and *Car Kit* (CC0, [kenney.nl](https://www.kenney.nl)) and Quaternius' *Medieval Village
-  MegaKit* (CC0, [quaternius.com](https://quaternius.com)), some of them recoloured or stretched; `Session HUD/tools/relax_art.py` makes them, once.
+  MegaKit* and *Ultimate Animated Animal Pack* (CC0, [quaternius.com](https://quaternius.com)), some of them recoloured or stretched; `Session HUD/tools/relax_art.py` makes them, once.
 
 ## Task list
 
@@ -525,7 +531,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.1`（目前） | `v4.0.2` 再加上：Relax mode 的營地改成透視，遠處變窄、越遠越朦朧、每樣東西照自己的輪廓投下影子，預設視角框住有建築的範圍；session 的建築改成各種行業（鐵匠鋪、教堂、酒館等），後面配小建築組成建築群；地圖兩側外面有丘陵和樹林。詳見 `CHANGELOG.md`。 |
+| `v4.1.1`（目前） | `v4.1` 再加上 Relax mode 的動物：部落有野生動物，從村莊起牛和馬養在有籬笆的牧場（城市的在城牆外），城市和大都會有狗；小人和動物也有影子。詳見 `CHANGELOG.md`。 |
+| `v4.1` | `v4.0.2` 再加上：Relax mode 的營地改成透視，遠處變窄、越遠越朦朧、每樣東西照自己的輪廓投下影子，預設視角框住有建築的範圍；session 的建築改成各種行業（鐵匠鋪、教堂、酒館等），後面配小建築組成建築群；地圖兩側外面有丘陵和樹林。詳見 `CHANGELOG.md`。 |
 | `v4.0.2` | `v4.0.1` 再加上 Relax mode 的新景色：兩排連綿的山脈且山頂有積雪、有雲的天空、長滿樹的丘陵，草地上還有池塘、樹林和野花。詳見 `CHANGELOG.md`。 |
 | `v4.0.1` | `v4.0` 再加上 Relax mode 的修正：建築的門朝向旁邊的路、路燈從城市才開始出現（提燈，到大都會換成現代路燈），營地旁的分隔條又能拖曳調整寬度。詳見 `CHANGELOG.md`。 |
 | `v4.0` | `v3.5.18` 再加上：全新的 Relax mode 營地，有河流和山的地形、可用滾輪縮放的固定地圖、六個時代直到超級都市、session 忙碌時建築顯示施工中，以及天黑後營地不再被蓋住。詳見 `CHANGELOG.md`。 |
@@ -737,6 +744,9 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，會重疊的要放大才顯示。地圖兩側
   外面是丘陵和樹林。
 - **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒著時坐著或四處走走。
+- **動物**：部落裡有鹿、公鹿、狐狸和狼；從村莊起，牛和馬（還有驢和羊駝）養在有籬笆的牧場裡，
+  外面也有一些野生動物；城市的馬場在城牆外，街上有狗；大都會裡有狗、一隻鹿和一隻狐狸。牠們會
+  吃草、走動、站著，晚上（20:00 到 5:30）不動。小人和動物也有影子。
 - **Cross-check 討論**是一堆營火，參與的模型坐在周圍的木頭上；正在回答的站著，步驟進行
   中時有火焰。
 - **滑鼠**：移到上面顯示名稱、狀態和訊息數；雙擊切到它的分頁（結束的會重新啟動，討論會
@@ -748,7 +758,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - 只重畫有變的部分，視窗隱藏或在 Office 模式時完全不跑。完整視窗在小鎮階段（`v4.0.1` 時量的）約占一個 CPU 核心的 9%，
   和當時的 Office 模式一樣；最大時代只在沒有終端機的測試頁量過，約 5%。
 - 圖片來自 Kenney 的 *Survival Kit*、*Fantasy Town Kit*、*City Kit (Commercial)*、*Car Kit*
-  （CC0，[kenney.nl](https://www.kenney.nl)）和 Quaternius 的 *Medieval Village MegaKit*
+  （CC0，[kenney.nl](https://www.kenney.nl)）和 Quaternius 的 *Medieval Village MegaKit*、*Ultimate Animated Animal Pack*
   （CC0，[quaternius.com](https://quaternius.com)），部分重新上色或拉長，由
   `Session HUD/tools/relax_art.py` 產生一次。
 

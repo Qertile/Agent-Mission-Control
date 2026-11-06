@@ -2,6 +2,35 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-07 – v4.1.1: Relax mode's animals and paddocks
+
+### Added
+- Relax mode: animals, from `animals.png` (Quaternius' *Ultimate Animated Animal Pack*,
+  rendered by `relax_art.py`), with the people's 5 Hz step and redraw. A tribe has deer,
+  stags, foxes and a wolf; a village and a town two cows and a bull in one paddock, two
+  horses, a donkey and an alpaca in another, and deer, a stag, a fox and a wolf loose; a city
+  three horses and a donkey in a paddock outside its wall, dogs, a deer, a stag and a fox; a
+  metropolis and a megacity dogs, a deer and a fox. Tame ones loose live near the buildings,
+  wild ones anywhere on the grass. They graze, wander round their home (dogs, foxes and
+  wolves faster and further) and stand; at night (20:00 to 5:30) they keep still.
+- Relax mode: paddocks, a rectangle of fence square to the map (360 by 168, a city's 270 by
+  126), drawn as posts and rails after the perspective warp so they narrow away from the
+  camera; never on a road, the river, a building or another paddock, and nothing grows in
+  them. The view, zoomed all the way out, takes them in too.
+- Relax mode: the people and the animals cast the shadow of their own outline, as the
+  buildings do.
+
+### Changed
+- Relax mode: a village's and a town's loose fences are gone; fences are only round paddocks.
+- README: Relax mode, animals (both languages).
+- Versions: `v4.1.1`.
+- Tagged `v4.1.1`.
+
+### Known
+- An animal is drawn over the front fence of its paddock, as the people are over buildings.
+- CPU on the WebKit test pages, with the animals: a town about 5.7% of one core (as before),
+  a megacity about 5.9%; WebKit memory about 16 MB more (the animals' shadow outline).
+
 ## 2026-11-06 – v4.1: Relax mode in perspective, sessions as trades with yards
 
 ### Changed

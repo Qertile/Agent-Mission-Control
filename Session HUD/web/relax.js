@@ -12,7 +12,7 @@
 const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
   const PICS_METRO = ['metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
-  const PICS_BASE = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people',
+  const PICS_BASE = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people', 'animals',
                 'fence', 'signpost', 'lantern', 'lamp', 'lamp-double', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
                 'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
@@ -51,8 +51,8 @@ const relax = (() => {
     [10000, 'Megacity', '#587a50', '#54575c', 0.17, '#a3a29a', 0.2, ['fountain'], 0.1],
     [5000, 'Metropolis', '#587a50', '#54575c', 0.17, '#a3a29a', 0.2, ['fountain'], 0.1],
     [1000, 'City', '#4f7d44', '#8f8b80', 0.17, '#5f5c57', 0.1, ['fountain', 'stall', 'stall-green', 'stall'], 0.1],
-    [500, 'Town', '#4f7d44', '#a8a497', 0.13, '#7d796e', 0.5, ['fountain', 'stall', 'stall-green', 'fence'], 0.16],
-    [100, 'Village', '#4b7a46', '#8a6d45', 0.1, null, 0.8, ['signpost', 'fence', 'fence'], 0.24],
+    [500, 'Town', '#4f7d44', '#a8a497', 0.13, '#7d796e', 0.5, ['fountain', 'stall', 'stall-green'], 0.16],
+    [100, 'Village', '#4b7a46', '#8a6d45', 0.1, null, 0.8, ['signpost'], 0.24],
     [0, 'Tribe', '#4b7a46', null, 0, null, 1, [], 0]];
   const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏯', Metropolis: '🏙', Megacity: '🌃'};
   const metro = e => e[1] === 'Metropolis' || e[1] === 'Megacity';
@@ -729,10 +729,48 @@ const relax = (() => {
         if (pic) woods.push([pic, x, y, kind === 'rock' ? 40 + rnd() * 25 : 60 + rnd() * 40]);
       }
     }
+    // Where the animals live: tame ones near the buildings, wild ones anywhere on the grass.
+    herd = [];
+    const {pens = [], loose: wild = []} = HERDS[e[1]] || {}, loose = [...wild], pensMade = [];
+    rails = [];
+    for (const group of pens) {
+      let pen = null;
+      // Near a building if there is room, else anywhere on the grass (outside a city's wall too).
+      const probe = [];
+      for (let a = 0; a <= 1; a += 0.25) for (let b = 0; b <= 1; b += 0.25) probe.push([a, b]);
+      const n = urban(e) ? 3 : 4, taken = (q) => pensMade.some(o => penHas(o, q.x, q.y, plot * 0.4));
+      for (let t = 0; t < 400 && !pen && placed.length; t++) {
+        const near = placed[Math.floor(rnd() * placed.length)];
+        // Then out on the land beyond the sides, high enough on the map to be in view there.
+        const fy = plot * 1.6 + rnd() * plot * 3.5, out = beyond(fy) * 0.7 - PEN_W * n / 2;
+        const c = t < 200 ? {x: near.x + (rnd() - 0.5) * plot * 4, y: near.y + (rnd() - 0.3) * plot * 2, n}
+          : {x: rnd() < 0.5 ? -rnd() * Math.max(0, out) : w + rnd() * Math.max(0, out), y: fy, n};
+        if (probe.every(([a, b]) => { const q = inPen(c, a, b); const edge = t < 200 ? -plot * 0.4 : beyond(q.y) * 0.7;   // in view
+          return q.x > -edge && q.x < w + edge && free(q.x, q.y, 30) && !taken(q); })) pen = c;
+      }
+      if (!pen) { loose.push(...group); continue; }      // no room: they roam instead
+      pensMade.push(pen);
+      // Its four sides, as lines of posts on the ground (drawn after the warp, so they follow it).
+      const line = (k, f) => Array.from({length: k + 1}, (_, i) => inPen(pen, ...f(i / k))), across = pen.n * 2, deep = pen.n;
+      rails.push(line(across, t => [t, 0]), line(deep, t => [0, t]), line(deep, t => [1, t]), line(across, t => [t, 1]));
+      group.forEach((kind, i) => { const q = inPen(pen, 0.25 + rnd() * 0.5, 0.25 + rnd() * 0.5); herd.push({kind, x: q.x, y: q.y, pen}); });
+    }
+    // Nothing grows in a paddock: the woods placed before it are cleared out of it.
+    const inside = (x, y) => pensMade.some(o => penHas(o, x, y, 8));
+    for (let i = woods.length - 1; i >= 0; i--) if (inside(woods[i][1], woods[i][2])) woods.splice(i, 1);
+    for (const kind of loose) {
+      for (let t = 0; t < 40; t++) {
+        const near = !WILD.has(kind) && placed.length ? placed[Math.floor(rnd() * placed.length)] : null;
+        const x = near ? near.x + (rnd() - 0.5) * plot * 2.4 : plot * 0.6 + rnd() * (w - plot * 1.2);
+        const y = near ? near.y + (rnd() - 0.2) * plot * 0.9 : plot * 1.3 + rnd() * (h - plot * 1.6);
+        if (free(x, y, 50)) { herd.push({kind, x, y}); break; }
+      }
+    }
     // And inside the map, a fringe of trees along both sides wherever there is room.
     for (let i = 0, n = Math.round(h / 40); i < n; i++) {
       const y = plot * 1.0 + rnd() * (h - plot * 1.0), d = rnd() * plot * 0.7, x = rnd() < 0.5 ? d : w - d;
-      tree(rnd() < 0.15 ? 'rock' : rnd() < 0.7 ? 'tree' : 'tree-autumn', x, y, 58 + rnd() * 34);
+      const kind = rnd() < 0.15 ? 'rock' : rnd() < 0.7 ? 'tree' : 'tree-autumn', sz = 58 + rnd() * 34;
+      if (!inside(x, y)) tree(kind, x, y, sz);
     }
   }
 
@@ -815,8 +853,9 @@ const relax = (() => {
     air.addColorStop(1, 'rgba(0, 20, 0, 0.16)');
     g.fillStyle = air;
     g.fillRect(0, top, MAP_W, MAP_H - top);
-    for (const [pic, x, y, sz] of woods) onGround(g, x, y, () => castShadow(g, pic, x, y, sz, false));
-    for (const [pic, x, y, sz] of woods.sort((a, c) => a[2] - c[2])) onGround(g, x, y, () => g.drawImage(pic, x - sz / 2, y - sz * ANCHOR, sz, sz));
+    fences(g);
+    for (const [pic, x, y, sz, flip] of woods) onGround(g, x, y, () => castShadow(g, pic, x, y, sz, flip));
+    for (const [pic, x, y, sz, flip] of woods.sort((a, c) => a[2] - c[2])) onGround(g, x, y, () => put(g, pic, x, y, sz, flip));
     spots = [];
     tags = [];
     litList = [];
@@ -863,7 +902,9 @@ const relax = (() => {
     // What is lit at night: each building with someone in it, the fires, the lanterns.
     lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
               ...lamps.filter(l => /^(lantern|lamp)/.test(l.b.kind)).map(l => ({x: l.x, y: l.y - plot * 0.25, r: plot * 0.5}))];
-    const xs = placed.map(p => warp(p.x, p.y)[0]);
+    // What the view must hold: the buildings, and every paddock's four corners.
+    const pens = [...new Set(herd.filter(a => a.pen).map(a => a.pen))];
+    const xs = [...placed.map(p => warp(p.x, p.y)[0]), ...pens.flatMap(pen => [[0, 0], [1, 0], [0, 1], [1, 1]].map(([a, b]) => { const q = inPen(pen, a, b); return warp(q.x, q.y)[0]; }))];
     const left = Math.max(0, Math.min(...xs, MAP_W * 0.3) - plot * 0.9), right = Math.min(MAP_W, Math.max(...xs, MAP_W * 0.7) + plot * 0.9);
     const wasFit = !zoom || zoom - fitZoom() < 0.001;
     const bottom = Math.min(MAP_H, Math.max(...placed.map(p => warp(p.x, p.y)[1])) + plot * 0.55);
@@ -1175,6 +1216,51 @@ const relax = (() => {
 
   // Each spot: [dx, dy] in building widths from the ground point, and the way it faces.
   const SPOTS = {work: [0.34, 0.02, 1], wave: [0.05, 0.16, 0], seat: [-0.3, 0.12, 0]};
+  // The animals (animals.png, a row each; 9 frames facing lower right, then 9 lower left: 0
+  // standing, 1-4 walking, 5-8 eating), by era: wild ones in a tribe, then farm animals, then
+  // horses and dogs in a city, dogs and a deer or two in a metropolis. Each keeps to a patch
+  // round its home, grazing, wandering and standing; at night they stand still.
+  const BEAST = {deer: 0, stag: 1, fox: 2, wolf: 3, cow: 4, bull: 5, horse: 6, white: 7, donkey: 8, alpaca: 9, husky: 10, shiba: 11};
+  const WILD = new Set([BEAST.deer, BEAST.stag, BEAST.fox, BEAST.wolf]);
+  // pens: the animals kept together in a fenced paddock; loose: the rest.
+  const HERDS = (b => ({
+    Tribe: {pens: [], loose: [b.deer, b.deer, b.stag, b.fox, b.wolf, b.deer, b.stag, b.fox]},
+    Village: {pens: [[b.cow, b.cow, b.bull], [b.horse, b.white, b.donkey, b.alpaca]], loose: [b.deer, b.deer, b.stag, b.fox, b.wolf]},
+    Town: {pens: [[b.cow, b.cow, b.bull], [b.horse, b.white, b.donkey, b.alpaca]], loose: [b.deer, b.deer, b.stag, b.fox, b.wolf]},
+    City: {pens: [[b.horse, b.white, b.donkey]], loose: [b.husky, b.shiba, b.deer, b.stag, b.fox]},
+    Metropolis: {pens: [], loose: [b.husky, b.shiba, b.husky, b.deer, b.fox]},
+    Megacity: {pens: [], loose: [b.husky, b.shiba, b.husky, b.deer, b.fox]}}))(BEAST);
+  // A paddock: a rectangle of fence square to the map, as the city wall is, so the warp makes
+  // it narrow away from the camera like everything else on the ground. pen.n sets its size:
+  // PEN_W wide and PEN_D deep per n, with posts PEN_W / 2 apart along it.
+  const PEN_W = 90, PEN_D = 42;
+  // A point in a paddock centred on (pen.x, pen.y): a across it (left to right), b into it (back to front), 0 to 1.
+  const inPen = (pen, a, b) => ({x: pen.x + (a - 0.5) * PEN_W * pen.n, y: pen.y + (b - 0.5) * PEN_D * pen.n});
+  const penHas = (o, x, y, more = 0) => Math.abs(x - o.x) < PEN_W * o.n / 2 + more && Math.abs(y - o.y) < PEN_D * o.n / 2 + more;
+  const FAST = new Set([BEAST.fox, BEAST.wolf, BEAST.husky, BEAST.shiba]);
+  let herd = [];                            // this draw's animals: {kind, x, y}, x and y their home
+  let rails = [];                           // this draw's paddock fences: lines of post points
+  // A paddock's fence, after the warp: a post at each point, two rails between them, and their
+  // shadow on the ground, all sized for how far away they stand. Back sides first.
+  function fences(g) {
+    const H = 22, W = p => warp(p.x, p.y), sorted = [...rails].sort((a, c) => (a[0].y + a[a.length - 1].y) - (c[0].y + c[c.length - 1].y));
+    g.lineCap = 'round';
+    for (const line of sorted) {
+      const pts = line.map(p => { const [X, Y] = W(p), m = depth(p.y); return {X, Y, h: H * m, m}; });
+      g.strokeStyle = 'rgba(12, 28, 12, 0.25)';
+      g.beginPath();
+      pts.forEach((q, i) => { const x = q.X + q.h * 0.35, y = q.Y - q.h * 0.15; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+      g.lineWidth = 3 * pts[0].m; g.stroke();
+      for (const [lift, color, wide] of [[0.45, '#a8673f', 2.4], [0.85, '#c98a5e', 2.6]]) {
+        g.strokeStyle = color;
+        g.beginPath();
+        pts.forEach((q, i) => (i ? g.lineTo(q.X, q.Y - q.h * lift) : g.moveTo(q.X, q.Y - q.h * lift)));
+        g.lineWidth = wide * pts[0].m; g.stroke();
+      }
+      g.strokeStyle = '#8f5534';
+      for (const q of pts) { g.lineWidth = 3.4 * q.m; g.beginPath(); g.moveTo(q.X, q.Y); g.lineTo(q.X, q.Y - q.h); g.stroke(); }
+    }
+  }
   function want(status) { return status === 'busy' || status === 'running' ? 'work' : status === 'waiting' ? 'wave' : 'rest'; }
   function spot(name, flip) { const [dx, dy, dir] = SPOTS[name], k = plot * SESSION_SIZE; return {dx: dx * k * (flip ? -1 : 1), dy: dy * k, dir: flip ? 1 - dir : dir}; }   // mirrored with its building
   function stroll() { const t = target({x: 0, y: 0}); return {dx: t.x, dy: t.y, dir: null}; }
@@ -1214,6 +1300,12 @@ const relax = (() => {
                           want: w, mode: 'at', goal: g, flip: !!flip, wait: 5 + Math.random() * 30, laps: 0, pause: 0});
       }
     }
+    herd.forEach(({kind, x, y, pen}, i) => {
+      const id = 'animal#' + i, p = people.get(id);
+      keep.add(id);
+      if (p && p.kind === kind && p.home.x === x && p.home.y === y) return;
+      people.set(id, {animal: true, kind, pen, home: {x, y}, x, y, dir: Math.random() < 0.5 ? 0 : 1, frame: 0, tick: 0, mode: 'graze', wait: 3 + Math.random() * 10});
+    });
     for (const id of [...people.keys()]) if (!keep.has(id)) people.delete(id);
     clock();
   }
@@ -1222,19 +1314,46 @@ const relax = (() => {
     return {x: home.x + (Math.random() - 0.5) * plot * 0.9 * SESSION_SIZE, y: home.y + (Math.random() * 0.2 - 0.04) * plot * SESSION_SIZE};
   }
   function size() { return plot * 0.75; }
-  function box(p) {
+  function box(p) {                         // the shadow reaches out to the right
     const s = size();
-    return [Math.floor(p.x - s / 2) - 1, Math.floor(p.y - s * ANCHOR) - 1, Math.ceil(s) + 2, Math.ceil(s) + 2];
+    return [Math.floor(p.x - s / 2) - 1, Math.floor(p.y - s * ANCHOR) - 1, Math.ceil(s * 1.35) + 2, Math.ceil(s) + 2];
   }
   function person(g, p) {
-    const pic = img.people, s = size();
+    const pic = p.animal ? img.animals : img.people, s = size();
     if (!pic || p.frame < 0) return;
-    const row = PEOPLE_ROW[p.tool] ?? 0, col = p.dir * PER_DIR + p.frame;
+    const row = p.animal ? p.kind : PEOPLE_ROW[p.tool] ?? 0, col = p.dir * (p.animal ? 9 : PER_DIR) + p.frame;
+    // Its shadow, from its own outline, as the buildings'.
+    g.save();
+    g.globalAlpha = 0.28;
+    g.translate(p.x, p.y); g.transform(1, 0, -0.6, 0.25, 0, 0);
+    g.drawImage(outline(pic), col * CELL, row * CELL, CELL, CELL, -s / 2, -s * ANCHOR, s, s);
+    g.restore();
     g.drawImage(pic, col * CELL, row * CELL, CELL, CELL, p.x - s / 2, p.y - s * ANCHOR, s, s);
+  }
+  // One step of an animal. Returns whether it looks different now.
+  function animalStep(p, dt) {
+    const before = [p.x, p.y, p.dir, p.frame].join(), h = hourNow();
+    if (h >= 20 || h < 5.5) { p.frame = 0; return before !== [p.x, p.y, p.dir, p.frame].join(); }   // asleep on its feet
+    p.tick++;
+    if (p.mode === 'walk') {
+      const speed = plot * (FAST.has(p.kind) ? 0.22 : 0.1) * dt, dx = p.goal.x - p.x, dy = p.goal.y - p.y, d = Math.hypot(dx, dy);
+      if (d <= speed) { p.x = p.goal.x; p.y = p.goal.y; p.mode = Math.random() < 0.6 ? 'graze' : 'stand'; p.wait = 4 + Math.random() * 14; p.frame = 0; }
+      else { p.x += dx / d * speed; p.y += dy / d * speed; p.dir = dx >= 0 ? 0 : 1; p.frame = 1 + p.tick % 4; }
+    } else {
+      p.frame = p.mode === 'graze' ? 5 + (p.tick >> 1) % 4 : 0;     // eating at half speed
+      p.wait -= dt;
+      if (p.wait <= 0) {
+        const roam = plot * (FAST.has(p.kind) ? 0.9 : 0.55), a = Math.random() * Math.PI * 2, r = roam * Math.sqrt(Math.random());
+        p.mode = 'walk';
+        p.goal = p.pen ? inPen(p.pen, 0.15 + Math.random() * 0.7, 0.15 + Math.random() * 0.7) : {x: p.home.x + Math.cos(a) * r, y: p.home.y + Math.sin(a) * r * KY};
+      }
+    }
+    return [p.x, p.y, p.dir, p.frame].join() !== before;
   }
 
   // One step of a session's person. Returns whether it looks different now.
   function step(p, dt) {
+    if (p.animal) return animalStep(p, dt);
     const before = [p.x, p.y, p.dir, p.frame].join();
     const w = want(p.status);
     if (w !== p.want) {                    // the status changed: off to that spot
