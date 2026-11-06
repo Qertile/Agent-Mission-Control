@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.0` (current) | `v3.5.18` plus a new Relax mode camp: terrain with a river and mountains, a fixed map with wheel zoom, six eras up to a megacity, buildings under construction while a session is busy, and a camp that shows after dark. See `CHANGELOG.md`. |
+| `v4.0.1` (current) | `v4.0` plus Relax mode fixes: buildings face the road beside them, street lights only from a city on (lanterns, then modern lamps in a metropolis), and the bar beside the camp resizes it again. See `CHANGELOG.md`. |
+| `v4.0` | `v3.5.18` plus a new Relax mode camp: terrain with a river and mountains, a fixed map with wheel zoom, six eras up to a megacity, buildings under construction while a session is busy, and a camp that shows after dark. See `CHANGELOG.md`. |
 | `v3.5.18` | `v3.5.17` plus a popup once after *Update*'s restart, listing what the update brought. See `CHANGELOG.md`. |
 | `v3.5.17` | `v3.5.16` plus the Relax mode camp growing from a tribe to a city, due dates and history on its board, day and night; Cross-check follow-ups showing what was asked; paths and web links in terminals opening on a click; and *Update* going only to tagged versions. See `CHANGELOG.md`. |
 | `v3.5.16` | `v3.5.15` plus getting files back (a full path in a phone *Chat* message or a remote desktop terminal is a download link, and *⬇* on the phone), and *📎* on the remote desktop. See `CHANGELOG.md`. |
@@ -289,11 +290,11 @@ The Tasks and Sessions columns can be a camp seen from above instead: ⚙ → *L
   Tasks column; *History* shows the finished and discarded ones, and a click on a status
   there restores it), *⚡ Stamina*, each tool's limits left, and the box to Task Reminder.
 - **Day and night**, by this computer's clock: daylight from 8:00 to 16:30, then dusk, night
-  from 19:30 to 5:00 with the sessions' buildings and the lanterns lit, then dawn. Names
+  from 19:30 to 5:00 with the sessions' buildings and, from a city on, the street lights lit, then dawn. Names
   and status badges stay as bright as by day.
-- It draws only what changes, and nothing while the window is hidden or in Office mode. At
-  the biggest era it took about 5% of one CPU core on a test page without terminals; the full
-  window is not measured yet.
+- It draws only what changes, and nothing while the window is hidden or in Office mode. In
+  the full window at a town it took about 9% of one CPU core, as much as Office mode did then;
+  at the biggest era, measured only on a test page without terminals, about 5%.
 - The pictures come from Kenney's *Survival Kit*, *Fantasy Town Kit*, *City Kit (Commercial)*
   and *Car Kit* (CC0, [kenney.nl](https://www.kenney.nl)) and Quaternius' *Medieval Village
   MegaKit* (CC0, [quaternius.com](https://quaternius.com)), some of them recoloured or stretched; `Session HUD/tools/relax_art.py` makes them, once.
@@ -515,7 +516,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.0`（目前） | `v3.5.18` 再加上：全新的 Relax mode 營地，有河流和山的地形、可用滾輪縮放的固定地圖、六個時代直到超級都市、session 忙碌時建築顯示施工中，以及天黑後營地不再被蓋住。詳見 `CHANGELOG.md`。 |
+| `v4.0.1`（目前） | `v4.0` 再加上 Relax mode 的修正：建築的門朝向旁邊的路、路燈從城市才開始出現（提燈，到大都會換成現代路燈），營地旁的分隔條又能拖曳調整寬度。詳見 `CHANGELOG.md`。 |
+| `v4.0` | `v3.5.18` 再加上：全新的 Relax mode 營地，有河流和山的地形、可用滾輪縮放的固定地圖、六個時代直到超級都市、session 忙碌時建築顯示施工中，以及天黑後營地不再被蓋住。詳見 `CHANGELOG.md`。 |
 | `v3.5.18` | `v3.5.17` 再加上：*Update* 重開後跳出一次視窗，列出這次更新的內容。詳見 `CHANGELOG.md`。 |
 | `v3.5.17` | `v3.5.16` 再加上：Relax mode 的營地從部落長成城市、看板上的到期日和歷史紀錄、日夜變化；Cross-check 的追問會顯示問了什麼；終端機裡的路徑和網址點一下就能開；*Update* 只更新到有 tag 的版本。詳見 `CHANGELOG.md`。 |
 | `v3.5.16` | `v3.5.15` 再加上：取回檔案（手機 *Chat* 訊息和遠端桌面終端機裡的完整路徑可以點擊下載，手機另有 *⬇*），以及遠端桌面的 *📎* 上傳按鈕。詳見 `CHANGELOG.md`。 |
@@ -726,9 +728,9 @@ Tasks 和 Sessions 兩欄可以換成一個從上方看的營地：⚙ → *Layo
 - **上方**：公告板列出未完成的任務（點日期或狀態可以改，和 Tasks 欄一樣；*History* 列出已完成
   和已捨棄的任務，點狀態可以還原），*⚡ Stamina* 顯示各工具剩下的用量，下面是給 Task Reminder 的輸入框。
 - **日夜**：依這台電腦的時鐘，8:00 到 16:30 是白天，接著是黃昏，19:30 到 5:00 是夜晚，有人的建築和
-  路燈會亮，再來是清晨。名字和狀態標記維持白天的亮度。
-- 只重畫有變的部分；最大時代在沒有終端機的測試頁上約占一個 CPU 核心的 5%，完整視窗還沒量過。視窗隱藏或在 Office 模式時
-  完全不跑。
+  路燈（城市以後才有）會亮，再來是清晨。名字和狀態標記維持白天的亮度。
+- 只重畫有變的部分，視窗隱藏或在 Office 模式時完全不跑。完整視窗在小鎮階段約占一個 CPU 核心的 9%，
+  和當時的 Office 模式一樣；最大時代只在沒有終端機的測試頁量過，約 5%。
 - 圖片來自 Kenney 的 *Survival Kit*、*Fantasy Town Kit*、*City Kit (Commercial)*、*Car Kit*
   （CC0，[kenney.nl](https://www.kenney.nl)）和 Quaternius 的 *Medieval Village MegaKit*
   （CC0，[quaternius.com](https://quaternius.com)），部分重新上色或拉長，由

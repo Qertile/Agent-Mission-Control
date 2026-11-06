@@ -1831,8 +1831,10 @@ try {
 } catch (e) {}
 document.querySelectorAll('.split').forEach(bar => bar.addEventListener('mousedown', e => {
   e.preventDefault();
-  const cols = document.querySelectorAll('.col');
-  const start = e.clientX, w1 = cols[0].offsetWidth, w2 = cols[1].offsetWidth;
+  // The grid's own column widths: in Relax mode the two columns are hidden (no width of
+  // their own) and the camp spans them, so their bar sets how wide the camp is.
+  const [w1, , w2] = getComputedStyle(document.body).gridTemplateColumns.split(' ').map(parseFloat);
+  const start = e.clientX;
   document.body.classList.add('dragging');
   let widths = [w1, w2];
   const move = ev => {

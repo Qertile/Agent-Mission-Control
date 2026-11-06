@@ -2,6 +2,27 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-06 – v4.0.1: Relax mode's buildings face the road, street lights by era
+
+### Fixed
+- Relax mode: the bar beside the camp did not resize it. Relax mode hides the two columns the
+  bar measured, so the camp shrank to its least width at the first drag and stayed there.
+- Relax mode: every building faced the same way. Each now has its door towards the road
+  beside it, drawn mirrored where the road is on its right; a session's person and a
+  village's or town's road to the door follow it. A mirrored picture is lit from the right.
+- Relax mode: street lights start in a city. A tribe, a village and a town have none, so a
+  town is darker at night than before. A city has its lanterns, a metropolis and a megacity
+  modern lamps (`lamp.png`, `lamp-double.png`, made by `relax_art.py`) with their arms over
+  the road, two arms on an avenue.
+- README: Relax mode, CPU in the full window (both languages).
+- Versions: `v4.0.1`.
+- Tagged `v4.0.1`.
+
+### Known
+- CPU in the full window, measured at a town (547 messages, dusk, 2026-11-05): Relax mode
+  about 9.1% of one core, Office mode 9.05%. The biggest era is still measured only on a test
+  page.
+
 ## 2026-11-05 – v4.0: Relax mode's new camp, from a tribe to a megacity
 
 ### Changed

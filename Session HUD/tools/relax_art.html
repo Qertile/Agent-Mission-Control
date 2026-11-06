@@ -85,6 +85,11 @@ function city(w, d, storeys, tile, extra = [], shape = 'gable', dx = 0) {
   else { o.push([tiles, 0, top, 0, 0, tile]); const g = w === 3 ? 'Roof_Front_Brick6' : 'Roof_Front_Brick4'; o.push([g, 0, top, d, 0], [g, 0, top, -d, 180]); }
   return [['box', '#2b2119', dx, top / 2 * MS, 0, 0, [w * 2 * MS * 0.96, top * MS, d * 2 * MS * 0.96]], ...at(med([...o, ...extra]), dx, 0)];
 }
+// A modern street lamp: a pole, an arm (two on an avenue) and its light, out towards +x.
+const LAMP_LIGHT = '#fff2c2', POLE = '#5d636e';
+const lampArm = side => [['solid', POLE, 0.22 * side, 1.62, 0, 0, [0.46, 0.035, 0.035]], ['solid', POLE, 0.42 * side, 1.6, 0, 0, [0.2, 0.05, 0.11]],
+                         ['solid', LAMP_LIGHT, 0.42 * side, 1.57, 0, 0, [0.16, 0.02, 0.08]]];
+const lampPole = [['cyl', POLE, 0, 0.05, 0, 0, [0.07, 0.1]], ['cyl', POLE, 0, 0.83, 0, 0, [0.038, 1.6]]];
 const PICTURES = {
   'level0': [['sk', 'campfire-pit', 0, 0, 0, 0, SK], ['sk', 'resource-wood', 0.45, 0, -0.25, 40, SK]],
   'level1': [['sk', 'tent', 0, 0, -0.15, 0, SK], ['sk', 'tent-canvas', 0, 0, -0.15, 0, SK], ['sk', 'campfire-pit', 0.55, 0, 0.6, 0, SK]],
@@ -114,6 +119,8 @@ const PICTURES = {
   'stall-green': [['ftk', 'stall-green', 0, 0, 0, 0], ['ftk', 'cart', 0.9, 0, -0.5, 60]],
   'fountain': [['ftk', 'fountain-round-detail', 0, 0, 0, 0, 0.9]],
   'tree-city': [['ftk', 'tree-high-round', 0, 0, 0, 0]],
+  'lamp': [...lampPole, ...lampArm(1)],
+  'lamp-double': [...lampPole, ...lampArm(1), ...lampArm(-1)],
   // A city's houses, nobody's: none has the sessions' teal or red roofs, so those stand out.
   // Some in colours of our own (paint, below), some in the kit's own second colour map.
   'house-a': paint(SHAPE.cottage, THATCH, PLASTER),
@@ -327,6 +334,15 @@ async function picture(name, parts) {
   sun.position.set(4, 8, 3);
   scene.add(sun);
   for (const [kit, m, x, y, z, turn, scale = 1, tiltX = 0, tiltZ = 0, color = null] of parts) {
+    if (kit === 'solid' || kit === 'cyl') {      // a lit shape of one colour: a modern street lamp's parts
+      const geo = kit === 'solid' ? new THREE.BoxGeometry(...scale) : new THREE.CylinderGeometry(scale[0], scale[0], scale[1], 12);
+      const b = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: m, roughness: 0.6, metalness: 0.2,
+        emissive: m === LAMP_LIGHT ? m : 0x000000, emissiveIntensity: m === LAMP_LIGHT ? 0.9 : 0}));
+      b.position.set(x, y, z);
+      b.rotation.y = turn * Math.PI / 180;
+      scene.add(b);
+      continue;
+    }
     if (kit === 'box') {          // a dark room behind a building's windows
       const b = new THREE.Mesh(new THREE.BoxGeometry(...scale), new THREE.MeshBasicMaterial({color: m}));
       b.position.set(x, y, z);

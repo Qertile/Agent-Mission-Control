@@ -13,7 +13,7 @@ const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
   const PICS_METRO = ['metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
   const PICS_BASE = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people',
-                'fence', 'signpost', 'lantern', 'stall', 'stall-green', 'fountain', 'tree-city',
+                'fence', 'signpost', 'lantern', 'lamp', 'lamp-double', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
                 'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
                 'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall'];
@@ -224,6 +224,10 @@ const relax = (() => {
     }
     return {all, pts};
   }
+  // Which way a building on a spot faces. The pictures have their door on the lower left; one
+  // drawn mirrored has it on the lower right. A building faces the road it stands by: nx is the
+  // way from the road to the spot along x. Square to the road, or with none, either way.
+  const facing = (nx, x, y) => (nx < -0.2 ? true : nx > 0.2 ? false : hash(`${Math.round(x)},${Math.round(y)}`) % 2 === 1);
   // Where a building can stand: along both sides of every road. The lots nearest the plaza
   // are taken first and packed closest, so the middle is the densest. No tower may hide a bridge.
   function streetLots({all, pts}) {
@@ -233,7 +237,7 @@ const relax = (() => {
     // Round the plaza first.
     for (let a = 0; a < 32; a++) {
       const x = PLAZA.x + Math.cos(a / 32 * Math.PI * 2) * 188, y = PLAZA.y + Math.sin(a / 32 * Math.PI * 2) * 112;
-      if (clear(x, y)) free.push({x, y, far: 0});
+      if (clear(x, y)) free.push({x, y, far: 0, flip: PLAZA.x > x});
     }
     for (const r of all) for (const side of [-1, 1]) for (let i = 2; i < r.line.length - 2; i++) {
       const a = r.line[i - 1], c = r.line[i + 1], d = Math.hypot(c.x - a.x, c.y - a.y) || 1;
@@ -243,7 +247,7 @@ const relax = (() => {
       if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || !clear(x, y)) continue;
       if (Math.hypot((x - PLAZA.x) / 170, (y - PLAZA.y) / 100) < 1) continue;
       if (bridge.some(p => Math.abs(p.x - x) < plot * 0.5 && p.y > y - plot * 1.3 && p.y < y)) continue;
-      free.push({x, y, far: groundGap({x, y}, PLAZA) / 1100});
+      free.push({x, y, far: groundGap({x, y}, PLAZA) / 1100, flip: facing(nx, x, y)});
     }
     free.sort((a, c) => a.far - c.far);
     for (const l of free) {
@@ -306,7 +310,7 @@ const relax = (() => {
       if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || wet(x, y)) continue;
       if (Math.hypot((x - PLAZA.x) / 190, (y - PLAZA.y) / 115) < 1) continue;
       if (pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1)) continue;
-      list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100});
+      list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100, flip: facing(nx, x, y)});
     }
     return list.sort((p, q) => p.far - q.far).map((l, n) => ({...l, n: `w${n}`}));
   }
@@ -317,7 +321,7 @@ const relax = (() => {
     for (let y = LOW; y <= HIGH; y += 36) for (let x = LEFT; x <= RIGHT; x += 44) {
       if (wet(x, y) || Math.hypot((x - PLAZA.x) / 190, (y - PLAZA.y) / 115) < 1) continue;
       if (pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1)) continue;
-      list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100, n: `o${list.length}`});
+      list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100, n: `o${list.length}`, flip: facing(0, x, y)});
     }
     return list.sort((p, q) => p.far - q.far);
   }
@@ -355,7 +359,7 @@ const relax = (() => {
       if (free) high = 0.7;
       const l = free || (found || order[0])[1];
       used.add(l);
-      placed.push({x: l.x, y: l.y, r: room(l.x, l.y, false, high), b});
+      placed.push({x: l.x, y: l.y, r: room(l.x, l.y, false, high), b, flip: !!l.flip && b.kind !== 'meeting'});
     }
     for (const b of props.filter(q => q.kind !== 'fountain')) {
       const rnd = rng(hash(b.id));
@@ -363,7 +367,7 @@ const relax = (() => {
       const found = order.find(([, l]) => !used.has(l) && !placed.some(q => clash(room(l.x, l.y, true), q.r)));
       if (!found) continue;
       used.add(found[1]);
-      placed.push({x: found[1].x, y: found[1].y, r: room(found[1].x, found[1].y, true), b});
+      placed.push({x: found[1].x, y: found[1].y, r: room(found[1].x, found[1].y, true), b, flip: !!found[1].flip});
     }
     const named = [...placed], styles = decorStyles(turns);
     styles.forEach((style, k) => {
@@ -383,7 +387,7 @@ const relax = (() => {
       const r = fits(l);
       used.add(l);
       houses.push(r.base);
-      placed.push({x: l.x, y: l.y, r, b: {id: `~d${k}`, prop: true, house: true, kind: pics[style - 1]}});
+      placed.push({x: l.x, y: l.y, r, flip: !!l.flip, b: {id: `~d${k}`, prop: true, house: true, kind: pics[style - 1]}});
     });
     return placed;
   }
@@ -517,6 +521,14 @@ const relax = (() => {
     }
   }
 
+  // A picture with its ground point at (cx, ground), mirrored if flip.
+  function put(g, im, cx, ground, s, flip) {
+    if (!flip) { g.drawImage(im, cx - s / 2, ground - s * ANCHOR, s, s); return; }
+    g.save();
+    g.translate(cx, 0); g.scale(-1, 1);
+    g.drawImage(im, -s / 2, ground - s * ANCHOR, s, s);
+    g.restore();
+  }
   function draw(list) {
     const w = MAP_W, h = MAP_H, e = era(camp);
     // The pictures of this era and those before it first, then draw: a city's old houses
@@ -549,11 +561,11 @@ const relax = (() => {
     litList = [];
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
-    for (const {x: cx, y: ground, b} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
+    for (const {x: cx, y: ground, b, flip} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
       if (b.prop) {
         const s = plot * 1.5 * (b.scale || scaleOf(b.kind)) * (b.house ? DECOR_SIZE : 1);
-        if (img[b.kind]) g.drawImage(img[b.kind], cx - s / 2, ground - s * ANCHOR, s, s);
-        if (metro(e)) litList.push([b.kind, cx, ground, s]);
+        if (img[b.kind]) put(g, img[b.kind], cx, ground, s, flip);
+        if (metro(e)) litList.push([b.kind, cx, ground, s, flip]);
         continue;
       }
       // An ended session is a wreck.
@@ -564,16 +576,16 @@ const relax = (() => {
       g.beginPath(); g.ellipse(cx, ground - 4, plot * 0.4 * big, plot * 0.14 * big, 0, 0, Math.PI * 2); g.fill();
       const building = (b.status === 'busy' || b.status === 'running') && b.kind !== 'meeting';
       if (building) scaffold(g, cx, ground, level, false);
-      if (pic) g.drawImage(pic, cx - s / 2, ground - s * ANCHOR, s, s);
+      if (pic) put(g, pic, cx, ground, s, flip);
       if (building) scaffold(g, cx, ground, level, true);
-      if (metro(e)) litList.push([level, cx, ground, s]);
+      if (metro(e)) litList.push([level, cx, ground, s, flip]);
       const top = ground - s * (ANCHOR - TOP[level]);
       tags.push({cx, ground, top, b});
       spots.unshift({x: cx - plot / 2 * big, y: ground - plot * 0.9 * big, w: plot * big, h: plot * 1.1 * big + 34, b});
     }
     // What is lit at night: each building with someone in it, the fires, the lanterns.
     lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
-              ...lamps.filter(l => l.b.kind === 'lantern').map(l => ({x: l.x, y: l.y - plot * 0.25, r: plot * 0.5}))];
+              ...lamps.filter(l => /^(lantern|lamp)/.test(l.b.kind)).map(l => ({x: l.x, y: l.y - plot * 0.25, r: plot * 0.5}))];
     eraNow = e;
     settle(placed.filter(p => !p.b.prop));
     skySig = '';
@@ -709,14 +721,14 @@ const relax = (() => {
   }
 
   // The roads: the shortest set of winding roads that joins every building and prop but
-  // the fences (each joins the nearest one not yet joined). From a town on, lanterns stand beside
+  // the fences (each joins the nearest one not yet joined). From a city on, street lights stand beside
   // the roads, unless a building is there. Returns the lanterns, drawn with the
   // buildings so they stand in front of or behind them, and the roads, which trees avoid.
   function roads(g, placed, e) {
     const joins = placed.filter(p => p.b.kind !== 'fence');
     if (!e[3] || (joins.length < 2 && !urban(e))) return {lamps: [], edges: []};
-    // Each road ends in front of the door (on the lower left), outside the footprint.
-    const pts = joins.map(p => ({x: p.x - plot * 0.18, y: p.y + plot * 0.16, id: p.b.id}));
+    // Each road ends in front of the door (on the lower left, or right if mirrored), outside the footprint.
+    const pts = joins.map(p => ({x: p.x + plot * 0.18 * (p.flip ? 1 : -1), y: p.y + plot * 0.16, id: p.b.id}));
     const joined = [0], edges = urban(e) ? cityPlan().edges : [];
     while (!urban(e) && joined.length < pts.length) {
       let best = null;
@@ -754,11 +766,11 @@ const relax = (() => {
       g.fillStyle = metro(e) ? '#c9c5b8' : e[3];
       g.beginPath(); g.ellipse(PLAZA.x, PLAZA.y, 124, 73, 0, 0, Math.PI * 2); g.fill();
     }
-    if (e[1] !== 'Town' && !urban(e)) return {lamps: [], edges};
+    if (!urban(e)) return {lamps: [], edges};      // street lights come with a city
     const lamps = [];
     for (const [n, r] of edges.entries()) {
-      // A town's: two along each road, on either side in turn. A city's roads come in short
-      // stretches: one on every stretch but the side streets' every other.
+      // A city's roads come in short stretches: a light on every stretch but the side
+      // streets' every other, on either side in turn.
       const a = r.line[0], b = r.line[r.line.length - 1], side = plot * ((r.width || e[4]) / 2 + 0.08);
       if (Math.hypot(b.x - a.x, b.y - a.y) < plot * 0.6) continue;
       if (urban(e) && r.width < 0.2 && n % 2) continue;
@@ -767,7 +779,8 @@ const relax = (() => {
         const x = m.x - m.dy / d * side * way, y = m.y + m.dx / d * side * way;
         if (lamps.some(q => Math.hypot(q.x - x, q.y - y) < plot * 0.5)) continue;
         if (placed.some(p => Math.abs(p.x - x) < plot * 0.45 && y > p.y - plot * 0.2 && y < p.y + plot * 0.5)) continue;
-        lamps.push({x, y, b: {prop: true, kind: 'lantern'}});
+        // A city's lanterns; a metropolis's lamps, with two arms over an avenue.
+        lamps.push({x, y, flip: m.dy * way < 0, b: {prop: true, kind: !metro(e) ? 'lantern' : r.width >= 0.2 ? 'lamp-double' : 'lamp'}});
       }
     }
     return {lamps, edges};
@@ -868,7 +881,7 @@ const relax = (() => {
   // Each spot: [dx, dy] in building widths from the ground point, and the way it faces.
   const SPOTS = {work: [0.34, 0.02, 1], wave: [0.05, 0.16, 0], seat: [-0.3, 0.12, 0]};
   function want(status) { return status === 'busy' || status === 'running' ? 'work' : status === 'waiting' ? 'wave' : 'rest'; }
-  function spot(name) { const [dx, dy, dir] = SPOTS[name]; return {dx: dx * plot * SESSION_SIZE, dy: dy * plot * SESSION_SIZE, dir}; }
+  function spot(name, flip) { const [dx, dy, dir] = SPOTS[name], k = plot * SESSION_SIZE; return {dx: dx * k * (flip ? -1 : 1), dy: dy * k, dir: flip ? 1 - dir : dir}; }   // mirrored with its building
   function stroll() { const t = target({x: 0, y: 0}); return {dx: t.x, dy: t.y, dir: null}; }
 
   // A participant's place by the fire: SEATS in relax_art.html's world units, moved a
@@ -881,7 +894,7 @@ const relax = (() => {
   function settle(placed) {
     const keep = new Set();
     fires = [];
-    for (const {x, y, b} of placed) {
+    for (const {x, y, b, flip} of placed) {
       if (b.kind === 'meeting') {
         if (b.status === 'busy') fires.push({x, y});
         (b.people || []).forEach((m, i) => {
@@ -897,12 +910,13 @@ const relax = (() => {
       const home = {x, y}, p = people.get(b.id);
       if (p) {
         p.x += x - p.home.x; p.y += y - p.home.y;
-        Object.assign(p, {home, tool: b.tool, status: b.status});
+        if (p.flip !== !!flip) { p.mode = 'go'; p.goal = spot(p.want === 'rest' ? 'seat' : p.want, !!flip); }
+        Object.assign(p, {home, tool: b.tool, status: b.status, flip: !!flip});
       } else {
         // A new person starts where its status puts it, already at it.
-        const w = want(b.status), g = spot(w === 'rest' ? 'seat' : w);
+        const w = want(b.status), g = spot(w === 'rest' ? 'seat' : w, !!flip);
         people.set(b.id, {home, x: x + g.dx, y: y + g.dy, dir: g.dir, frame: -1, tick: 0, tool: b.tool, status: b.status,
-                          want: w, mode: 'at', goal: g, wait: 5 + Math.random() * 30, laps: 0, pause: 0});
+                          want: w, mode: 'at', goal: g, flip: !!flip, wait: 5 + Math.random() * 30, laps: 0, pause: 0});
       }
     }
     for (const id of [...people.keys()]) if (!keep.has(id)) people.delete(id);
@@ -929,7 +943,7 @@ const relax = (() => {
     const before = [p.x, p.y, p.dir, p.frame].join();
     const w = want(p.status);
     if (w !== p.want) {                    // the status changed: off to that spot
-      p.want = w; p.mode = 'go'; p.goal = spot(w === 'rest' ? 'seat' : w); p.pause = 0;
+      p.want = w; p.mode = 'go'; p.goal = spot(w === 'rest' ? 'seat' : w, p.flip); p.pause = 0;
     }
     if (p.pause > 0) {                     // a stop on a walk: standing
       p.pause -= dt; p.frame = F.stand;
@@ -948,7 +962,7 @@ const relax = (() => {
       if (d <= speed) {
         p.x = tx; p.y = ty; p.frame = F.stand;
         if (p.mode === 'stroll' && --p.laps > 0) { p.goal = stroll(); p.pause = 1 + Math.random() * 2; }
-        else if (p.mode === 'stroll') { p.mode = 'go'; p.goal = spot('seat'); p.pause = 1 + Math.random() * 2; }
+        else if (p.mode === 'stroll') { p.mode = 'go'; p.goal = spot('seat', p.flip); p.pause = 1 + Math.random() * 2; }
         else { p.mode = 'at'; p.dir = p.goal.dir; p.wait = 20 + Math.random() * 20; }
       } else {
         p.x += dx / d * speed; p.y += dy / d * speed;
@@ -1031,10 +1045,10 @@ const relax = (() => {
       litMap = litMap || document.createElement('canvas');
       litMap.width = MAP_W; litMap.height = MAP_H;
       const g = litMap.getContext('2d');
-      for (const [kind, x, y, s] of litList) {
-        if (img[kind]) { g.globalCompositeOperation = 'destination-out'; g.drawImage(img[kind], x - s / 2, y - s * ANCHOR, s, s); }
+      for (const [kind, x, y, s, flip] of litList) {
+        if (img[kind]) { g.globalCompositeOperation = 'destination-out'; put(g, img[kind], x, y, s, flip); }
         g.globalCompositeOperation = 'source-over';
-        if (img[kind + '-lit']) g.drawImage(img[kind + '-lit'], x - s / 2, y - s * ANCHOR, s, s);
+        if (img[kind + '-lit']) put(g, img[kind + '-lit'], x, y, s, flip);
       }
       litOn = true;
     }
