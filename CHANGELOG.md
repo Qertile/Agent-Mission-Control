@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-12 – v4.8.0: fewer details in the Session Monitor
+
+### Added
+- ⓘ at the right of *Session Monitor*: the usage as one line per tool, each limit a short bar
+  with its percent (yellow from 70%, red from 90%, as the pies), in place of the text and
+  the pies.
+- ⓘ beside *Session* in the session list: only the name, its activity line and the status;
+  the id and pid, 5h Tok, Up and Updated are hidden.
+- Each lights up while on, as Tasks' clock does, and is kept for next time in this window.
+- README: Session Monitor, Versions (both languages).
+- Versions: `v4.8.0`.
+- Tagged `v4.8.0`.
+
+### Changed
+- Session list: the activity line under a name is at most 160 px long instead of the whole
+  column.
+
+### Known
+- Seen on test pages, not yet in the real AMC window.
+
 ## 2026-11-12 – v4.7.1: session names no longer cut short
 
 ### Changed
