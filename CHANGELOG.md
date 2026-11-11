@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-11 – v4.4.1: Session Monitor can be hidden, no conhost leak on Windows
+
+### Changed
+- The two sections below, as a version.
+- README: Versions (both languages).
+- Versions: `v4.4.1`.
+- Tagged `v4.4.1`.
+
 ## 2026-11-11 – the Session Monitor column can be hidden
 
 ### Added
@@ -10,7 +18,7 @@ All notable changes to this project are listed here, newest first.
   desktop keeps its own. Relax mode and full width (⇔) are not affected.
 - README: Columns (both languages).
 
-## 2026-11-11 – Windows: the Antigravity usage read leaves no console behind (to try)
+## 2026-11-11 – Windows: the Antigravity usage read leaves no console behind
 
 ### Fixed
 - Windows: reading Antigravity's limits every 10 minutes left one `conhost.exe` behind
@@ -22,8 +30,8 @@ All notable changes to this project are listed here, newest first.
   mode; picking 486e60f itself goes back to before it.
 
 ### Known
-- Not yet run on Windows, so not in a version. Whether the leaked `conhost.exe 0x4` hosts are
-  the pty's own is not confirmed.
+- Run on Windows in developer mode (05a959b): no `conhost.exe` was left behind. That the
+  Antigravity limits still refresh every 10 minutes there is not confirmed.
 
 ## 2026-11-11 – v4.4.0: developer mode, Update to any commit
 

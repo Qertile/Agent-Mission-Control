@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.4.0` (current) | `v4.3.0` plus ⚙ → *Developer mode* (after a warning): *Update* to any commit of GitHub's `master`, also ones not released as a version. See `CHANGELOG.md`. |
+| `v4.4.1` (current) | `v4.4.0` plus ⚙ → *Session Monitor* to hide that column, and on Windows the Antigravity usage read no longer leaving a `conhost.exe` behind every 10 minutes. See `CHANGELOG.md`. |
+| `v4.4.0` | `v4.3.0` plus ⚙ → *Developer mode* (after a warning): *Update* to any commit of GitHub's `master`, also ones not released as a version. See `CHANGELOG.md`. |
 | `v4.3.0` | `v4.2.1` plus seasons in Relax mode (blossom, autumn colours, snowy trees, by the calendar) and fireworks when the camp reaches a new era. See `CHANGELOG.md`. |
 | `v4.2.1` | `v4.2` plus a Relax mode fix: with many sessions no two buildings stand on each other, so each can be double-clicked. See `CHANGELOG.md`. |
 | `v4.2` | `v4.1.2` plus weather in Relax mode: clear, cloudy, rain, fog and, in winter, snow lying on the ground, 10 to 20 minutes each with a 3-minute fade between them. See `CHANGELOG.md`. |
@@ -556,7 +557,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.4.0`（目前） | `v4.3.0` 再加上 ⚙ → *Developer mode*（先確認警告）：*Update* 可以選 GitHub `master` 上任何一個 commit，包括還沒發布成版本的。詳見 `CHANGELOG.md`。 |
+| `v4.4.1`（目前） | `v4.4.0` 再加上：⚙ → *Session Monitor* 可以隱藏那一欄；Windows 上每 10 分鐘讀一次 Antigravity 用量時，不再留下一個 `conhost.exe`。詳見 `CHANGELOG.md`。 |
+| `v4.4.0` | `v4.3.0` 再加上 ⚙ → *Developer mode*（先確認警告）：*Update* 可以選 GitHub `master` 上任何一個 commit，包括還沒發布成版本的。詳見 `CHANGELOG.md`。 |
 | `v4.3.0` | `v4.2.1` 再加上 Relax mode 的季節（依日期：春天開花、秋天變色、冬天樹上積雪），以及營地升到新時期時放煙火。詳見 `CHANGELOG.md`。 |
 | `v4.2.1` | `v4.2` 再加上 Relax mode 的修正：session 很多時建築不再疊在一起，每一棟都能雙擊。詳見 `CHANGELOG.md`。 |
 | `v4.2` | `v4.1.2` 再加上 Relax mode 的天氣：晴、多雲、雨、霧，冬天會下雪並在地上積雪，每種持續 10 到 20 分鐘，換的時候花 3 分鐘淡入。詳見 `CHANGELOG.md`。 |
