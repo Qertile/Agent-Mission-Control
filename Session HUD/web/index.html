@@ -179,6 +179,11 @@
   /* Wide: the task and session columns are hidden, the panes get the whole window. */
   body.wide { grid-template-columns: 1fr; }
   body.wide > .col:not(#term-col), body.wide > .split { display: none; }
+  /* ⚙ → Session Monitor unticked: that column and its bar hidden, the panes take its room.
+     The columns stay as they are, so the bar between Tasks and the panes drags as before. */
+  body.no-monitor:not(.relax):not(.wide) > #monitor-col,
+  body.no-monitor:not(.relax):not(.wide) > .split[data-col="2"] { display: none; }
+  body.no-monitor:not(.relax):not(.wide) > #term-col { grid-column: 3 / 6; }
   #no-tabs { color: var(--note); padding: 14px; }
 
   /* cross-check: a discussion tab and the form that starts one */
@@ -276,7 +281,7 @@
   <div class="chat" id="task-chat"></div>
 </div>
 <div class="split" data-col="1"></div>
-<div class="col">
+<div class="col" id="monitor-col">
   <div class="head">Session Monitor</div>
   <div id="usage"></div>
   <div id="grid-head"><div>Session</div><div>Status</div><div>5h Tok</div><div>Up</div><div>Updated</div></div>
@@ -1475,6 +1480,8 @@ $('set-btn').addEventListener('click', async e => {
   m.innerHTML = '<div class="disabled">Layout</div>' +
     [['office', 'Office'], ['relax', 'Relax']].map(([k, label]) =>
       `<div data-mode="${k}">${(k === 'relax') === relax.on ? '✓' : '\u00a0'} ${label}</div>`).join('') +
+    `<div data-monitor="1" title="show or hide the Session Monitor column (Office mode)">` +
+    `${document.body.classList.contains('no-monitor') ? '\u00a0' : '✓'} Session Monitor</div>` +
     `<hr><div data-sub="theme">Theme: ${esc(themeName)} ▸</div>` +
     `<div data-sub="ai" title="the AI that Task Reminder and Session Manager start with">Default AI: ${AI_LABELS[def.tool]} ▸</div>` +
     '<div data-sub="remote" title="open AMC from your phone or another computer">Remote Access AMC ▸</div>' +
@@ -1588,6 +1595,11 @@ $('set-menu').addEventListener('click', e => {
     return;
   }
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
+  if (e.target.dataset.monitor) {
+    const hide = !document.body.classList.contains('no-monitor');
+    document.body.classList.toggle('no-monitor', hide);
+    try { localStorage.setItem(MONITOR_KEY, hide ? 'hidden' : ''); } catch (err) {}
+  }
   if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
   if (e.target.dataset.feedback) api().send_feedback();
   if (e.target.dataset.tool) {
@@ -1864,6 +1876,9 @@ $('grid').addEventListener('click', e => {
   }
 });
 
+// ⚙ → Session Monitor: hidden or not, kept for next time in this window.
+const MONITOR_KEY = 'amc-monitor';
+try { if (localStorage.getItem(MONITOR_KEY) === 'hidden') document.body.classList.add('no-monitor'); } catch (e) {}
 // The bars between the columns drag; the widths are kept for next time.
 const WIDTHS_KEY = 'amc-column-widths';
 function setWidths(c1, c2) {

@@ -429,6 +429,8 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   hidden `agy` → `/usage` every 10 minutes (about 5 seconds; no model quota is used and
   no conversation is made).
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
+  `⚙` → *Session Monitor* (under Layout) hides or shows the Session Monitor column; the
+  panes take its room, and the choice is kept.
 - **Keys:** Ctrl+Tab / Ctrl+Shift+Tab switch to the next / previous tab; the mouse
   wheel over the tab bar scrolls it.
 - **Files:** drag files from the file manager onto a pane to type their full paths
@@ -877,7 +879,8 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   視窗和重置時間。ANTIGRAVITY（`agents.json` 有 agy session 時）：每組模型的週額度，每
   10 分鐘在背景開一個看不到的 `agy` 打 `/usage` 讀出來（約 5 秒，不會用到模型額度，也不
   會新增對話）。
-- **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。
+- **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。`⚙` → *Session Monitor*（在 Layout 下面）可以隱藏或顯示
+  Session Monitor 欄，隱藏時終端機補滿它的位置，選擇會記住。
 - **按鍵**：Ctrl+Tab／Ctrl+Shift+Tab 切到下一個／上一個分頁；滑鼠滾輪在分頁列上可以左右捲動。
 - **檔案**：從檔案管理員把檔案拖到某一格，會把完整路徑打進那個分頁。
 - **圖片**：剪貼簿裡是圖片時按 Ctrl+V（或 Ctrl+Shift+V），會存成暫存資料夾裡的

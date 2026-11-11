@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-11 – the Session Monitor column can be hidden
+
+### Added
+- ⚙ → *Session Monitor*, under Layout, hides or shows the Session Monitor column; the panes
+  take its room. The choice is kept in this window, like the column widths, so the remote
+  desktop keeps its own. Relax mode and full width (⇔) are not affected.
+- README: Columns (both languages).
+
 ## 2026-11-11 – Windows: the Antigravity usage read leaves no console behind (to try)
 
 ### Fixed
