@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-12 – v4.5.0: v4.4.2 released as 4.5.0
+
+### Changed
+- No change to the tools: v4.5.0 is v4.4.2 under a new version number. Together with
+  v4.4.0 to v4.4.2 it brings developer mode, the Session Monitor column that can be hidden,
+  picking several sessions in the session list, and no conhost leak on Windows.
+- Versions: `v4.5.0`.
+- Tagged `v4.5.0`.
+
 ## 2026-11-12 – v4.4.2: several sessions at once in the session list
 
 ### Added

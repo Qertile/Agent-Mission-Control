@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.4.2` (current) | `v4.4.1` plus picking several sessions in the session list (Ctrl+click, Shift+click) to copy or terminate them at once. See `CHANGELOG.md`. |
+| `v4.5.0` (current) | The same as `v4.4.2`, released as `v4.5.0`: picking several sessions in the session list, the Session Monitor column that can be hidden, developer mode, and no conhost leak on Windows. See `CHANGELOG.md`. |
+| `v4.4.2` | `v4.4.1` plus picking several sessions in the session list (Ctrl+click, Shift+click) to copy or terminate them at once. See `CHANGELOG.md`. |
 | `v4.4.1` | `v4.4.0` plus ⚙ → *Session Monitor* to hide that column, and on Windows the Antigravity usage read no longer leaving a `conhost.exe` behind every 10 minutes. See `CHANGELOG.md`. |
 | `v4.4.0` | `v4.3.0` plus ⚙ → *Developer mode* (after a warning): *Update* to any commit of GitHub's `master`, also ones not released as a version. See `CHANGELOG.md`. |
 | `v4.3.0` | `v4.2.1` plus seasons in Relax mode (blossom, autumn colours, snowy trees, by the calendar) and fireworks when the camp reaches a new era. See `CHANGELOG.md`. |
@@ -560,7 +561,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.4.2`（目前） | `v4.4.1` 再加上：Session 清單可以多選（Ctrl+點、Shift+點），一次複製或結束多個 session。詳見 `CHANGELOG.md`。 |
+| `v4.5.0`（目前） | 內容和 `v4.4.2` 相同，以 `v4.5.0` 發布：Session 清單多選、可隱藏的 Session Monitor 欄、開發者模式，以及 Windows 不再洩漏 conhost。詳見 `CHANGELOG.md`。 |
+| `v4.4.2` | `v4.4.1` 再加上：Session 清單可以多選（Ctrl+點、Shift+點），一次複製或結束多個 session。詳見 `CHANGELOG.md`。 |
 | `v4.4.1` | `v4.4.0` 再加上：⚙ → *Session Monitor* 可以隱藏那一欄；Windows 上每 10 分鐘讀一次 Antigravity 用量時，不再留下一個 `conhost.exe`。詳見 `CHANGELOG.md`。 |
 | `v4.4.0` | `v4.3.0` 再加上 ⚙ → *Developer mode*（先確認警告）：*Update* 可以選 GitHub `master` 上任何一個 commit，包括還沒發布成版本的。詳見 `CHANGELOG.md`。 |
 | `v4.3.0` | `v4.2.1` 再加上 Relax mode 的季節（依日期：春天開花、秋天變色、冬天樹上積雪），以及營地升到新時期時放煙火。詳見 `CHANGELOG.md`。 |
