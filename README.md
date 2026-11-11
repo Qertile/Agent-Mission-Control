@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.6.0` (current) | `v4.5.0` plus Relax mode's names on small wooden signs in the task board's wood. See `CHANGELOG.md`. |
+| `v4.7.0` (current) | `v4.6.0` plus a tidier ⚙ menu: *Session Monitor* in a Show group of its own (greyed in Relax), switches marked ☑/☐ and choices ✓. See `CHANGELOG.md`. |
+| `v4.6.0` | `v4.5.0` plus Relax mode's names on small wooden signs in the task board's wood. See `CHANGELOG.md`. |
 | `v4.5.0` | The same as `v4.4.2`, released as `v4.5.0`: picking several sessions in the session list, the Session Monitor column that can be hidden, developer mode, and no conhost leak on Windows. See `CHANGELOG.md`. |
 | `v4.4.2` | `v4.4.1` plus picking several sessions in the session list (Ctrl+click, Shift+click) to copy or terminate them at once. See `CHANGELOG.md`. |
 | `v4.4.1` | `v4.4.0` plus ⚙ → *Session Monitor* to hide that column, and on Windows the Antigravity usage read no longer leaving a `conhost.exe` behind every 10 minutes. See `CHANGELOG.md`. |
@@ -436,7 +437,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   hidden `agy` → `/usage` every 10 minutes (about 5 seconds; no model quota is used and
   no conversation is made).
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
-  `⚙` → *Session Monitor* (under Layout) hides or shows the Session Monitor column; the
+  `⚙` → *Session Monitor* (under Show; Office only) hides or shows the Session Monitor column; the
   panes take its room, and the choice is kept.
 - **Keys:** Ctrl+Tab / Ctrl+Shift+Tab switch to the next / previous tab; the mouse
   wheel over the tab bar scrolls it.
@@ -563,7 +564,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.6.0`（目前） | `v4.5.0` 再加上：Relax mode 的名字改放在和任務看板同色的小木牌上。詳見 `CHANGELOG.md`。 |
+| `v4.7.0`（目前） | `v4.6.0` 再加上：整理過的 ⚙ 選單，*Session Monitor* 移到自己的 Show 群組（Relax 時變灰），開關用 ☑/☐、二選一用 ✓。詳見 `CHANGELOG.md`。 |
+| `v4.6.0` | `v4.5.0` 再加上：Relax mode 的名字改放在和任務看板同色的小木牌上。詳見 `CHANGELOG.md`。 |
 | `v4.5.0` | 內容和 `v4.4.2` 相同，以 `v4.5.0` 發布：Session 清單多選、可隱藏的 Session Monitor 欄、開發者模式，以及 Windows 不再洩漏 conhost。詳見 `CHANGELOG.md`。 |
 | `v4.4.2` | `v4.4.1` 再加上：Session 清單可以多選（Ctrl+點、Shift+點），一次複製或結束多個 session。詳見 `CHANGELOG.md`。 |
 | `v4.4.1` | `v4.4.0` 再加上：⚙ → *Session Monitor* 可以隱藏那一欄；Windows 上每 10 分鐘讀一次 Antigravity 用量時，不再留下一個 `conhost.exe`。詳見 `CHANGELOG.md`。 |
@@ -891,7 +893,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   視窗和重置時間。ANTIGRAVITY（`agents.json` 有 agy session 時）：每組模型的週額度，每
   10 分鐘在背景開一個看不到的 `agy` 打 `/usage` 讀出來（約 5 秒，不會用到模型額度，也不
   會新增對話）。
-- **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。`⚙` → *Session Monitor*（在 Layout 下面）可以隱藏或顯示
+- **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。`⚙` → *Session Monitor*（在 Show 下面，只用於 Office）可以隱藏或顯示
   Session Monitor 欄，隱藏時終端機補滿它的位置，選擇會記住。
 - **按鍵**：Ctrl+Tab／Ctrl+Shift+Tab 切到下一個／上一個分頁；滑鼠滾輪在分頁列上可以左右捲動。
 - **檔案**：從檔案管理員把檔案拖到某一格，會把完整路徑打進那個分頁。

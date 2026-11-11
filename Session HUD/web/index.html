@@ -1480,15 +1480,18 @@ $('set-btn').addEventListener('click', async e => {
   m.innerHTML = '<div class="disabled">Layout</div>' +
     [['office', 'Office'], ['relax', 'Relax']].map(([k, label]) =>
       `<div data-mode="${k}">${(k === 'relax') === relax.on ? '✓' : '\u00a0'} ${label}</div>`).join('') +
-    `<div data-monitor="1" title="show or hide the Session Monitor column (Office mode)">` +
-    `${document.body.classList.contains('no-monitor') ? '\u00a0' : '✓'} Session Monitor</div>` +
+    // Show: on/off switches (☑/☐), apart from Layout's one-of-two (✓). Session Monitor is a
+    // column of Office only, so it is greyed in Relax.
+    '<hr><div class="disabled">Show</div>' +
+    `<div data-monitor="1" class="${relax.on ? 'disabled' : ''}" title="show or hide the Session Monitor column (Office only)">` +
+    `${document.body.classList.contains('no-monitor') ? '☐' : '☑'} Session Monitor</div>` +
     `<hr><div data-sub="theme">Theme: ${esc(themeName)} ▸</div>` +
     `<div data-sub="ai" title="the AI that Task Reminder and Session Manager start with">Default AI: ${AI_LABELS[def.tool]} ▸</div>` +
     '<div data-sub="remote" title="open AMC from your phone or another computer">Remote Access AMC ▸</div>' +
     '<div data-sub="accounts" title="the account each AI tool is logged in with">Accounts ▸</div>' +
     '<hr><div data-restart="1">Restart</div>' +
-    `<div data-update="1">Update${def.developer ? ' to a commit… ▸' : ''}</div>` +
-    `<div data-dev="1" title="Update to any commit, not only to released versions">${def.developer ? '✓' : '\u00a0'} Developer mode</div>` +
+    `<div data-update="1">Update${def.developer ? ' to a commit ▸' : ''}</div>` +
+    `<div data-dev="1" title="Update to any commit, not only to released versions">${def.developer ? '☑' : '☐'} Developer mode</div>` +
     '<div data-feedback="1">Send feedback…</div>' +
     (def.version ? `<div class="disabled" style="font-size:10px;text-align:right">${esc(def.version)}</div>` : '');
   const r = $('set-btn').getBoundingClientRect();

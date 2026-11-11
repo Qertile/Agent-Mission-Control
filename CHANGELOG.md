@@ -2,6 +2,19 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-12 – v4.7.0: a tidier ⚙ menu
+
+### Changed
+- ⚙: *Session Monitor* is no longer under Layout, where it looked like a third layout next to
+  Office and Relax; it is in a *Show* group of its own, greyed in Relax mode, which has no
+  such column.
+- ⚙: on/off switches are marked ☑/☐ (*Session Monitor*, *Developer mode*), as *Open on
+  start* already was; Layout's one-of-two keeps ✓.
+- ⚙: developer mode's Update reads *Update to a commit ▸*, without the extra `…`.
+- README: Columns, Versions (both languages).
+- Versions: `v4.7.0`.
+- Tagged `v4.7.0`.
+
 ## 2026-11-12 – v4.6.0: Relax mode's names on wooden signs
 
 ### Changed
