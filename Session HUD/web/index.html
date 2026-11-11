@@ -249,6 +249,7 @@
   #add-menu .hist-row { display: flex; justify-content: space-between; gap: 12px; }
   #add-menu .hist-row span { color: var(--grey); padding: 0 2px; }
   #add-menu .hist-row span:hover { color: var(--red); }
+  .menu .commits div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
   .menu input { margin: 3px 8px; width: 180px; background: var(--bg); color: var(--title);
                 border: 1px solid var(--desc); font: inherit; padding: 2px 4px; outline: none; }
@@ -1479,7 +1480,8 @@ $('set-btn').addEventListener('click', async e => {
     '<div data-sub="remote" title="open AMC from your phone or another computer">Remote Access AMC ▸</div>' +
     '<div data-sub="accounts" title="the account each AI tool is logged in with">Accounts ▸</div>' +
     '<hr><div data-restart="1">Restart</div>' +
-    '<div data-update="1">Update</div>' +
+    `<div data-update="1">Update${def.developer ? ' to a commit… ▸' : ''}</div>` +
+    `<div data-dev="1" title="Update to any commit, not only to released versions">${def.developer ? '✓' : '\u00a0'} Developer mode</div>` +
     '<div data-feedback="1">Send feedback…</div>' +
     (def.version ? `<div class="disabled" style="font-size:10px;text-align:right">${esc(def.version)}</div>` : '');
   const r = $('set-btn').getBoundingClientRect();
@@ -1623,6 +1625,53 @@ $('set-menu').addEventListener('click', e => {
     api().restart();
     return;
   }
+  if (e.target.dataset.dev) {
+    // Developer mode: off at once; on only after the warning is agreed to.
+    e.stopPropagation();
+    if (setMenuDef.developer) { api().set_developer_mode(false).then(() => $('set-btn').click()); return; }
+    $('set-menu').innerHTML =
+      '<div class="disabled" style="white-space:normal;width:340px">Developer mode lets Update move AMC to ' +
+      'any commit on GitHub\'s master, also ones not released as a version. Those may have bugs that stop AMC ' +
+      'from starting or lose work in progress. An older commit goes back in time and may not understand newer ' +
+      'settings. For testing only; this computer only.</div>' +
+      '<div data-dev-go="1">I understand, turn it on</div><div data-back="1">Cancel</div>';
+    const b = $('set-btn').getBoundingClientRect();
+    showAt($('set-menu'), b.right - $('set-menu').offsetWidth, b.bottom);
+    return;
+  }
+  if (e.target.dataset.devGo) {
+    e.stopPropagation();
+    api().set_developer_mode(true).then(() => $('set-btn').click());
+    return;
+  }
+  if (e.target.dataset.update && setMenuDef.developer) {
+    // Developer mode: GitHub master's commits to pick from, the current one marked.
+    e.stopPropagation();
+    const m = $('set-menu');
+    m.innerHTML = '<div data-back="1">◂ Back</div><hr><div class="disabled">reading GitHub…</div>';
+    api().update_commits().then(r => {
+      if (!m.querySelector('[data-back]')) return;
+      m.innerHTML = '<div data-back="1">◂ Back</div><hr>' + (r.error ? `<div class="err">${esc(r.error)}</div>` :
+        '<div class="commits" style="max-height:60vh;overflow-y:auto;padding:0;width:min(620px,80vw)">' + r.commits.map(c => {
+          const text = `${c.current ? '●' : '\u00a0'} ${esc(c.short)} ${esc(c.date)} ` +
+            c.tags.map(t => `<b>[${esc(t)}]</b> `).join('') + esc(c.subject.length > 60 ? c.subject.slice(0, 59) + '…' : c.subject);
+          return c.current ? `<div class="disabled" title="the current one">${text}</div>`
+                           : `<div data-pick="${esc(c.hash)}" data-short="${esc(c.short)}" title="${esc(c.subject)}">${text}</div>`;
+        }).join('') + '</div>');
+      const b = $('set-btn').getBoundingClientRect();
+      showAt(m, b.right - m.offsetWidth, b.bottom);
+    });
+    return;
+  }
+  if (e.target.closest('[data-pick]')) {
+    const c = e.target.closest('[data-pick]');
+    e.stopPropagation();
+    $('set-menu').innerHTML =
+      `<div class="disabled">AMC will restart at ${esc(c.dataset.short)}. Sure?</div>` +
+      `<div data-update-go="1" data-to="${esc(c.dataset.pick)}">Update</div><div data-update="1">Cancel</div>` +
+      '<div class="err" id="update-msg" style="white-space:normal;max-width:300px"></div>';
+    return;
+  }
   if (e.target.dataset.update) {
     // Asked first: a new version means a restart, which restarts every tab.
     e.stopPropagation();
@@ -1638,7 +1687,7 @@ $('set-menu').addEventListener('click', e => {
     const msg = $('update-msg');
     msg.style.color = 'var(--grey)';
     msg.textContent = 'updating…';
-    api().update().then(r => {
+    api().update(e.target.dataset.to || null).then(r => {
       msg.style.color = r.error ? '' : 'var(--grey)';
       msg.textContent = r.error || r.text;
       if (r.restart) { msg.textContent = 'restarting…'; api().restart(); }

@@ -483,7 +483,8 @@ class Api:
         busy = {s['sid'] for s in self._sessions if s.get('status') == 'busy'}
         made = [{'name': e['name'], 'tool': e.get('tool') or 'claude', 'busy': e['id'] in busy}
                 for e in core.agents() if e['name'] in CREATE_ON_SEND]
-        return {'tool': tool, 'installed': installed, 'made': made, 'version': self._version()}
+        return {'tool': tool, 'installed': installed, 'made': made, 'version': self._version(),
+                'developer': bool(self._config.get('developerMode'))}
 
     def set_default_tool(self, tool, move=False):
         """Keeps `tool` as "defaultTool" in hud-config.json, the rest of the file as it was.
@@ -796,22 +797,99 @@ class Api:
         conf['token'] = token
         return self.remote_access()
 
-    def update(self):
+    def set_developer_mode(self, on):
+        """⚙ → Developer mode, kept as "developerMode" in hud-config.json (this computer only).
+        The page asks for consent before turning it on."""
+        path = os.path.join(HERE, 'hud-config.json')
+        config = load_json(path) or {}
+        if on:
+            config['developerMode'] = True
+        else:
+            config.pop('developerMode', None)
+        with open(path + '.tmp', 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+            f.write('\n')
+        os.replace(path + '.tmp', path)
+        if on:
+            self._config['developerMode'] = True
+        else:
+            self._config.pop('developerMode', None)
+
+    def update_commits(self):
+        """Developer mode's Update: GitHub master's last 30 commits, newest first, as
+        {'commits': [{'hash', 'short', 'subject', 'date', 'tags', 'current'}]} or {'error': ...}."""
+        if not self._config.get('developerMode'):
+            return {'error': 'developer mode is off'}
+        if not self._git() or not os.path.isdir(os.path.join(core.ROOT, '.git')):
+            return {'error': 'not a git clone yet: turn developer mode off and press Update once'}
+        try:
+            r = self._fetch_version()
+            if r.get('error') and r['error'] != 'no version tag on GitHub':
+                return r
+            log = self._run_git('log', 'origin/master', '-n', '30', '--date=format:%Y-%m-%d %H:%M',
+                                '--format=%H%x1f%h%x1f%cd%x1f%s').stdout
+            refs = self._run_git('for-each-ref', 'refs/tags', '--format=%(objectname) %(*objectname) %(refname:short)').stdout
+            head = self._run_git('rev-parse', 'HEAD').stdout.strip()
+        except subprocess.TimeoutExpired:
+            return {'error': 'git took over 2 minutes'}
+        tags = {}
+        for line in refs.splitlines():
+            obj, *rest = line.split()
+            commit, name = (rest[0], rest[1]) if len(rest) == 2 else (obj, rest[0])   # annotated: the commit it points at
+            tags.setdefault(commit, []).append(name)
+        commits = []
+        for line in log.splitlines():
+            h, short, date, subject = line.split('\x1f', 3)
+            commits.append({'hash': h, 'short': short, 'date': date, 'subject': subject,
+                            'tags': tags.get(h, []), 'current': h == head})
+        return {'commits': commits}
+
+    def update(self, commit=None):
         """⚙ → Update: this folder (a clone of the GitHub repo) moves forward to the newest
         version tag on GitHub's master, never to commits after it, which may still have bugs.
         A copy already past that tag stays where it is. Installs git first when there is none,
         and makes a folder that is not a clone (a downloaded zip, a copy) one first (_make_clone).
+        In developer mode `commit` is any commit of GitHub's master, newer or older (_move_to_commit).
         Returns {'text': what happened} or {'error': ...}; the new code runs after a restart,
         which shows what it brought (update_note)."""
+        if commit and not self._config.get('developerMode'):
+            return {'error': 'developer mode is off'}
         if not self._git():
             err = self._install_git()
             if err or not self._git():
                 return {'error': err or 'git is not installed'}
         old = self._changelog()
-        r = self._move_to_tag() if os.path.isdir(os.path.join(core.ROOT, '.git')) else self._make_clone()
+        if not os.path.isdir(os.path.join(core.ROOT, '.git')):
+            r = self._make_clone()
+        else:
+            r = self._move_to_commit(str(commit)) if commit else self._move_to_tag()
         if r.get('restart'):
             self._save_update_note(r['tag'], old)
         return r
+
+    def _move_to_commit(self, commit):
+        """Developer mode: master moves to `commit` of GitHub's master, newer or older than now.
+        Not when this copy has commits of its own (they would be lost) or is on another
+        branch; changes not committed stay, unless the move would overwrite them (reset --keep)."""
+        if not re.fullmatch(r'[0-9a-f]{7,40}', commit):
+            return {'error': f'not a commit: {commit}'}
+        try:
+            if self._run_git('symbolic-ref', '--short', '-q', 'HEAD').stdout.strip() != 'master':
+                return {'error': 'this copy is not on the master branch'}
+            if self._run_git('merge-base', '--is-ancestor', commit, 'origin/master').returncode:
+                return {'error': f'{commit[:7]} is not on GitHub\'s master'}
+            if self._run_git('rev-list', '-n', '1', 'origin/master..HEAD').stdout.strip():
+                return {'error': 'this copy has commits that are not on GitHub; they would be lost'}
+            if self._run_git('rev-parse', 'HEAD').stdout.strip() == self._run_git('rev-parse', commit).stdout.strip():
+                return {'text': 'Already on that commit'}
+            r = self._run_git('reset', '-q', '--keep', commit)
+            label = self._run_git('describe', '--tags', '--always', commit).stdout.strip() or commit[:7]
+        except subprocess.TimeoutExpired:
+            return {'error': 'git took over 2 minutes'}
+        out = (r.stdout + r.stderr).strip()
+        if r.returncode:
+            return {'error': out.splitlines()[-1] if out else 'git reset failed'}
+        return {'text': f'Updated to {label}', 'restart': True, 'tag': label}
 
     def _move_to_tag(self):
         try:
