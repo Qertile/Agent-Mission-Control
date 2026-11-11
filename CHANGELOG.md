@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-11 – Windows: the Antigravity usage read leaves no console behind (to try)
+
+### Fixed
+- Windows: reading Antigravity's limits every 10 minutes left one `conhost.exe` behind
+  each time, about 360 (1.9 GB) after 3.7 days. The hidden `agy` was only terminated, which
+  leaves pywinpty's socket pair open, so its reader thread kept the pty and its console host.
+  It is now closed (`close(force=True)`). Linux still terminates it, as ptyprocess's
+  `close()` waits forever for the read in progress there.
+- This is 486e60f again, on top of v4.4.0. Picking it in developer mode keeps developer
+  mode; picking 486e60f itself goes back to before it.
+
+### Known
+- Not yet run on Windows, so not in a version. Whether the leaked `conhost.exe 0x4` hosts are
+  the pty's own is not confirmed.
+
 ## 2026-11-11 – v4.4.0: developer mode, Update to any commit
 
 ### Added
