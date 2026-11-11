@@ -222,17 +222,7 @@ def agy_usage():
         screen = plain(mark)
         return core.parse_agy_usage(screen[screen.rfind('Models & Quota'):])
     finally:
-        # Windows: close, not only terminate. terminate leaves pywinpty's socket pair open, so
-        # its reader thread and pump() above keep the pty, and with it the console host (one
-        # conhost.exe per call), alive; close() ends both. Linux: terminate only, as
-        # ptyprocess's close() waits for pump()'s read to give up its lock, which it never does.
-        try:
-            if WINDOWS:
-                proc.close(force=True)
-            else:
-                proc.terminate(force=True)
-        except Exception:
-            pass
+        proc.terminate(force=True)
 
 
 def agent_argv(entry):
