@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.4.1` (current) | `v4.4.0` plus ⚙ → *Session Monitor* to hide that column, and on Windows the Antigravity usage read no longer leaving a `conhost.exe` behind every 10 minutes. See `CHANGELOG.md`. |
+| `v4.4.2` (current) | `v4.4.1` plus picking several sessions in the session list (Ctrl+click, Shift+click) to copy or terminate them at once. See `CHANGELOG.md`. |
+| `v4.4.1` | `v4.4.0` plus ⚙ → *Session Monitor* to hide that column, and on Windows the Antigravity usage read no longer leaving a `conhost.exe` behind every 10 minutes. See `CHANGELOG.md`. |
 | `v4.4.0` | `v4.3.0` plus ⚙ → *Developer mode* (after a warning): *Update* to any commit of GitHub's `master`, also ones not released as a version. See `CHANGELOG.md`. |
 | `v4.3.0` | `v4.2.1` plus seasons in Relax mode (blossom, autumn colours, snowy trees, by the calendar) and fireworks when the camp reaches a new era. See `CHANGELOG.md`. |
 | `v4.2.1` | `v4.2` plus a Relax mode fix: with many sessions no two buildings stand on each other, so each can be double-clicked. See `CHANGELOG.md`. |
@@ -352,7 +353,9 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   such as a scheduled `claude -p` job, says it is a background job). Right-click for Copy,
   Copy all rows, Open on start, Terminate, Fork and Model; right-clicking a tab in the tab bar
   opens the same menu for its session. Drag a session up or down to reorder
-  it; the order is saved in `agents.json`, so the tab bar follows.
+  it; the order is saved in `agents.json`, so the tab bar follows. Ctrl+click adds or
+  removes a session, Shift+click picks a range; right-click on one of them to *Copy* or
+  *Terminate* them all at once (the other items are for one session only).
 - **Selecting and pinning text:** drag in a tab to select (double-click: a word), also in
   Claude and Codex, which take the mouse: there the left button selects instead of
   reaching them; the wheel still scrolls them. Right-click the selection for *📌 Pin* or
@@ -557,7 +560,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.4.1`（目前） | `v4.4.0` 再加上：⚙ → *Session Monitor* 可以隱藏那一欄；Windows 上每 10 分鐘讀一次 Antigravity 用量時，不再留下一個 `conhost.exe`。詳見 `CHANGELOG.md`。 |
+| `v4.4.2`（目前） | `v4.4.1` 再加上：Session 清單可以多選（Ctrl+點、Shift+點），一次複製或結束多個 session。詳見 `CHANGELOG.md`。 |
+| `v4.4.1` | `v4.4.0` 再加上：⚙ → *Session Monitor* 可以隱藏那一欄；Windows 上每 10 分鐘讀一次 Antigravity 用量時，不再留下一個 `conhost.exe`。詳見 `CHANGELOG.md`。 |
 | `v4.4.0` | `v4.3.0` 再加上 ⚙ → *Developer mode*（先確認警告）：*Update* 可以選 GitHub `master` 上任何一個 commit，包括還沒發布成版本的。詳見 `CHANGELOG.md`。 |
 | `v4.3.0` | `v4.2.1` 再加上 Relax mode 的季節（依日期：春天開花、秋天變色、冬天樹上積雪），以及營地升到新時期時放煙火。詳見 `CHANGELOG.md`。 |
 | `v4.2.1` | `v4.2` 再加上 Relax mode 的修正：session 很多時建築不再疊在一起，每一棟都能雙擊。詳見 `CHANGELOG.md`。 |
@@ -818,7 +822,8 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **Session 清單**：雙擊 session 會切到它的分頁（沒有終端機的 session，例如排程跑的
   `claude -p`，會顯示它是背景工作）。右鍵有 Copy、Copy all rows、
   Open on start、Terminate、Fork、Model；在分頁列的分頁上按右鍵，也會跳出同一個選單。上下拖曳 session 可以調整順序，順序存進 `agents.json`，
-  分頁列也會跟著變。
+  分頁列也會跟著變。Ctrl+點可以加選或取消一個 session，Shift+點可以選一段範圍；在選到的其中一個上按右鍵，
+  *Copy* 和 *Terminate* 會一次套用到全部（其他項目只能用在單一 session）。
 - **選取和釘選文字**：在分頁裡拖曳選取（雙擊選一個字）。Claude 和 Codex 會接管滑鼠，
   在它們的分頁裡左鍵改成選取，不會傳給它們；滾輪照常讓它們捲動。在選取的文字上按右鍵
   有 *📌 Pin* 和 *Copy*。有釘選的窗格上方多一行（`📌 2 · <最新一則>`），點它展開清單，

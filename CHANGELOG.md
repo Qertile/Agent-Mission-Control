@@ -2,6 +2,20 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-12 – v4.4.2: several sessions at once in the session list
+
+### Added
+- Session list: Ctrl+click adds or removes a session, Shift+click picks the range from the
+  last one clicked. A right-click on one of those picked acts on all of them: *Copy N rows*
+  and *Terminate N sessions* (one after another, without asking, as Terminate always did);
+  Open on start, Fork and Model are for one session only. A plain click still picks one.
+- README: Session list, Versions (both languages).
+- Versions: `v4.4.2`.
+- Tagged `v4.4.2`.
+
+### Known
+- Tried on a test page, not yet in the real AMC window.
+
 ## 2026-11-11 – v4.4.1: Session Monitor can be hidden, no conhost leak on Windows
 
 ### Changed
