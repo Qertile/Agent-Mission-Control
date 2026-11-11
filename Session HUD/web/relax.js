@@ -1089,19 +1089,22 @@ const relax = (() => {
       if (b.status === 'waiting') badge(g, bx, by, '!', STATUS_COLORS.waiting);
       if (taken.some(q => rect[0] < q[0] + q[2] && q[0] < rect[0] + rect[2] && rect[1] < q[1] + q[3] && q[1] < rect[1] + rect[3])) continue;
       taken.push(rect);
-      // The name, with the tool's colour as a dot, and the status under it; an ended
-      // session's name is dark grey on a pale label, with no status.
-      g.fillStyle = ended ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.55)';
-      g.fillRect(...rect);
+      // The name on a little wooden sign like the task board's, with the tool's colour as a
+      // dot and the status under it; an ended session's sign is weathered grey, with no status.
+      plank(g, rect, ended);
       g.fillStyle = TOOL_COLORS[b.tool] || TOOL_COLORS.claude;
       if (b.kind === 'meeting') { g.font = "12px 'DejaVu Sans Mono', Consolas, monospace"; g.fillText('⚖', x - nw / 2 - 5, y + 13);
                                   g.font = "bold 12px 'DejaVu Sans Mono', Consolas, monospace"; }
-      else { g.beginPath(); g.arc(x - nw / 2 - 5, y + 9, 4, 0, Math.PI * 2); g.fill(); }
-      g.fillStyle = ended ? '#3a3a3a' : '#ffffff';
+      else {
+        g.beginPath(); g.arc(x - nw / 2 - 5, y + 9, 4, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = 'rgba(43, 26, 12, 0.7)'; g.lineWidth = 1; g.stroke();
+      }
+      g.fillStyle = ended ? '#3a3630' : '#2b1a0c';
+      g.font = "bold 12px 'DejaVu Sans Mono', Consolas, monospace";   // badge() above changes it
       g.fillText(name, x + 4, y + 13);
       if (!ended && full) {
         g.font = "11px 'DejaVu Sans Mono', Consolas, monospace";
-        g.fillStyle = STATUS_COLORS[b.status] || STATUS_COLORS.ended;
+        g.fillStyle = '#4a3019';
         g.fillText(b.status || '-', x, y + 26);
       }
     }
@@ -1817,6 +1820,23 @@ const relax = (() => {
     const want = on && !document.hidden && (people.size > 0 || fires.length > 0);
     if (want && !timer) timer = setInterval(tick, TICK);
     if (!want && timer) { clearInterval(timer); timer = 0; }
+  }
+
+  // A name sign: the task board's wood (#a87b4f, a dark edge and a light inner line), with a
+  // soft shadow on the ground; weathered grey for an ended session.
+  function plank(g, [x, y, w, h], old) {
+    const r = 3, path = () => {
+      g.beginPath();
+      g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+      g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+    };
+    g.save();
+    g.shadowColor = 'rgba(0, 0, 0, 0.35)'; g.shadowOffsetY = 2; g.shadowBlur = 3;
+    path(); g.fillStyle = old ? '#9c968a' : '#a87b4f'; g.fill();
+    g.restore();
+    g.lineWidth = 1.5; g.strokeStyle = old ? '#5a554c' : '#4a3019'; g.stroke();
+    g.beginPath(); g.moveTo(x + 3, y + 2.5); g.lineTo(x + w - 3, y + 2.5);
+    g.lineWidth = 1; g.strokeStyle = old ? '#b4aea2' : '#c4955f'; g.stroke();
   }
 
   function badge(g, x, y, text, color) {

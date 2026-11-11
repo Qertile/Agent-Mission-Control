@@ -2,6 +2,25 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-12 – v4.6.0: Relax mode's names on wooden signs
+
+### Changed
+- Relax mode: a session's name is on a small wooden sign in the task board's wood (#a87b4f,
+  a dark edge, a light inner line, a soft shadow) with dark brown text, instead of white on
+  a dark see-through box. An ended session's sign is weathered grey. The status under the
+  name, shown when zoomed in, is dark brown; the ⚒ and ! badges keep their colours.
+- README: Relax mode, Versions (both languages).
+- Versions: `v4.6.0`.
+- Tagged `v4.6.0`.
+
+### Fixed
+- Relax mode: a busy or waiting session's name was drawn in its badge's larger font, so it ran
+  into the tool's dot in front of it.
+
+### Known
+- Seen on test pages by day, at night and zoomed out; the status line when zoomed in and the
+  real AMC window are not seen yet.
+
 ## 2026-11-12 – v4.5.0: v4.4.2 released as 4.5.0
 
 ### Changed

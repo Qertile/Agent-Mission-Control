@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.5.0` (current) | The same as `v4.4.2`, released as `v4.5.0`: picking several sessions in the session list, the Session Monitor column that can be hidden, developer mode, and no conhost leak on Windows. See `CHANGELOG.md`. |
+| `v4.6.0` (current) | `v4.5.0` plus Relax mode's names on small wooden signs in the task board's wood. See `CHANGELOG.md`. |
+| `v4.5.0` | The same as `v4.4.2`, released as `v4.5.0`: picking several sessions in the session list, the Session Monitor column that can be hidden, developer mode, and no conhost leak on Windows. See `CHANGELOG.md`. |
 | `v4.4.2` | `v4.4.1` plus picking several sessions in the session list (Ctrl+click, Shift+click) to copy or terminate them at once. See `CHANGELOG.md`. |
 | `v4.4.1` | `v4.4.0` plus ⚙ → *Session Monitor* to hide that column, and on Windows the Antigravity usage read no longer leaving a `conhost.exe` behind every 10 minutes. See `CHANGELOG.md`. |
 | `v4.4.0` | `v4.3.0` plus ⚙ → *Developer mode* (after a warning): *Update* to any commit of GitHub's `master`, also ones not released as a version. See `CHANGELOG.md`. |
@@ -270,10 +271,11 @@ Tailscale network and token as the phone page.
 The Tasks and Sessions columns can be a camp seen from a tilted camera instead: ⚙ → *Layout* →
 *Relax* (*Office* goes back). The choice is kept per computer; the terminals stay as they are.
 
-- **A building per session**, scattered about the camp, its name under it. It grows with
+- **A building per session**, scattered about the camp, its name on a small wooden sign
+  under it, in the task board's wood. It grows with
   the messages typed into the session: a campfire at 0, a tent from 1, a cabin from 10, a
   house from 50, a tower from 200 (Antigravity, whose conversations cannot be read: 6 per
-  hour open). An ended session is a wreck with its name in dark grey.
+  hour open). An ended session is a wreck with its name on a weathered grey sign.
 - **The whole camp grows too**, with the messages of all the sessions in `agents.json`,
   ended ones included: a tribe from 0, a village from 100, a town from 500, a city from 1000,
   a metropolis from 5000 and a megacity from 10000. Roads go from dirt paths to stone to a
@@ -561,7 +563,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.5.0`（目前） | 內容和 `v4.4.2` 相同，以 `v4.5.0` 發布：Session 清單多選、可隱藏的 Session Monitor 欄、開發者模式，以及 Windows 不再洩漏 conhost。詳見 `CHANGELOG.md`。 |
+| `v4.6.0`（目前） | `v4.5.0` 再加上：Relax mode 的名字改放在和任務看板同色的小木牌上。詳見 `CHANGELOG.md`。 |
+| `v4.5.0` | 內容和 `v4.4.2` 相同，以 `v4.5.0` 發布：Session 清單多選、可隱藏的 Session Monitor 欄、開發者模式，以及 Windows 不再洩漏 conhost。詳見 `CHANGELOG.md`。 |
 | `v4.4.2` | `v4.4.1` 再加上：Session 清單可以多選（Ctrl+點、Shift+點），一次複製或結束多個 session。詳見 `CHANGELOG.md`。 |
 | `v4.4.1` | `v4.4.0` 再加上：⚙ → *Session Monitor* 可以隱藏那一欄；Windows 上每 10 分鐘讀一次 Antigravity 用量時，不再留下一個 `conhost.exe`。詳見 `CHANGELOG.md`。 |
 | `v4.4.0` | `v4.3.0` 再加上 ⚙ → *Developer mode*（先確認警告）：*Update* 可以選 GitHub `master` 上任何一個 commit，包括還沒發布成版本的。詳見 `CHANGELOG.md`。 |
@@ -760,10 +763,10 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *Layout* → *Relax*（選 *Office*
 換回來）。每台電腦各自記住選擇；終端機分頁不受影響。
 
-- **每個 session 一棟建築**，散布在營地裡，名字寫在下面。打進 session 的訊息越多，建築
+- **每個 session 一棟建築**，散布在營地裡，名字寫在下面的小木牌上，木頭和任務看板一樣。打進 session 的訊息越多，建築
   越大：0 則是營火、1 則起是帳篷、10 則起是小木屋、50 則起是房子、200 則起是高塔
   （Antigravity 的對話讀不到，改用開著的時間，每小時算 6 則）。結束的 session 變成廢墟，
-  名字是深灰色。
+  名字在褪色的灰木牌上。
 - **整個營地也會成長**，依 `agents.json` 裡所有 session 的訊息總數計算，已結束的也算：
   0 則起是部落，100 則起是村莊，500 則起是小鎮，1000 則起是城市，5000 則起是大都會，10000 則起
   是超級都市。路從泥土路、石板路，變成城市的廣場、大道、支路和城牆，再變成柏油路並拆掉城牆；
