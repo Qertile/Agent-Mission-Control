@@ -2,6 +2,20 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-12 – v4.7.1: session names no longer cut short
+
+### Changed
+- Session list: a session's name and its id use the whole Session column; the activity line
+  that took about 110 px beside them is a 12 px strip under them, stretched to the column's
+  width. Names like *Session Manager* and the `(pid …)` part show in full; each row is about
+  6 px taller.
+- README: Versions (both languages).
+- Versions: `v4.7.1`.
+- Tagged `v4.7.1`.
+
+### Known
+- Seen on a test page, not yet in the real AMC window.
+
 ## 2026-11-12 – v4.7.0: a tidier ⚙ menu
 
 ### Changed

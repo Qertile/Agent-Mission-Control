@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.7.0` (current) | `v4.6.0` plus a tidier ⚙ menu: *Session Monitor* in a Show group of its own (greyed in Relax), switches marked ☑/☐ and choices ✓. See `CHANGELOG.md`. |
+| `v4.7.1` (current) | `v4.7.0` plus session names using the whole Session column, with the activity line in a thin strip under them. See `CHANGELOG.md`. |
+| `v4.7.0` | `v4.6.0` plus a tidier ⚙ menu: *Session Monitor* in a Show group of its own (greyed in Relax), switches marked ☑/☐ and choices ✓. See `CHANGELOG.md`. |
 | `v4.6.0` | `v4.5.0` plus Relax mode's names on small wooden signs in the task board's wood. See `CHANGELOG.md`. |
 | `v4.5.0` | The same as `v4.4.2`, released as `v4.5.0`: picking several sessions in the session list, the Session Monitor column that can be hidden, developer mode, and no conhost leak on Windows. See `CHANGELOG.md`. |
 | `v4.4.2` | `v4.4.1` plus picking several sessions in the session list (Ctrl+click, Shift+click) to copy or terminate them at once. See `CHANGELOG.md`. |
@@ -564,7 +565,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.7.0`（目前） | `v4.6.0` 再加上：整理過的 ⚙ 選單，*Session Monitor* 移到自己的 Show 群組（Relax 時變灰），開關用 ☑/☐、二選一用 ✓。詳見 `CHANGELOG.md`。 |
+| `v4.7.1`（目前） | `v4.7.0` 再加上：Session 欄的名字使用整欄寬度，活動曲線改成名字下面的細條。詳見 `CHANGELOG.md`。 |
+| `v4.7.0` | `v4.6.0` 再加上：整理過的 ⚙ 選單，*Session Monitor* 移到自己的 Show 群組（Relax 時變灰），開關用 ☑/☐、二選一用 ✓。詳見 `CHANGELOG.md`。 |
 | `v4.6.0` | `v4.5.0` 再加上：Relax mode 的名字改放在和任務看板同色的小木牌上。詳見 `CHANGELOG.md`。 |
 | `v4.5.0` | 內容和 `v4.4.2` 相同，以 `v4.5.0` 發布：Session 清單多選、可隱藏的 Session Monitor 欄、開發者模式，以及 Windows 不再洩漏 conhost。詳見 `CHANGELOG.md`。 |
 | `v4.4.2` | `v4.4.1` 再加上：Session 清單可以多選（Ctrl+點、Shift+點），一次複製或結束多個 session。詳見 `CHANGELOG.md`。 |
