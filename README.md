@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.3.0` (current) | `v4.2.1` plus seasons in Relax mode (blossom, autumn colours, snowy trees, by the calendar) and fireworks when the camp reaches a new era. See `CHANGELOG.md`. |
+| `v4.4.0` (current) | `v4.3.0` plus ⚙ → *Developer mode* (after a warning): *Update* to any commit of GitHub's `master`, also ones not released as a version. See `CHANGELOG.md`. |
+| `v4.3.0` | `v4.2.1` plus seasons in Relax mode (blossom, autumn colours, snowy trees, by the calendar) and fireworks when the camp reaches a new era. See `CHANGELOG.md`. |
 | `v4.2.1` | `v4.2` plus a Relax mode fix: with many sessions no two buildings stand on each other, so each can be double-clicked. See `CHANGELOG.md`. |
 | `v4.2` | `v4.1.2` plus weather in Relax mode: clear, cloudy, rain, fog and, in winter, snow lying on the ground, 10 to 20 minutes each with a 3-minute fade between them. See `CHANGELOG.md`. |
 | `v4.1.2` | `v4.1.1` plus Relax mode fixes: a city's windows light at night, and a paddock's front fence stands in front of its animals. See `CHANGELOG.md`. |
@@ -484,6 +485,12 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   first: on Windows the latest MinGit (Git for Windows' zip, no admin) into
   `%LOCALAPPDATA%\Programs\MinGit`, used by Agent Mission Control only; on Linux
   `apt-get install git` behind the system's password box.
+- **Developer mode:** `⚙` → *Developer mode* turns on only after you agree to a warning,
+  on this computer only (`hud-config.json`). *Update* then lists the last 30 commits of
+  GitHub's `master` (tags marked, the current one with `●`) and moves to the one you pick,
+  newer or older, after asking. It refuses when this copy has commits not on GitHub, is not
+  on `master`, or would overwrite changes not committed. Click it again to turn it off;
+  *Update* then follows the version tags again.
 - **Restart:** `⚙` → *Restart* (after asking) closes the window and opens a new one; the
   tabs end and resume with their conversations.
 - **Send feedback:** `⚙` → *Send feedback…* opens a new GitHub issue
@@ -547,7 +554,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.3.0`（目前） | `v4.2.1` 再加上 Relax mode 的季節（依日期：春天開花、秋天變色、冬天樹上積雪），以及營地升到新時期時放煙火。詳見 `CHANGELOG.md`。 |
+| `v4.4.0`（目前） | `v4.3.0` 再加上 ⚙ → *Developer mode*（先確認警告）：*Update* 可以選 GitHub `master` 上任何一個 commit，包括還沒發布成版本的。詳見 `CHANGELOG.md`。 |
+| `v4.3.0` | `v4.2.1` 再加上 Relax mode 的季節（依日期：春天開花、秋天變色、冬天樹上積雪），以及營地升到新時期時放煙火。詳見 `CHANGELOG.md`。 |
 | `v4.2.1` | `v4.2` 再加上 Relax mode 的修正：session 很多時建築不再疊在一起，每一棟都能雙擊。詳見 `CHANGELOG.md`。 |
 | `v4.2` | `v4.1.2` 再加上 Relax mode 的天氣：晴、多雲、雨、霧，冬天會下雪並在地上積雪，每種持續 10 到 20 分鐘，換的時候花 3 分鐘淡入。詳見 `CHANGELOG.md`。 |
 | `v4.1.2` | `v4.1.1` 再加上 Relax mode 的修正：城市的窗戶晚上會亮，牧場前排的籬笆會擋在動物前面。詳見 `CHANGELOG.md`。 |
@@ -912,6 +920,10 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   `tasks.md`…）不動，跟 GitHub 不同的程式檔會先備份到 `.update-backup/<時間>/` 再換掉。沒有 git 時會先幫你裝：Windows 下載最新的 MinGit（Git for Windows
   官方的 zip，不需系統管理員）到 `%LOCALAPPDATA%\Programs\MinGit`，只給 Agent Mission Control
   用；Linux 會跳出系統密碼視窗執行 `apt-get install git`。
+- **開發者模式**：`⚙` → *Developer mode* 要先同意警告才會開啟，只影響這台電腦（存在 `hud-config.json`）。
+  開啟後 *Update* 會列出 GitHub `master` 最近 30 個 commit（標出 tag，目前所在的有 `●`），確認後更新到你選的那個，
+  新的舊的都可以。這份有還沒推上 GitHub 的 commit、不在 `master` 分支，或會蓋掉還沒 commit 的修改時會拒絕。
+  再點一次就關閉，*Update* 恢復只跟版本 tag。
 - **重新啟動**：`⚙` → *Restart*（會先確認）會關掉視窗再開新的；分頁會結束，再接續原本的對話。
 - **意見回饋**：`⚙` → *Send feedback…* 會用預設瀏覽器開 GitHub 的新 issue 頁面（github.com/Qertile/Agent-Mission-Control/issues/new）。
 

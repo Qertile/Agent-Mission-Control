@@ -2,6 +2,28 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-11 – v4.4.0: developer mode, Update to any commit
+
+### Added
+- ⚙ → *Developer mode*, turned on only after a warning is agreed to and kept in this
+  computer's `hud-config.json`. *Update* then lists the last 30 commits of GitHub's
+  `master`, with tags marked and the current one dotted, and moves to the one picked,
+  newer or older, after asking. It refuses when this copy has commits not on GitHub, is not
+  on `master`, or would overwrite changes not committed (`git reset --keep`). Clicking it
+  again turns it off.
+- README: Developer mode, Versions (both languages).
+- Versions: `v4.4.0`.
+- Tagged `v4.4.0`.
+
+### Changed
+- The Windows fix for the Antigravity usage read (486e60f, closing the hidden `agy`) is
+  reverted before this version, as it has not run on Windows yet. In developer mode a
+  Windows computer can pick 486e60f to try it.
+
+### Known
+- Developer mode has not run in the real AMC window: it was tested in temporary git
+  repositories and drawn on a test page.
+
 ## 2026-11-07 – v4.3.0: Relax mode's seasons and fireworks
 
 ### Added
