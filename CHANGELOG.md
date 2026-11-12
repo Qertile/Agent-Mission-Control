@@ -2,6 +2,28 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-12 – v4.9.0: the brief Session Monitor under the task list
+
+### Added
+- With both ⓘ on, the Session Monitor moves under the task list, above the box to Task
+  Reminder, and its own column and bar go, so the panes get that room. There a tool's name
+  has its own line with its limits under it, and a session's name sits beside a short
+  activity line and its status. A Tasks column narrower than 300 px is widened to that
+  meanwhile (not saved). Turning either ⓘ off puts it back in its column.
+
+### Fixed
+- Brief usage: the bars of all the tools line up in columns, and a percent no longer wraps
+  under its bar; a long tool or limit name ends in `…`.
+- The session list's ⓘ is at the right end of its head, under the Session Monitor's.
+- Brief session list: one line per session, the name (18 characters), the activity line and
+  the status side by side, with no gap between them.
+- README: Session Monitor, Versions (both languages).
+- Versions: `v4.9.0`.
+- Tagged `v4.9.0`.
+
+### Known
+- Seen on test pages, not yet in the real AMC window.
+
 ## 2026-11-12 – v4.8.0: fewer details in the Session Monitor
 
 ### Added

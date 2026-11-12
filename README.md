@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.8.0` (current) | `v4.7.1` plus ⓘ buttons that show the usage as short bars only and the session list as name, activity and status only, and a shorter activity line. See `CHANGELOG.md`. |
+| `v4.9.0` (current) | `v4.8.0` plus the brief Session Monitor moving under the task list when both ⓘ are on, its bars lined up and a line per session. See `CHANGELOG.md`. |
+| `v4.8.0` | `v4.7.1` plus ⓘ buttons that show the usage as short bars only and the session list as name, activity and status only, and a shorter activity line. See `CHANGELOG.md`. |
 | `v4.7.1` | `v4.7.0` plus session names using the whole Session column, with the activity line in a thin strip under them. See `CHANGELOG.md`. |
 | `v4.7.0` | `v4.6.0` plus a tidier ⚙ menu: *Session Monitor* in a Show group of its own (greyed in Relax), switches marked ☑/☐ and choices ✓. See `CHANGELOG.md`. |
 | `v4.6.0` | `v4.5.0` plus Relax mode's names on small wooden signs in the task board's wood. See `CHANGELOG.md`. |
@@ -440,8 +441,10 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   no conversation is made).
 - **Fewer details:** ⓘ at the right of *Session Monitor* shows the usage as one line per tool,
   each limit a short bar with its percent; ⓘ beside *Session* shows the session list as the
-  name, its activity line and the status only. Each lights up while on, as Tasks' clock does,
-  and is kept for next time.
+  name, its activity line and the status only, one line each. Each lights up while on, as
+  Tasks' clock does, and is kept for next time. With both on, the Session Monitor moves under
+  the task list and its column goes, so the panes get that room; the Tasks column is widened
+  to at least 300 px meanwhile.
 - **Columns:** drag the bars between the three columns to resize them; the widths are kept.
   `⚙` → *Session Monitor* (under Show; Office only) hides or shows the Session Monitor column; the
   panes take its room, and the choice is kept.
@@ -570,7 +573,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.8.0`（目前） | `v4.7.1` 再加上：ⓘ 按鈕可以讓用量只顯示短長條、Session 清單只顯示名稱、活動曲線和狀態，活動曲線也變短。詳見 `CHANGELOG.md`。 |
+| `v4.9.0`（目前） | `v4.8.0` 再加上：兩個 ⓘ 都開時，精簡的 Session Monitor 移到任務清單下面；長條對齊、每個 session 一行。詳見 `CHANGELOG.md`。 |
+| `v4.8.0` | `v4.7.1` 再加上：ⓘ 按鈕可以讓用量只顯示短長條、Session 清單只顯示名稱、活動曲線和狀態，活動曲線也變短。詳見 `CHANGELOG.md`。 |
 | `v4.7.1` | `v4.7.0` 再加上：Session 欄的名字使用整欄寬度，活動曲線改成名字下面的細條。詳見 `CHANGELOG.md`。 |
 | `v4.7.0` | `v4.6.0` 再加上：整理過的 ⚙ 選單，*Session Monitor* 移到自己的 Show 群組（Relax 時變灰），開關用 ☑/☐、二選一用 ✓。詳見 `CHANGELOG.md`。 |
 | `v4.6.0` | `v4.5.0` 再加上：Relax mode 的名字改放在和任務看板同色的小木牌上。詳見 `CHANGELOG.md`。 |
@@ -902,8 +906,8 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   10 分鐘在背景開一個看不到的 `agy` 打 `/usage` 讀出來（約 5 秒，不會用到模型額度，也不
   會新增對話）。
 - **精簡顯示**：*Session Monitor* 右邊的 ⓘ 會把用量改成每個工具一行，每個限制是一條短長條加百分比；
-  *Session* 旁邊的 ⓘ 會讓 Session 清單只顯示名稱、活動曲線和狀態。開啟時按鈕會亮，和 Tasks 的時鐘一樣，
-  選擇會記住。
+  *Session* 旁邊的 ⓘ 會讓 Session 清單只顯示名稱、活動曲線和狀態，每個一行。開啟時按鈕會亮，和 Tasks 的時鐘一樣，
+  選擇會記住。兩個都開時，Session Monitor 會移到任務清單下面，它自己那欄消失，空間讓給終端機；這時 Tasks 欄至少 300 px 寬。
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。`⚙` → *Session Monitor*（在 Show 下面，只用於 Office）可以隱藏或顯示
   Session Monitor 欄，隱藏時終端機補滿它的位置，選擇會記住。
 - **按鍵**：Ctrl+Tab／Ctrl+Shift+Tab 切到下一個／上一個分頁；滑鼠滾輪在分頁列上可以左右捲動。

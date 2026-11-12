@@ -74,26 +74,33 @@
   .task .m { color: var(--note); }
   #task-hist { float: right; color: var(--desc); line-height: 0; padding-top: 2px; }
   #task-hist:hover, #task-hist.on { color: var(--accent); }
-  /* ⓘ in the Session Monitor's and the session list's heads: details shown or not (lit: hidden). */
+  /* ⓘ in the Session Monitor's and the session list's heads, both at the right edge: details
+     shown or not (lit: hidden). */
   .detail-btn { float: right; color: var(--desc); line-height: 0; padding-top: 2px; cursor: pointer; }
-  #grid-head .detail-btn { padding: 0 6px 0 0; }
+  #grid-head .detail-btn { float: none; grid-column: -2; justify-self: end; padding: 0 8px 0 0; }
   .detail-btn:hover, .detail-btn.on { color: var(--accent); }
-  /* Usage without details: each tool's name and its pies on one line. */
-  #usage.brief .sec, #usage.brief .sec.with-pies { padding: 6px 12px; min-height: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  /* Usage without details: a line per tool, its name then each limit (caption, bar, percent)
+     in equal columns, so the bars line up from tool to tool. */
+  #usage.brief .sec, #usage.brief .sec.with-pies { padding: 5px 12px; min-height: 0; display: grid;
+      grid-template-columns: 8.5em 1fr 1fr; align-items: center; column-gap: 14px; }
   #usage.brief .sec > :not(.tool):not(.mini) { display: none; }
-  #usage.brief .tool { margin-bottom: 0; min-width: 110px; }
+  #usage.brief .tool { margin-bottom: 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   #usage .mini { display: none; }
-  #usage.brief .mini { display: flex; align-items: center; gap: 16px; font-size: 12px; }
-  #usage .mini .cap { color: var(--desc); font-weight: bold; margin-right: 6px; }
-  #usage .mini .pct { color: var(--title); font-weight: bold; margin-left: 6px; min-width: 3.2em; }
-  #usage .mini .bar { display: inline-block; width: 90px; height: 8px; background: var(--bar);
-                      border: 1px solid var(--desc); vertical-align: middle; }
+  #usage.brief .mini { display: contents; font-size: 12px; }
+  #usage .mini > span { display: flex; align-items: center; min-width: 0; font-size: 12px; }
+  #usage .mini .cap { color: var(--desc); font-weight: bold; flex: 0 0 4.6em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #usage .mini .pct { color: var(--title); font-weight: bold; flex: 0 0 3.2em; text-align: right; }
+  #usage .mini .bar { flex: 1 1 auto; min-width: 24px; height: 8px; background: var(--bar); border: 1px solid var(--desc); }
   #usage .mini .bar > i { display: block; height: 100%; }
-  /* The session list without details: the name, its activity line and the status. */
-  #monitor-col.brief-grid #grid-head, #monitor-col.brief-grid .row-s { grid-template-columns: 1fr 80px; }
-  #monitor-col.brief-grid #grid-head > div:nth-child(n+3), #monitor-col.brief-grid .row-s > div:nth-child(n+3),
+  /* The session list without details: one line each, the name, its activity line and the status
+     side by side at fixed widths (each row is its own grid, so they line up). */
+  #monitor-col.brief-grid #grid-head, #monitor-col.brief-grid .row-s { grid-template-columns: calc(18ch + 130px) 70px 1fr 26px; }
+  #monitor-col.brief-grid #grid-head > div:nth-child(n+3):not(.detail-btn), #monitor-col.brief-grid .row-s > div:nth-child(n+3),
   #monitor-col.brief-grid .row-s .sub { display: none; }
   #monitor-col.brief-grid .row-s { min-height: 0; }
+  #monitor-col.brief-grid .row-s .who { flex-direction: row; align-items: center; gap: 8px; padding: 5px 8px; }
+  #monitor-col.brief-grid .row-s .who .txt { flex: 0 0 18ch; }
+  #monitor-col.brief-grid .row-s .who svg { flex: 0 0 100px; width: 100px; height: 14px; }
   .task .r { color: var(--accent); padding-left: 2.2em; text-indent: -1.2em; }
   .st { font-weight: bold; }
 
@@ -116,7 +123,7 @@
   #usage .pies .pct { color: var(--title); font-size: 12px; }
 
   /* session list */
-  #grid-head, .row-s { display: grid; grid-template-columns: 1fr 70px 70px 72px 82px; align-items: center; }
+  #grid-head, .row-s { display: grid; grid-template-columns: 1fr 70px 70px 72px 82px 26px; align-items: center; }
   #grid-head { background: var(--bar); color: var(--accent); font-weight: bold; height: 28px; }
   #grid-head > div, .row-s > div { text-align: center; }
   #grid-head > div:first-child { text-align: left; padding-left: 8px; }
@@ -127,7 +134,7 @@
   .row-s.mark-after { box-shadow: inset 0 -3px 0 var(--accent); }
   /* The name and its id over the whole column, the activity line in a thin strip under them. */
   .row-s .who { display: flex; flex-direction: column; text-align: left; padding: 4px 8px; gap: 2px; min-width: 0; }
-  .row-s .who svg { display: block; width: 100%; max-width: 160px; height: 12px; }
+  .row-s .who svg { display: block; align-self: flex-start; width: 100%; max-width: 160px; height: 12px; }
   .row-s .who .txt { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .row-s .who .sub { color: var(--desc); padding-left: 1.4em; font-size: 12px; white-space: nowrap; }
   .row-s .tabmark { color: var(--accent); }
@@ -205,6 +212,21 @@
   body.no-monitor:not(.relax):not(.wide) > #monitor-col,
   body.no-monitor:not(.relax):not(.wide) > .split[data-col="2"] { display: none; }
   body.no-monitor:not(.relax):not(.wide) > #term-col { grid-column: 3 / 6; }
+  /* Both ⓘ on: the brief Session Monitor docks under the task list (dockMonitor moves it into
+     the Tasks column), its own column and bar go, and the panes take their room. */
+  body.docked:not(.relax):not(.wide) > .split[data-col="2"] { display: none; }
+  body.docked:not(.relax):not(.wide) > #term-col { grid-column: 3 / 6; }
+  body.no-monitor #monitor-col.docked { display: none; }
+  #monitor-col.docked { flex: 0 1 auto; max-height: 60%; border-top: 1px solid var(--line); }
+  #monitor-col.docked #grid { flex: 1 1 auto; }
+  /* Narrow there: a tool's name on its own line, its limits wrapping under it; a session's
+     name takes what is left beside a short activity line and the status. */
+  #monitor-col.docked #usage.brief .sec { display: block; }
+  #monitor-col.docked #usage.brief .mini { display: flex; flex-wrap: wrap; column-gap: 14px; row-gap: 2px; margin-top: 2px; }
+  #monitor-col.docked #usage .mini > span { flex: 1 1 150px; }
+  #monitor-col.docked.brief-grid #grid-head, #monitor-col.docked.brief-grid .row-s { grid-template-columns: minmax(0, 1fr) 66px 26px; }
+  #monitor-col.docked.brief-grid .row-s .who .txt { flex: 1 1 auto; min-width: 0; }
+  #monitor-col.docked.brief-grid .row-s .who svg { flex: 0 0 44px; width: 44px; }
   #no-tabs { color: var(--note); padding: 14px; }
 
   /* cross-check: a discussion tab and the form that starts one */
@@ -306,8 +328,8 @@
   <div class="head">Session Monitor<span id="usage-detail" class="detail-btn" title="show only the limits, as bars"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
   stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2V11.4"/><circle cx="8" cy="4.6" r="0.4" fill="currentColor"/></svg></span></div>
   <div id="usage"></div>
-  <div id="grid-head"><div>Session<span id="grid-detail" class="detail-btn" title="show only the name, activity and status"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
-  stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2V11.4"/><circle cx="8" cy="4.6" r="0.4" fill="currentColor"/></svg></span></div><div>Status</div><div>5h Tok</div><div>Up</div><div>Updated</div></div>
+  <div id="grid-head"><div>Session</div><div>Status</div><div>5h Tok</div><div>Up</div><div>Updated</div><div id="grid-detail" class="detail-btn" title="show only the name, activity and status"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+  stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2V11.4"/><circle cx="8" cy="4.6" r="0.4" fill="currentColor"/></svg></div></div>
   <div id="grid"></div>
   <div class="note" id="grid-msg"></div>   <!-- kept until the next click; grid-note is redrawn every second -->
   <div class="note" id="grid-note"></div>
@@ -2104,6 +2126,20 @@ function detailButton(btn, target, cls, key, hidden, shown) {
 detailButton($('usage-detail'), $('usage'), 'brief', 'amc-usage-detail', 'show only the limits, as bars', 'show the details again');
 detailButton($('grid-detail'), $('monitor-col'), 'brief-grid', 'amc-grid-detail',
              'show only the name, activity and status', 'show the details again');
+// Both ⓘ on: the Session Monitor goes under the task list, and back to its column otherwise.
+function dockMonitor() {
+  const col = $('monitor-col'), tasks = $('task-head').parentElement;
+  const dock = $('usage').classList.contains('brief') && col.classList.contains('brief-grid');
+  document.body.classList.toggle('docked', dock);
+  col.classList.toggle('docked', dock);
+  if (dock && col.parentElement !== tasks) tasks.insertBefore(col, $('task-chat'));
+  // Under the tasks it needs about 300 px; a narrower Tasks column widens to that (not saved).
+  const [w1, , w2] = getComputedStyle(document.body).gridTemplateColumns.split(' ').map(parseFloat);
+  if (dock && !relax.on && w1 < 300) setWidths(300, w2);
+  if (!dock && col.parentElement === tasks) document.body.insertBefore(col, document.querySelector('.split[data-col="2"]'));
+}
+dockMonitor();
+for (const id of ['usage-detail', 'grid-detail']) $(id).addEventListener('click', dockMonitor);
 $('task-hist').addEventListener('click', () => {
   taskHistory = !taskHistory;
   $('task-hist').classList.toggle('on', taskHistory);
