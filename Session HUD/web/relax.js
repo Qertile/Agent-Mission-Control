@@ -1938,10 +1938,15 @@ const relax = (() => {
     on = mode === 'relax';
     save(on ? 'relax' : 'office');
     document.body.classList.toggle('relax', on);
-    sig = '';
     clock();
     weatherClock();
-    if (on) { loadTasks(); load().then(() => update(true)); }
+    // Back in Relax: the picture drawn last time shows at once, and is drawn anew only if what
+    // it shows changed meanwhile (the same check as every refresh), a moment later.
+    if (on) {
+      loadTasks();
+      if (bg) { measure(); compose(); }
+      load().then(() => setTimeout(() => update(false), 30));
+    }
   }
 
   function wire() {

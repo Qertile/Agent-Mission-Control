@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-13 – v4.11.3: Relax mode switches in at once
+
+### Fixed
+- Switching to Relax mode drew the whole camp anew every time (ground, roads, buildings,
+  perspective and shadows), about 0.4 s on a test page and longer on Windows, even when
+  nothing had changed. The last picture now shows at once; it is drawn anew a moment later
+  only if what it shows changed meanwhile (a session's status, the count, the weather). The
+  first switch after a start still loads and draws it all, about 0.9 s on a test page.
+- README: Versions (both languages).
+- Versions: `v4.11.3`.
+- Tagged `v4.11.3`.
+
+### Known
+- Measured on a test page with a City of 16 sessions; not yet on Windows.
+
 ## 2026-11-13 – v4.11.2: no fireworks at every start
 
 ### Fixed
