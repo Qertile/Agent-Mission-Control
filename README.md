@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.11.1` (current) | `v4.11.0` plus no usage shown for a limit at 0%, or for a tool whose limits are all at 0%. See `CHANGELOG.md`. |
+| `v4.11.2` (current) | `v4.11.1` plus Relax mode's fireworks no longer going off at every start. See `CHANGELOG.md`. |
+| `v4.11.1` | `v4.11.0` plus no usage shown for a limit at 0%, or for a tool whose limits are all at 0%. See `CHANGELOG.md`. |
 | `v4.11.0` | `v4.10.1` plus the terminals' font size (⚙ or Ctrl+Shift+= / -) and bars that set the heights of the usage and of the Session Monitor under the tasks. See `CHANGELOG.md`. |
 | `v4.10.1` | `v4.10.0` under the MIT license (`LICENSE`). See `CHANGELOG.md`. |
 | `v4.10.0` | `v4.9.0` plus *Send feedback…* filling in the GitHub issue: questions to answer, this run's errors, and the version, system and settings, without private data. See `CHANGELOG.md`. |
@@ -594,7 +595,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.11.1`（目前） | `v4.11.0` 再加上：0% 的限制不顯示用量，全部是 0% 的工具整段不顯示。詳見 `CHANGELOG.md`。 |
+| `v4.11.2`（目前） | `v4.11.1` 再加上：Relax mode 的煙火不會每次啟動都放。詳見 `CHANGELOG.md`。 |
+| `v4.11.1` | `v4.11.0` 再加上：0% 的限制不顯示用量，全部是 0% 的工具整段不顯示。詳見 `CHANGELOG.md`。 |
 | `v4.11.0` | `v4.10.1` 再加上：終端機字體大小（⚙ 或 Ctrl+Shift+=／-），以及可以調整用量和停靠的 Session Monitor 高度的分隔條。詳見 `CHANGELOG.md`。 |
 | `v4.10.1` | `v4.10.0` 加上 MIT 授權（`LICENSE`）。詳見 `CHANGELOG.md`。 |
 | `v4.10.0` | `v4.9.0` 再加上：*Send feedback…* 會先填好 GitHub issue：要回答的問題、這次執行的錯誤，以及版本、系統和設定，不含私人資料。詳見 `CHANGELOG.md`。 |

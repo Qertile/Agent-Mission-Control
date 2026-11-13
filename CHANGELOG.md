@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-13 – v4.11.2: no fireworks at every start
+
+### Fixed
+- Relax mode: the fireworks for a new era went off at every start of AMC, seen on Windows.
+  For a moment after a start the camp's count can be low while the sessions are still read,
+  and that lower era was kept, so the real count right after looked like a new era. Only the
+  highest era reached is kept now; the fireworks still go off once when a new one comes.
+- README: Versions (both languages).
+- Versions: `v4.11.2`.
+- Tagged `v4.11.2`.
+
+### Known
+- Tried on a test page (a count dropping to 0 and back after a start, then a real new era);
+  not yet restarted on Windows.
+
 ## 2026-11-13 – v4.11.1: no usage shown at 0%
 
 ### Changed

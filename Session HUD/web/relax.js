@@ -1765,8 +1765,12 @@ const relax = (() => {
     const now = ERAS.length - 1 - ERAS.indexOf(e);
     let was = null;
     try { was = localStorage.getItem(ERA_KEY); } catch (x) {}
+    // Only the highest era is kept. Right after a start the count can be low for a moment
+    // (sessions still being read, slowest on Windows); keeping that lower era made the next
+    // count, the real one, set the fireworks off again at every start.
+    if (was !== null && now <= Number(was)) return;
     try { localStorage.setItem(ERA_KEY, String(now)); } catch (x) {}
-    if (was !== null && now > Number(was)) celebrate(ERAS[ERAS.length - 1 - Number(was)][1], e[1]);
+    if (was !== null) celebrate(ERAS[ERAS.length - 1 - Number(was)][1], e[1]);
   }
   function celebrate(from, to) {
     let cv = $('relax-fx');
