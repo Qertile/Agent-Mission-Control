@@ -13,6 +13,20 @@
                font-family: 'DejaVu Sans Mono', Consolas, monospace; font-size: 14px; overflow: hidden; }
   body { display: grid; grid-template-columns: var(--c1, 16%) 5px var(--c2, 42%) 5px 1fr; }
   body.dragging { cursor: col-resize; user-select: none; }
+  body.dragging-rows { cursor: row-resize; user-select: none; }
+  /* Bars that drag up and down: between the usage and the session list, and above the
+     Session Monitor docked under the tasks. A double-click gives back the height it had. */
+  .hsplit { flex: 0 0 5px; background: var(--line); cursor: row-resize; }
+  .hsplit:hover, body.dragging-rows .hsplit { background: var(--desc); }
+  #dock-split { display: none; }
+  body.docked:not(.relax) #dock-split { display: block; }
+  #usage.sized { flex: 0 0 auto; height: var(--usage-h); overflow-y: auto; }
+  #monitor-col.docked.sized { flex: 0 0 auto; height: var(--dock-h); max-height: none; }
+  /* ⚙ → Font size: − and + beside the size, the row itself does nothing. */
+  .menu div.font-row { cursor: default; display: flex; gap: 10px; align-items: center; }
+  .menu div.font-row:hover { background: none; color: inherit; }
+  .menu .font-row span[data-font] { cursor: pointer; padding: 0 6px; border: 1px solid var(--desc); }
+  .menu .font-row span[data-font]:hover { color: var(--accent); border-color: var(--accent); }
   /* Relax mode (relax.js): one canvas in place of the Tasks and Sessions columns. */
   #relax { display: none; grid-column: 1 / 4; grid-row: 1; position: relative; min-width: 0; min-height: 0;
            overflow: hidden; background: #3f6a3b; }
@@ -328,6 +342,7 @@
   <div class="head">Session Monitor<span id="usage-detail" class="detail-btn" title="show only the limits, as bars"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
   stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2V11.4"/><circle cx="8" cy="4.6" r="0.4" fill="currentColor"/></svg></span></div>
   <div id="usage"></div>
+  <div class="hsplit" id="usage-split" title="drag to give the usage more or less room; double-click: as it was"></div>
   <div id="grid-head"><div>Session</div><div>Status</div><div>5h Tok</div><div>Up</div><div>Updated</div><div id="grid-detail" class="detail-btn" title="show only the name, activity and status"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
   stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2V11.4"/><circle cx="8" cy="4.6" r="0.4" fill="currentColor"/></svg></div></div>
   <div id="grid"></div>
@@ -694,7 +709,7 @@ const amc = {
     el.className = 'term';
     $('terms').appendChild(el);
     const term = new Terminal({
-      fontFamily: "'DejaVu Sans Mono', Consolas, monospace", fontSize: 14, cursorBlink: true,
+      fontFamily: "'DejaVu Sans Mono', Consolas, monospace", fontSize: amc.font, cursorBlink: true,
       scrollback: 5000, allowProposedApi: true,
       theme: termTheme(),
       // A link the program marked itself (OSC 8): xterm's own way, window.open, does nothing here.
@@ -714,6 +729,11 @@ const amc = {
       if (e.type !== 'keydown' || !e.ctrlKey || e.altKey) return true;
       if (e.code === 'KeyV') return false;
       if (e.shiftKey && e.code === 'KeyC') { copyText(term.getSelection()); term.focus(); return false; }
+      // Ctrl+Shift+= / Ctrl+Shift+- / Ctrl+Shift+0: the terminals' font size (plain Ctrl+-
+      // is left to the program: it is Claude Code's undo).
+      if (e.shiftKey && ['Equal', 'NumpadAdd'].includes(e.code)) { amc.setFont(amc.font + 1); return false; }
+      if (e.shiftKey && ['Minus', 'NumpadSubtract'].includes(e.code)) { amc.setFont(amc.font - 1); return false; }
+      if (e.shiftKey && ['Digit0', 'Numpad0'].includes(e.code)) { amc.setFont(FONT_DEFAULT); return false; }
       return true;
     });
     // WebKitGTK's paste carries no image at all: then Python reads the clipboard. Plain text
@@ -1362,6 +1382,17 @@ amc.feedbackInfo = () => ({
          $('usage').classList.contains('brief') && 'usage brief', $('monitor-col').classList.contains('brief-grid') && 'list brief']
         .filter(Boolean).join(' · ') || 'all details',
 });
+// The terminals' font size (⚙ → Font size, or Ctrl+Shift+= and -), kept for next time in this window.
+const FONT_KEY = 'amc-font-size', FONT_DEFAULT = 14;
+amc.font = (() => { try { return +localStorage.getItem(FONT_KEY) || FONT_DEFAULT; } catch (e) { return FONT_DEFAULT; } })();
+amc.setFont = n => {
+  amc.font = Math.max(9, Math.min(24, Math.round(n)));
+  try { localStorage.setItem(FONT_KEY, amc.font === FONT_DEFAULT ? '' : String(amc.font)); } catch (e) {}
+  for (const t of Object.values(amc.tabs)) if (t.term && t.term.options) t.term.options.fontSize = amc.font;
+  amc.render();
+  const shown = document.getElementById('font-size');
+  if (shown) shown.textContent = amc.font;
+};
 amc.openUrl = async url => {
   const err = await api().open_url(url);
   if (err) alert(err);
@@ -1544,6 +1575,8 @@ $('set-btn').addEventListener('click', async e => {
     `<div data-monitor="1" class="${relax.on ? 'disabled' : ''}" title="show or hide the Session Monitor column (Office only)">` +
     `${document.body.classList.contains('no-monitor') ? '☐' : '☑'} Session Monitor</div>` +
     `<hr><div data-sub="theme">Theme: ${esc(themeName)} ▸</div>` +
+    `<div class="font-row" title="the terminals' text (also Ctrl+Shift+= and Ctrl+Shift+-)">Font size ` +
+    `<span data-font="-1">−</span><b id="font-size">${amc.font}</b><span data-font="1">+</span></div>` +
     `<div data-sub="ai" title="the AI that Task Reminder and Session Manager start with">Default AI: ${AI_LABELS[def.tool]} ▸</div>` +
     '<div data-sub="remote" title="open AMC from your phone or another computer">Remote Access AMC ▸</div>' +
     '<div data-sub="accounts" title="the account each AI tool is logged in with">Accounts ▸</div>' +
@@ -1653,6 +1686,11 @@ $('set-menu').addEventListener('click', e => {
       await amc.syncTabs();
       amc.select(r.id);
     });
+    return;
+  }
+  if (e.target.closest('.font-row')) {
+    e.stopPropagation();                    // the menu stays open while the size changes
+    if (e.target.dataset.font) amc.setFont(amc.font + +e.target.dataset.font);
     return;
   }
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
@@ -2145,11 +2183,44 @@ function dockMonitor() {
   const dock = $('usage').classList.contains('brief') && col.classList.contains('brief-grid');
   document.body.classList.toggle('docked', dock);
   col.classList.toggle('docked', dock);
-  if (dock && col.parentElement !== tasks) tasks.insertBefore(col, $('task-chat'));
+  if (dock && col.parentElement !== tasks) { tasks.insertBefore(col, $('task-chat')); tasks.insertBefore($('dock-split'), col); }
   // Under the tasks it needs about 300 px; a narrower Tasks column widens to that (not saved).
   const [w1, , w2] = getComputedStyle(document.body).gridTemplateColumns.split(' ').map(parseFloat);
   if (dock && !relax.on && w1 < 300) setWidths(300, w2);
   if (!dock && col.parentElement === tasks) document.body.insertBefore(col, document.querySelector('.split[data-col="2"]'));
+}
+// Up-and-down bars: each sets the height of `el` (kept as `cssVar` on it, in px) and saves it
+// under `key`; `grows`: +1 when dragging down makes it taller, -1 when dragging up does.
+function heightBar(bar, el, cssVar, key, grows, room) {
+  const set = h => {
+    if (h == null) { el.classList.remove('sized'); el.style.removeProperty(cssVar); return; }
+    el.style.setProperty(cssVar, h + 'px');
+    el.classList.add('sized');
+  };
+  try { const h = +localStorage.getItem(key); if (h) set(h); } catch (e) {}
+  bar.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const start = e.clientY, from = el.getBoundingClientRect().height;
+    document.body.classList.add('dragging-rows');
+    let h = from;
+    const move = ev => { h = Math.round(Math.max(40, Math.min(room() - 60, from + grows * (ev.clientY - start)))); set(h); };
+    const up = () => {
+      document.body.classList.remove('dragging-rows');
+      removeEventListener('mousemove', move); removeEventListener('mouseup', up);
+      try { localStorage.setItem(key, String(h)); } catch (err) {}
+    };
+    addEventListener('mousemove', move); addEventListener('mouseup', up);
+  });
+  bar.addEventListener('dblclick', () => { set(null); try { localStorage.removeItem(key); } catch (e) {} });
+}
+{
+  const dockBar = document.createElement('div');
+  dockBar.className = 'hsplit';
+  dockBar.id = 'dock-split';
+  dockBar.title = 'drag to give the Session Monitor more or less room; double-click: as it was';
+  $('task-head').parentElement.insertBefore(dockBar, $('task-chat'));
+  heightBar(dockBar, $('monitor-col'), '--dock-h', 'amc-dock-height', -1, () => $('task-head').parentElement.clientHeight);
+  heightBar($('usage-split'), $('usage'), '--usage-h', 'amc-usage-height', 1, () => $('monitor-col').clientHeight);
 }
 dockMonitor();
 for (const id of ['usage-detail', 'grid-detail']) $(id).addEventListener('click', dockMonitor);

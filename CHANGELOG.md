@@ -2,6 +2,24 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-13 – v4.11.0: font size and panel heights
+
+### Added
+- ⚙ → *Font size* with − and + (9 to 24, the menu stays open), and Ctrl+Shift+= /
+  Ctrl+Shift+- / Ctrl+Shift+0 (14) in a terminal: the text size of all the terminals, kept
+  for next time in this window. Plain Ctrl+- is left to the program (Claude Code's undo).
+- A bar under the usage: dragging it gives the usage more or less room than the session
+  list, in a column of its own and under the tasks.
+- With the Session Monitor under the tasks, a bar above it sets its height.
+- A double-click on either bar gives back the height it had; both are kept for next time.
+- README: Font size, Heights, Versions (both languages).
+- Versions: `v4.11.0`.
+- Tagged `v4.11.0`.
+
+### Known
+- Tried on a test page; not yet in the real AMC window, and Ctrl+Shift+= not with every
+  keyboard layout.
+
 ## 2026-11-13 – v4.10.1: the MIT license
 
 ### Added

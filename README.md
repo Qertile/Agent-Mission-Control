@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.10.1` (current) | `v4.10.0` under the MIT license (`LICENSE`). See `CHANGELOG.md`. |
+| `v4.11.0` (current) | `v4.10.1` plus the terminals' font size (⚙ or Ctrl+Shift+= / -) and bars that set the heights of the usage and of the Session Monitor under the tasks. See `CHANGELOG.md`. |
+| `v4.10.1` | `v4.10.0` under the MIT license (`LICENSE`). See `CHANGELOG.md`. |
 | `v4.10.0` | `v4.9.0` plus *Send feedback…* filling in the GitHub issue: questions to answer, this run's errors, and the version, system and settings, without private data. See `CHANGELOG.md`. |
 | `v4.9.0` | `v4.8.0` plus the brief Session Monitor moving under the task list when both ⓘ are on, its bars lined up and a line per session. See `CHANGELOG.md`. |
 | `v4.8.0` | `v4.7.1` plus ⓘ buttons that show the usage as short bars only and the session list as name, activity and status only, and a shorter activity line. See `CHANGELOG.md`. |
@@ -452,6 +453,11 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   panes take its room, and the choice is kept.
 - **Keys:** Ctrl+Tab / Ctrl+Shift+Tab switch to the next / previous tab; the mouse
   wheel over the tab bar scrolls it.
+- **Font size:** `⚙` → *Font size* − / + (9 to 24), or Ctrl+Shift+= / Ctrl+Shift+- and
+  Ctrl+Shift+0 for 14, sets the terminals' text size; it is kept for next time.
+- **Heights:** drag the bar under the usage to give it more or less room than the session
+  list; with the Session Monitor under the tasks, the bar above it sets its height. A
+  double-click on a bar gives back the height it had; the heights are kept.
 - **Files:** drag files from the file manager onto a pane to type their full paths
   into that tab.
 - **Images:** Ctrl+V (or Ctrl+Shift+V) with an image on the clipboard saves it as
@@ -587,7 +593,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.10.1`（目前） | `v4.10.0` 加上 MIT 授權（`LICENSE`）。詳見 `CHANGELOG.md`。 |
+| `v4.11.0`（目前） | `v4.10.1` 再加上：終端機字體大小（⚙ 或 Ctrl+Shift+=／-），以及可以調整用量和停靠的 Session Monitor 高度的分隔條。詳見 `CHANGELOG.md`。 |
+| `v4.10.1` | `v4.10.0` 加上 MIT 授權（`LICENSE`）。詳見 `CHANGELOG.md`。 |
 | `v4.10.0` | `v4.9.0` 再加上：*Send feedback…* 會先填好 GitHub issue：要回答的問題、這次執行的錯誤，以及版本、系統和設定，不含私人資料。詳見 `CHANGELOG.md`。 |
 | `v4.9.0` | `v4.8.0` 再加上：兩個 ⓘ 都開時，精簡的 Session Monitor 移到任務清單下面；長條對齊、每個 session 一行。詳見 `CHANGELOG.md`。 |
 | `v4.8.0` | `v4.7.1` 再加上：ⓘ 按鈕可以讓用量只顯示短長條、Session 清單只顯示名稱、活動曲線和狀態，活動曲線也變短。詳見 `CHANGELOG.md`。 |
@@ -927,6 +934,10 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **欄寬**：拖動三欄之間的分隔線可以調整寬度，寬度會記住。`⚙` → *Session Monitor*（在 Show 下面，只用於 Office）可以隱藏或顯示
   Session Monitor 欄，隱藏時終端機補滿它的位置，選擇會記住。
 - **按鍵**：Ctrl+Tab／Ctrl+Shift+Tab 切到下一個／上一個分頁；滑鼠滾輪在分頁列上可以左右捲動。
+- **字體大小**：`⚙` → *Font size* 的 −／+（9 到 24），或 Ctrl+Shift+=／Ctrl+Shift+-，Ctrl+Shift+0 恢復成 14，
+  可以調整終端機的字體大小，會記住。
+- **高度**：拖動用量下面的分隔條，可以調整用量和 Session 清單各佔多少；Session Monitor 停靠在任務下面時，
+  它上方的分隔條可以調整它的高度。雙擊分隔條恢復原本的高度，高度會記住。
 - **檔案**：從檔案管理員把檔案拖到某一格，會把完整路徑打進那個分頁。
 - **圖片**：剪貼簿裡是圖片時按 Ctrl+V（或 Ctrl+Shift+V），會存成暫存資料夾裡的
   `amc-paste/paste-<時間>.png`（Linux 是 `/tmp`），並把路徑打進分頁；送出後 Claude 會讀那張圖。
