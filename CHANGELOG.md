@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-13 – v4.10.1: the MIT license
+
+### Added
+- `LICENSE`: Agent Mission Control is under the MIT license, from this version on. xterm.js
+  (MIT) and the Relax mode pictures (CC0) keep their own licenses.
+- README: License, Versions (both languages).
+- Versions: `v4.10.1`.
+- Tagged `v4.10.1`.
+
 ## 2026-11-13 – v4.10.0: Send feedback fills in the issue
 
 ### Added

@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.10.0` (current) | `v4.9.0` plus *Send feedback…* filling in the GitHub issue: questions to answer, this run's errors, and the version, system and settings, without private data. See `CHANGELOG.md`. |
+| `v4.10.1` (current) | `v4.10.0` under the MIT license (`LICENSE`). See `CHANGELOG.md`. |
+| `v4.10.0` | `v4.9.0` plus *Send feedback…* filling in the GitHub issue: questions to answer, this run's errors, and the version, system and settings, without private data. See `CHANGELOG.md`. |
 | `v4.9.0` | `v4.8.0` plus the brief Session Monitor moving under the task list when both ⓘ are on, its bars lined up and a line per session. See `CHANGELOG.md`. |
 | `v4.8.0` | `v4.7.1` plus ⓘ buttons that show the usage as short bars only and the session list as name, activity and status only, and a shorter activity line. See `CHANGELOG.md`. |
 | `v4.7.1` | `v4.7.0` plus session names using the whole Session column, with the activity line in a thin strip under them. See `CHANGELOG.md`. |
@@ -560,6 +561,13 @@ or commit it (`.gitignore` already excludes it).
 Optional notes source: the daily summary also reads `<work folder>\Obsidian Vault\MyNotes\<date>.md`
 when that file exists and contains the tag `#work`.
 
+## License
+
+MIT: see [`LICENSE`](LICENSE). You may use, copy, change and share Agent Mission Control,
+also commercially, as long as the copyright notice stays with it. Two parts keep their own
+licenses: xterm.js (`Session HUD/web/vendor/LICENSE-xterm.txt`, MIT) and the Relax mode
+pictures made from Kenney's and Quaternius' kits (`Session HUD/web/relax/LICENSE.txt`, CC0).
+
 ---
 
 # Agent Mission Control（繁體中文）
@@ -579,7 +587,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.10.0`（目前） | `v4.9.0` 再加上：*Send feedback…* 會先填好 GitHub issue：要回答的問題、這次執行的錯誤，以及版本、系統和設定，不含私人資料。詳見 `CHANGELOG.md`。 |
+| `v4.10.1`（目前） | `v4.10.0` 加上 MIT 授權（`LICENSE`）。詳見 `CHANGELOG.md`。 |
+| `v4.10.0` | `v4.9.0` 再加上：*Send feedback…* 會先填好 GitHub issue：要回答的問題、這次執行的錯誤，以及版本、系統和設定，不含私人資料。詳見 `CHANGELOG.md`。 |
 | `v4.9.0` | `v4.8.0` 再加上：兩個 ⓘ 都開時，精簡的 Session Monitor 移到任務清單下面；長條對齊、每個 session 一行。詳見 `CHANGELOG.md`。 |
 | `v4.8.0` | `v4.7.1` 再加上：ⓘ 按鈕可以讓用量只顯示短長條、Session 清單只顯示名稱、活動曲線和狀態，活動曲線也變短。詳見 `CHANGELOG.md`。 |
 | `v4.7.1` | `v4.7.0` 再加上：Session 欄的名字使用整欄寬度，活動曲線改成名字下面的細條。詳見 `CHANGELOG.md`。 |
@@ -1001,3 +1010,9 @@ powershell -ExecutionPolicy Bypass -File "Agent-Mission-Control\Daily Summary\se
 
 可選的筆記來源：每日總結也會讀取 `<工作資料夾>\Obsidian Vault\MyNotes\<日期>.md`，
 前提是該檔案存在且含有 `#work` 標籤。
+
+## 授權
+
+MIT，見 [`LICENSE`](LICENSE)。可以自由使用、複製、修改和分享 Agent Mission Control，商業用途也可以，
+只要保留版權聲明。有兩個部分維持各自的授權：xterm.js（`Session HUD/web/vendor/LICENSE-xterm.txt`，MIT），
+以及用 Kenney 和 Quaternius 素材做的 Relax mode 圖片（`Session HUD/web/relax/LICENSE.txt`，CC0）。
