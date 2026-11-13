@@ -1874,11 +1874,17 @@ function drawUsage(u) {
   if (u.message) { $('usage').innerHTML = `<div class="sec"><div class="s">${esc(u.message)}</div></div>`; return; }
   const pies = list => list.length ? '<div class="pies">' + list.map(p => `<div><div class="cap">${esc(p.caption)}</div>` +
     `${pieSvg(p.frac)}<div class="pct">${Math.round(Math.min(1, p.frac) * 100)}%</div></div>`).join('') + '</div>' : '';
-  const sec = (title, body, list) =>
-    `<div class="sec${list.length ? ' with-pies' : ''}"><div class="tool">${esc(title)}</div>${body}${pies(list)}` +
-    `<div class="mini">${list.map(miniLimit).join('')}</div></div>`;
+  // A limit at 0% has no pie or bar either.
+  const sec = (title, body, all) => {
+    const list = all.filter(p => Math.round(Math.min(1, p.frac) * 100) > 0);
+    return `<div class="sec${list.length ? ' with-pies' : ''}"><div class="tool">${esc(title)}</div>${body}${pies(list)}` +
+      `<div class="mini">${list.map(miniLimit).join('')}</div></div>`;
+  };
   const row = (k, v, cls = 'v') => `<div class="row"><span class="k">${k}</span><span class="${cls}">${esc(v)}</span></div>`;
   const limit = l => row(l.caption, l.used) + (l.note ? `<div class="row d">${esc(l.note)}</div>` : '');
+  // A limit at 0% is left out, its text too, and a tool whose limits are all at 0% altogether.
+  const used = l => Math.round(Math.min(1, l.frac || 0) * 100) > 0;
+  const limits = list => list.filter(used).map(limit).join('');
   const c = u.claude;
   let html = !c ? '' : sec('CLAUDE',
     `<div class="row"><span class="k">5H BLOCK</span><span class="big">${esc(c.total)}</span></div>` +
@@ -1887,14 +1893,14 @@ function drawUsage(u) {
     row('TODAY/WEEK', c.week) +
     `<div class="row d">${esc(c.week_reset)}</div>` +
     (c.models ? row('MODELS', c.models, 's') : ''), c.pies);
-  if (u.codex)
+  if (u.codex && u.codex.windows.some(used))
     html += sec('CODEX' + (u.codex.plan ? ' · ' + u.codex.plan.toUpperCase() : ''),
-      u.codex.windows.map(limit).join(''),
+      limits(u.codex.windows),
       u.codex.windows.map(w => ({caption: w.caption, frac: w.frac})));
   // agy's weekly limit per model group, read from its /usage every 10 minutes.
-  if (u.agy)
+  if (u.agy && (!u.agy.groups.length || u.agy.groups.some(used)))   // not yet read: says so
     html += sec('ANTIGRAVITY' + (u.agy.at ? ' · read ' + u.agy.at : ''),
-      u.agy.groups.length ? u.agy.groups.map(limit).join('')
+      u.agy.groups.length ? limits(u.agy.groups)
                           : '<div class="row s">reading agy\'s /usage...</div>',
       u.agy.groups.map(g => ({caption: g.caption, frac: g.frac})));
   $('usage').innerHTML = html || '<div class="sec"><div class="s">USAGE  no Claude Code, Codex limits or Antigravity sessions yet</div></div>';

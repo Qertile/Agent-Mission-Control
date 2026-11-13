@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.11.0` (current) | `v4.10.1` plus the terminals' font size (⚙ or Ctrl+Shift+= / -) and bars that set the heights of the usage and of the Session Monitor under the tasks. See `CHANGELOG.md`. |
+| `v4.11.1` (current) | `v4.11.0` plus no usage shown for a limit at 0%, or for a tool whose limits are all at 0%. See `CHANGELOG.md`. |
+| `v4.11.0` | `v4.10.1` plus the terminals' font size (⚙ or Ctrl+Shift+= / -) and bars that set the heights of the usage and of the Session Monitor under the tasks. See `CHANGELOG.md`. |
 | `v4.10.1` | `v4.10.0` under the MIT license (`LICENSE`). See `CHANGELOG.md`. |
 | `v4.10.0` | `v4.9.0` plus *Send feedback…* filling in the GitHub issue: questions to answer, this run's errors, and the version, system and settings, without private data. See `CHANGELOG.md`. |
 | `v4.9.0` | `v4.8.0` plus the brief Session Monitor moving under the task list when both ⓘ are on, its bars lined up and a line per session. See `CHANGELOG.md`. |
@@ -441,7 +442,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   and the models used. CODEX: each limit window with its reset. ANTIGRAVITY (when
   `agents.json` has an agy session): the weekly limit of each model group, read from a
   hidden `agy` → `/usage` every 10 minutes (about 5 seconds; no model quota is used and
-  no conversation is made).
+  no conversation is made). A limit at 0% is not shown, nor a tool whose limits are all at 0%.
 - **Fewer details:** ⓘ at the right of *Session Monitor* shows the usage as one line per tool,
   each limit a short bar with its percent; ⓘ beside *Session* shows the session list as the
   name, its activity line and the status only, one line each. Each lights up while on, as
@@ -593,7 +594,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.11.0`（目前） | `v4.10.1` 再加上：終端機字體大小（⚙ 或 Ctrl+Shift+=／-），以及可以調整用量和停靠的 Session Monitor 高度的分隔條。詳見 `CHANGELOG.md`。 |
+| `v4.11.1`（目前） | `v4.11.0` 再加上：0% 的限制不顯示用量，全部是 0% 的工具整段不顯示。詳見 `CHANGELOG.md`。 |
+| `v4.11.0` | `v4.10.1` 再加上：終端機字體大小（⚙ 或 Ctrl+Shift+=／-），以及可以調整用量和停靠的 Session Monitor 高度的分隔條。詳見 `CHANGELOG.md`。 |
 | `v4.10.1` | `v4.10.0` 加上 MIT 授權（`LICENSE`）。詳見 `CHANGELOG.md`。 |
 | `v4.10.0` | `v4.9.0` 再加上：*Send feedback…* 會先填好 GitHub issue：要回答的問題、這次執行的錯誤，以及版本、系統和設定，不含私人資料。詳見 `CHANGELOG.md`。 |
 | `v4.9.0` | `v4.8.0` 再加上：兩個 ⓘ 都開時，精簡的 Session Monitor 移到任務清單下面；長條對齊、每個 session 一行。詳見 `CHANGELOG.md`。 |
@@ -927,7 +929,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   時間，讀不到時用 `weekResetWeekday`／`weekResetHour`）、用了哪些模型。CODEX：每個額度
   視窗和重置時間。ANTIGRAVITY（`agents.json` 有 agy session 時）：每組模型的週額度，每
   10 分鐘在背景開一個看不到的 `agy` 打 `/usage` 讀出來（約 5 秒，不會用到模型額度，也不
-  會新增對話）。
+  會新增對話）。0% 的限制不顯示；全部限制都是 0% 的工具整段不顯示。
 - **精簡顯示**：*Session Monitor* 右邊的 ⓘ 會把用量改成每個工具一行，每個限制是一條短長條加百分比；
   *Session* 旁邊的 ⓘ 會讓 Session 清單只顯示名稱、活動曲線和狀態，每個一行。開啟時按鈕會亮，和 Tasks 的時鐘一樣，
   選擇會記住。兩個都開時，Session Monitor 會移到任務清單下面，它自己那欄消失，空間讓給終端機；這時 Tasks 欄至少 300 px 寬。

@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-13 – v4.11.1: no usage shown at 0%
+
+### Changed
+- Usage: a limit at 0% (as shown, so under 0.5% too) has no pie, no bar and no line of
+  text, and a tool whose limits are all at 0% (such as Codex at 0% of its 30 days) is not
+  shown at all, until it is used. Claude's block and week totals stay, as they are not
+  limits; Antigravity still says it is reading its `/usage` until it has.
+- README: Usage, Versions (both languages).
+- Versions: `v4.11.1`.
+- Tagged `v4.11.1`.
+
 ## 2026-11-13 – v4.11.0: font size and panel heights
 
 ### Added
