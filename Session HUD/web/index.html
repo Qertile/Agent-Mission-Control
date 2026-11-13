@@ -1349,6 +1349,19 @@ amc.openPath = async tries => {
   const err = await api().open_path(tries);
   if (err) alert(err);
 };
+// What the page tells Send feedback: its look and its last script errors.
+amc.errors = [];
+addEventListener('error', e => { amc.errors.push(`${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})`); amc.errors.splice(0, amc.errors.length - 20); });
+addEventListener('unhandledrejection', e => { amc.errors.push(`unhandled: ${e.reason && e.reason.message || e.reason}`); amc.errors.splice(0, amc.errors.length - 20); });
+// What AMC told the person in a box (an error in most cases) goes with it too.
+const shownAlert = window.alert.bind(window);
+window.alert = text => { amc.errors.push(`shown: ${String(text).slice(0, 300)}`); amc.errors.splice(0, amc.errors.length - 20); shownAlert(text); };
+amc.feedbackInfo = () => ({
+  layout: relax.on ? 'Relax' : 'Office', theme: themeName, errors: amc.errors,
+  view: [document.body.classList.contains('no-monitor') && 'Session Monitor hidden',
+         $('usage').classList.contains('brief') && 'usage brief', $('monitor-col').classList.contains('brief-grid') && 'list brief']
+        .filter(Boolean).join(' · ') || 'all details',
+});
 amc.openUrl = async url => {
   const err = await api().open_url(url);
   if (err) alert(err);
@@ -1649,7 +1662,7 @@ $('set-menu').addEventListener('click', e => {
     try { localStorage.setItem(MONITOR_KEY, hide ? 'hidden' : ''); } catch (err) {}
   }
   if (e.target.dataset.mode) relax.set(e.target.dataset.mode);
-  if (e.target.dataset.feedback) api().send_feedback();
+  if (e.target.dataset.feedback) api().send_feedback(amc.feedbackInfo());
   if (e.target.dataset.tool) {
     // Task Reminder / Session Manager on another tool: ask whether they move too.
     const k = e.target.dataset.tool, label = AI_LABELS;

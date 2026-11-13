@@ -2,6 +2,29 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-13 – v4.10.0: Send feedback fills in the issue
+
+### Added
+- ⚙ → *Send feedback…* opens the new GitHub issue already filled in, for someone who meets a
+  problem we never saw and would not know how to describe it: a title from the last error,
+  three simple questions (what were you doing, what did you expect, what happened), then
+  what AMC saw: this run's errors in `amc-web.log` (whole tracebacks; a tab that could not
+  start; a tab that quit within 15 s, with its tool's last lines), the error boxes and
+  script errors shown on screen, an earlier run's errors, and the version, system, Python
+  packages, tool versions, session count per tool, layout and settings.
+- Left out: the remote token, session names (each becomes its tool), what was typed or
+  shown in a tab, the command line a tab was started with, and the home folder's name. The
+  remote servers' dropped connections are not counted as errors. Nothing is sent from AMC:
+  the person reads it and submits it on GitHub. On the remote desktop, the other computer
+  fills it in and this one's browser opens it.
+- README: Send feedback, Versions (both languages).
+- Versions: `v4.10.0`.
+- Tagged `v4.10.0`.
+
+### Known
+- Tried with this computer's real settings and log, and on a test page; not yet opened from
+  the real AMC window, on Windows, or from the remote desktop.
+
 ## 2026-11-12 – v4.9.0: the brief Session Monitor under the task list
 
 ### Added

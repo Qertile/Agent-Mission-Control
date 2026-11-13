@@ -25,8 +25,13 @@
   const LOCAL = {
     resize: () => null,                    // the terminals keep this computer's size
     paste_clipboard_image: () => null,     // that clipboard is the other computer's
-    // The issue is written in this computer's browser.
-    send_feedback: () => { window.open('https://github.com/Qertile/Agent-Mission-Control/issues/new', '_blank'); },
+    // The issue is written in this computer's browser, filled in by the other one. The tab
+    // opens at once, with the click, so the browser does not block it as a popup.
+    send_feedback: page => {
+      const w = window.open('about:blank', '_blank');
+      call('feedback_url', [page]).then(url => { if (w) w.location = url; else window.open(url, '_blank'); })
+        .catch(() => { if (w) w.location = 'https://github.com/Qertile/Agent-Mission-Control/issues/new'; });
+    },
     // A web link in a terminal opens in this computer's browser too.
     open_url: url => { window.open(url, '_blank', 'noopener'); return null; },
   };

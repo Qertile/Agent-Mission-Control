@@ -64,6 +64,11 @@ RUNS_WHEN_OPENED = ('.exe', '.bat', '.cmd', '.com', '.msi', '.ps1', '.vbs', '.vb
                     '.lnk', '.url', '.hta', '.reg', '.sh', '.desktop', '.appimage', '.run', '.py', '.pyw', '.jar', '.app')
 APP_ID = 'AgentMissionControl'             # Windows taskbar identity (main(), _set_relaunch)
 REPO_URL = 'https://github.com/Qertile/Agent-Mission-Control.git'   # ⚙ → Update from GitHub
+LOG = os.path.join(HERE, 'amc-web.log')            # the launchers send this process's errors here
+try:
+    LOG_START = os.path.getsize(LOG)               # where this run's part of it begins (Linux appends)
+except OSError:
+    LOG_START = 0
 UPDATE_NOTE = os.path.join(HERE, 'update-note.json')   # what an Update brought, until the restart shows it
 HANDOFF_MESSAGES = 50                      # of a conversation, for the tool it moves to
 HANDOFF_DIR = os.path.join(LAUNCHER_DIR, 'handoff')
@@ -1062,9 +1067,144 @@ class Api:
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return None
 
-    def send_feedback(self):
-        """⚙ → Send feedback: a new GitHub issue in the default browser."""
-        self.open_url(FEEDBACK_URL)
+    def send_feedback(self, page=None):
+        """⚙ → Send feedback: a new GitHub issue in the default browser, its form filled in
+        with this copy's version, settings and last errors (feedback_url)."""
+        self.open_url(self.feedback_url(page))
+
+    def feedback_url(self, page=None):
+        """The new-issue link with a filled-in title and body, for someone who would not know
+        what to write: a few questions for them, then what went wrong as AMC saw it (errors of
+        this run first) and what it runs on. Nothing is sent from here: they read it and send
+        it on GitHub. `page`: what the page knows, {'theme', 'layout', 'view', 'errors'}.
+        Left out: the remote token, session names (each becomes its tool), what was typed or
+        shown in a tab, and the home folder's name."""
+        from urllib.parse import quote
+        import platform
+        page = page if isinstance(page, dict) else {}
+        home, sessions = os.path.expanduser('~'), core.agents()
+        names = sorted({(e.get('name') or '', e.get('tool') or 'claude') for e in sessions if len(e.get('name') or '') >= 3},
+                       key=lambda n: -len(n[0]))
+
+        def clean(text):
+            text = str(text).replace(home, '~')
+            for name, tool in names:
+                text = text.replace(name, f'<a {tool} session>')
+            token = (self._config.get('remote') or {}).get('token')
+            if token:
+                text = text.replace(token, '<token>')
+            return re.sub(r'#t=[\w-]+', '#t=<token>', text)
+
+        def tool_version(cmd):
+            exe = shutil.which(cmd)
+            if not exe:
+                return 'not installed'
+            try:
+                kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
+                r = subprocess.run([exe, '--version'], capture_output=True, text=True, timeout=5,
+                                   stdin=subprocess.DEVNULL, **kw)
+                return ((r.stdout or r.stderr).strip().splitlines() or ['?'])[0][:60]
+            except Exception:
+                return 'installed'
+
+        def package(name):
+            try:
+                import importlib.metadata
+                return importlib.metadata.version(name)
+            except Exception:
+                return '-'
+
+        def details(summary, rows):
+            return ['', f'<details><summary>{summary}</summary>', '', '```', *rows, '```', '</details>'] if rows else []
+
+        tools = {}
+        for e in sessions:
+            t = e.get('tool') or 'claude'
+            tools[t] = tools.get(t, 0) + 1
+        conf = self._config
+        settings = {k: conf[k] for k in ('defaultTool', 'costCap5h', 'costCapWeek', 'weekResetWeekday', 'weekResetHour')
+                    if k in conf}
+        settings['remote access'] = 'on' if (conf.get('remote') or {}).get('token') else 'off'
+        settings['developer mode'] = 'on' if conf.get('developerMode') else 'off'
+        now, before = self._recent_errors()
+        shown = [str(x) for x in (page.get('errors') or [])][-10:]
+        version = self._version() or '?'
+        head = [
+            '### What happened',
+            '<!-- Answer in your own words, in any language. A screenshot helps: paste it here. -->',
+            '1. What were you doing?', '', '2. What did you expect?', '', '3. What happened instead?', '', '',
+            '### Filled in by Agent Mission Control',
+            '<!-- Read it before you submit: issues are public. Delete anything you do not want to share. -->',
+        ]
+        system = [
+            '' if now or shown or before else '- No errors were recorded.',
+            f'- AMC: {version}',
+            f'- System: {platform.platform()}, Python {platform.python_version()}',
+            f'- Packages: pywebview {package("pywebview")}, ' +
+            (f'pywinpty {package("pywinpty")}' if WINDOWS else f'ptyprocess {package("ptyprocess")}'),
+            f'- Tools: claude {tool_version("claude")}; codex {tool_version("codex")}; agy {tool_version("agy")}',
+            f'- Sessions in agents.json: {len(sessions)} ' + '(' + ', '.join(f'{t} {n}' for t, n in sorted(tools.items())) + ')',
+            '- Page: ' + ', '.join(f'{k} {page[k]}' for k in ('layout', 'theme', 'view') if page.get(k)),
+            '- Settings: ' + ', '.join(f'{k} {v}' for k, v in settings.items()),
+        ]
+        compose = lambda old: clean('\n'.join([*head, *details('Errors in this run of AMC', now),
+                                               *details('Errors and messages on the screen', shown),
+                                               *details('Errors from an earlier run', old), *system]))
+        last = (now or shown or [''])[-1].strip()
+        title = clean(f'Problem in AMC {version}' + (f': {last[:80]}' if last else ''))
+        # GitHub takes a link of about 8000 characters at most: an earlier run's errors go first,
+        # then lines from the end.
+        body = compose(before)
+        while len(quote(body)) + len(quote(title)) > 7000 and before:
+            before = before[:-1]
+            body = compose(before)
+        while len(quote(body)) + len(quote(title)) > 7000 and '\n' in body:
+            body = body[:body.rindex('\n')]
+        return f'{FEEDBACK_URL}?title={quote(title)}&body={quote(body)}'
+
+    @staticmethod
+    def _recent_errors(blocks=3, lines=25):
+        """From amc-web.log: (this run's, an earlier run's) last few problems, each a whole
+        traceback, a tab that could not start (without its command line), or a tab that ended
+        within 15 s (its last lines: what the tool said). Not the remote servers' dropped
+        connections (a phone going to sleep), which come from several threads at once."""
+        try:
+            with open(LOG, encoding='utf-8', errors='replace') as f:
+                f.seek(max(0, LOG_START - 100_000))
+                old = f.read(max(0, LOG_START - f.tell()))
+                new = f.read()
+        except OSError:
+            return [], []
+
+        def problems(text):
+            text, found, i = text.splitlines(), [], 0
+            while i < len(text):
+                line = text[i]
+                if line.startswith('Traceback'):
+                    j = i + 1
+                    while j < len(text) and (text[j].startswith((' ', '\t')) or not text[j].strip()):
+                        j += 1
+                    block = text[i:j + 1]
+                    if (re.match(r'\w+(Error|Exception|Interrupt)\b', block[-1])
+                            and not re.match(r'(ConnectionReset|BrokenPipe|ConnectionAborted)Error', block[-1])
+                            and not any('socketserver.py' in b or 'http/server.py' in b for b in block)):
+                        found.append(block[-lines:])
+                    i = j + 1
+                    continue
+                if line.startswith('---') and 'could not start' in line:
+                    found.append([line.split('  argv=')[0][:300]])
+                m = re.match(r'--- .* ended after (\d+) s; last output:', line)
+                if m and int(m[1]) < 15:
+                    j = i + 1
+                    while j < len(text) and not text[j].startswith(('---', 'Traceback', 'restart:')):
+                        j += 1
+                    said = [t.rstrip() for t in text[i + 1:j] if t.strip()][-6:]
+                    found.append([line, *('    ' + t[:200] for t in said)])
+                    i = j
+                    continue
+                i += 1
+            return [row for block in found[-blocks:] for row in block + ['']][:-1]
+        return problems(new), problems(old)[-lines:]
 
     def fork_session(self, sid, name, replace=False):
         """Adds a session named `name` to agents.json that starts from session `sid`'s

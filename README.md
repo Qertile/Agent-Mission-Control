@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.9.0` (current) | `v4.8.0` plus the brief Session Monitor moving under the task list when both ⓘ are on, its bars lined up and a line per session. See `CHANGELOG.md`. |
+| `v4.10.0` (current) | `v4.9.0` plus *Send feedback…* filling in the GitHub issue: questions to answer, this run's errors, and the version, system and settings, without private data. See `CHANGELOG.md`. |
+| `v4.9.0` | `v4.8.0` plus the brief Session Monitor moving under the task list when both ⓘ are on, its bars lined up and a line per session. See `CHANGELOG.md`. |
 | `v4.8.0` | `v4.7.1` plus ⓘ buttons that show the usage as short bars only and the session list as name, activity and status only, and a shorter activity line. See `CHANGELOG.md`. |
 | `v4.7.1` | `v4.7.0` plus session names using the whole Session column, with the activity line in a thin strip under them. See `CHANGELOG.md`. |
 | `v4.7.0` | `v4.6.0` plus a tidier ⚙ menu: *Session Monitor* in a Show group of its own (greyed in Relax), switches marked ☑/☐ and choices ✓. See `CHANGELOG.md`. |
@@ -513,8 +514,13 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 - **Restart:** `⚙` → *Restart* (after asking) closes the window and opens a new one; the
   tabs end and resume with their conversations.
 - **Send feedback:** `⚙` → *Send feedback…* opens a new GitHub issue
-  (github.com/Qertile/Agent-Mission-Control/issues/new) in the default browser.
-
+  (github.com/Qertile/Agent-Mission-Control/issues/new) in the default browser, already filled
+  in, for someone who would not know what to write: a title, three simple questions, the
+  errors of this run (whole tracebacks, a tab that could not start, a tab that quit within
+  15 s with what its tool said, and the messages shown on screen), earlier runs' errors, and
+  the version, system, tools and settings. The remote token, session names, what was typed
+  in a tab and the home folder's name are left out. Nothing is sent until you submit it on
+  GitHub; read it first, as issues are public.
 - **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
   written to `tasks.md` and synced to the Excel file.
 - **Status:** click a task's status (or `-`) for Pending / Ongoing / Checking / Finished /
@@ -573,7 +579,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.9.0`（目前） | `v4.8.0` 再加上：兩個 ⓘ 都開時，精簡的 Session Monitor 移到任務清單下面；長條對齊、每個 session 一行。詳見 `CHANGELOG.md`。 |
+| `v4.10.0`（目前） | `v4.9.0` 再加上：*Send feedback…* 會先填好 GitHub issue：要回答的問題、這次執行的錯誤，以及版本、系統和設定，不含私人資料。詳見 `CHANGELOG.md`。 |
+| `v4.9.0` | `v4.8.0` 再加上：兩個 ⓘ 都開時，精簡的 Session Monitor 移到任務清單下面；長條對齊、每個 session 一行。詳見 `CHANGELOG.md`。 |
 | `v4.8.0` | `v4.7.1` 再加上：ⓘ 按鈕可以讓用量只顯示短長條、Session 清單只顯示名稱、活動曲線和狀態，活動曲線也變短。詳見 `CHANGELOG.md`。 |
 | `v4.7.1` | `v4.7.0` 再加上：Session 欄的名字使用整欄寬度，活動曲線改成名字下面的細條。詳見 `CHANGELOG.md`。 |
 | `v4.7.0` | `v4.6.0` 再加上：整理過的 ⚙ 選單，*Session Monitor* 移到自己的 Show 群組（Relax 時變灰），開關用 ☑/☐、二選一用 ✓。詳見 `CHANGELOG.md`。 |
@@ -957,7 +964,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   新的舊的都可以。這份有還沒推上 GitHub 的 commit、不在 `master` 分支，或會蓋掉還沒 commit 的修改時會拒絕。
   再點一次就關閉，*Update* 恢復只跟版本 tag。
 - **重新啟動**：`⚙` → *Restart*（會先確認）會關掉視窗再開新的；分頁會結束，再接續原本的對話。
-- **意見回饋**：`⚙` → *Send feedback…* 會用預設瀏覽器開 GitHub 的新 issue 頁面（github.com/Qertile/Agent-Mission-Control/issues/new）。
+- **意見回饋**：`⚙` → *Send feedback…* 會用預設瀏覽器開 GitHub 的新 issue 頁面（github.com/Qertile/Agent-Mission-Control/issues/new），並先替不知道怎麼寫的人填好：標題、三個簡單的問題、這次執行的錯誤（完整的 traceback、啟動失敗的分頁、15 秒內就結束的分頁和工具最後說的話、畫面上跳出的訊息）、之前執行的錯誤，以及版本、系統、工具和設定。遠端 token、session 名稱、分頁裡打的內容和家目錄名稱都不會放進去。要在 GitHub 上按送出才會送出；issue 是公開的，送出前請先看過。
 
 - **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
   並同步到 Excel。
