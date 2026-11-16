@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.12.0` (current) | `v4.11.3` plus a city in Relax mode with a stone wall, gates and towers winding round its buildings, cobbled streets, the sessions' buildings round the fountain, and medieval street lanterns. See `CHANGELOG.md`. |
+| `v4.13.0` (current) | `v4.12.0` plus a town's palisade of stakes with gates, and in a metropolis the old city wall's gates kept whole among broken stretches and towers. See `CHANGELOG.md`. |
+| `v4.12.0` | `v4.11.3` plus a city in Relax mode with a stone wall, gates and towers winding round its buildings, cobbled streets, the sessions' buildings round the fountain, and medieval street lanterns. See `CHANGELOG.md`. |
 | `v4.11.3` | `v4.11.2` plus Relax mode showing its last picture at once when switched to again. See `CHANGELOG.md`. |
 | `v4.11.2` | `v4.11.1` plus Relax mode's fireworks no longer going off at every start. See `CHANGELOG.md`. |
 | `v4.11.1` | `v4.11.0` plus no usage shown for a limit at 0%, or for a tool whose limits are all at 0%. See `CHANGELOG.md`. |
@@ -291,8 +292,9 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   ended ones included: a tribe from 0, a village from 100, a town from 500, a city from 1000,
   a metropolis from 5000 and a megacity from 10000. Roads go from dirt paths to stone to a
   city's cobbled streets round a paved square, the sessions' buildings round its fountain,
-  with a stone wall, gates and towers winding round the town between its buildings, then
-  asphalt with the wall gone; at night a city's and a metropolis's windows light up, and a
+  with a stone wall, gates and towers winding round the town between its buildings (a town
+  has a palisade of stakes), then asphalt, with only the old wall's gates and some broken
+  stretches and towers left; at night a city's and a metropolis's windows light up, and a
   city's street lanterns cast pools of light. The top left of the camp shows what it is now and when the
   next one comes. Deleting a session from `agents.json` takes its messages off the count,
   so the camp can shrink back.
@@ -599,7 +601,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.12.0`（目前） | `v4.11.3` 再加上 Relax mode 城市的改造：在建築之間繞一圈有城門和塔樓的石牆、石板街道、session 建築圍著噴水池，以及中世紀風格的提燈。詳見 `CHANGELOG.md`。 |
+| `v4.13.0`（目前） | `v4.12.0` 再加上：小鎮有一圈帶門的木柵欄，大都會保留舊城牆完整的城門，以及幾段殘破的牆和塔。詳見 `CHANGELOG.md`。 |
+| `v4.12.0` | `v4.11.3` 再加上 Relax mode 城市的改造：在建築之間繞一圈有城門和塔樓的石牆、石板街道、session 建築圍著噴水池，以及中世紀風格的提燈。詳見 `CHANGELOG.md`。 |
 | `v4.11.3` | `v4.11.2` 再加上：再次切到 Relax mode 時，立刻顯示上次的畫面。詳見 `CHANGELOG.md`。 |
 | `v4.11.2` | `v4.11.1` 再加上：Relax mode 的煙火不會每次啟動都放。詳見 `CHANGELOG.md`。 |
 | `v4.11.1` | `v4.11.0` 再加上：0% 的限制不顯示用量，全部是 0% 的工具整段不顯示。詳見 `CHANGELOG.md`。 |
@@ -817,7 +820,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **整個營地也會成長**，依 `agents.json` 裡所有 session 的訊息總數計算，已結束的也算：
   0 則起是部落，100 則起是村莊，500 則起是小鎮，1000 則起是城市，5000 則起是大都會，10000 則起
   是超級都市。路從泥土路、石板路，變成城市的石板街道和鋪石廣場，session 的建築圍著廣場的噴水池，一圈有城門
-  和塔樓的石牆在建築之間繞住市區；再變成柏油路並拆掉城牆。城市和大都會的窗戶晚上會亮，城市的提燈會
+  和塔樓的石牆在建築之間繞住市區（小鎮是一圈木柵欄）；再變成柏油路，舊城牆只剩城門和幾段殘破的牆與塔。城市和大都會的窗戶晚上會亮，城市的提燈會
   在地上照出一圈光。營地左上角會顯示目前的階段和下一階段的門檻。從 `agents.json` 刪除
   session 會扣掉它的訊息數，所以營地可能退回前一階段。
 - **不屬於任何 session 的建築**會隨著成長出現，1000 則以前每 100 則一棟，之後每 500 則一棟：

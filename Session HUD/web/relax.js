@@ -733,7 +733,7 @@ const relax = (() => {
     const road = roadPoints(edges);
     const clear = plot * (e[4] / 2 + 0.12);
     const onBuilding = (x, y, s) => placed.some(p => Math.abs(p.x - x) < plot * 0.6 && y > p.y - plot * 0.9 && y < p.y + plot * 0.45 + s * 0.8);
-    const free = (x, y, s) => !road.some(p => Math.hypot(p.x - x, p.y - y) < clear) && riverGap(x, y) > riverWidth() / 2 + s * 0.2 && !(e[1] === 'City' && onWall(x, y))
+    const free = (x, y, s) => !road.some(p => Math.hypot(p.x - x, p.y - y) < clear) && riverGap(x, y) > riverWidth() / 2 + s * 0.2 && !((e[1] === 'City' || e[1] === 'Town') && onWall(x, y))
       && y > plot * 0.98 && y < h - 10 && !onBuilding(x, y, s) && !ponds.some(q => Math.hypot((q.x - x) / (q.rx + 12), (q.y - y) / (q.ry + 8)) < 1);
     // Ponds where there is room, a reed or two at their edge; fewer as the camp grows.
     const ponds = [];
@@ -901,14 +901,16 @@ const relax = (() => {
     g.fillRect(-PAD, -PADY, w + 2 * PAD, h + PADY);
     land(g, w, h, e);
     const {lamps: allLamps, edges} = roads(g, placed, e);
-    wallLine = e[1] === 'City' ? wallOutline(placed) : null;
+    // A town's palisade, a city's wall, what is left of it in a metropolis.
+    const wallStyle = {Town: 'wood', City: 'stone', Metropolis: 'ruin', Megacity: 'ruin'}[e[1]];
+    wallLine = wallStyle ? wallOutline(placed) : null;
     const lamps = allLamps.filter(l => riverGap(l.x, l.y) > riverWidth() / 2 + plot * 0.04 && !(e[1] === 'City' && onWall(l.x, l.y)));
     lampCount = lamps.length;
     bridges(g, edges, e);
     const trees = urban(e) ? streetTrees(edges, placed, lamps, e, w, h).filter(t => !(e[1] === 'City' && onWall(t.x, t.y))) : [];
     if (e[1] === 'City') trees.push(...plazaEdge(edges, placed, lamps, trees));
     plazaCount = trees.filter(t => t.b.house).length;
-    const ramparts = wallLine ? cityWall(edges, wallLine) : [];
+    const ramparts = wallLine ? cityWall(edges, wallLine, wallStyle) : [];
     const woods = [];
     scenery(g, w, h, placed, plot, e, edges, woods);
     // The ground is done: warp it, then stand everything upright on it. Each thing is drawn
@@ -1446,8 +1448,16 @@ const relax = (() => {
   // river, a gatehouse tower each side of an avenue, and a round tower with a tiled roof at
   // each corner. Each stretch and tower is drawn in its place among the buildings, the side
   // facing the camera, lit from the left, with its shadow to the right.
-  function cityWall(edges, outline) {
-    const T = 8, H = 40, PIECE = 24, n = outline.length;
+  // style: 'stone' (a city), 'wood' (a town: a palisade of pointed stakes, no towers, its gates
+  // only openings), 'ruin' (a metropolis: the old wall, a stretch here and there, broken down,
+  // a few towers without their roofs).
+  function cityWall(edges, outline, style = 'stone') {
+    const wood = style === 'wood', ruin = style === 'ruin';
+    const T = wood ? 3 : 8, H = wood ? 24 : 40, PIECE = 24, n = outline.length;
+    let walked = 0;
+    // How much of a ruined stretch stands, 0 to 1, from where it is along the wall: stretches
+    // of about 120 standing, then gaps, so it reads as old wall kept in pieces.
+    const standing = d => { const k = Math.floor(d / 120), r = rng(k * 9973 + 5)(); return r < 0.6 ? 0.55 + 0.45 * rng(Math.floor(d / 24) * 31 + 7)() : 0; };
     let skipped = 0;
     // The middle of the outline, and each point's way out from it (for which face shows).
     const mid = outline.reduce((a, q) => ({x: a.x + q.x / n, y: a.y + q.y / n}), {x: 0, y: 0});
@@ -1473,7 +1483,7 @@ const relax = (() => {
     const lift = (q, h) => { const [X, Y] = warp(q.x, q.y); return [X, Y - h * depth(q.y)]; };
     const face = (g, P, light) => {
       g.beginPath(); P.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.closePath();
-      g.fillStyle = pat(g, brick, '#9b958a'); g.fill();
+      g.fillStyle = wood ? '#6e4c2c' : pat(g, brick, '#9b958a'); g.fill();
       g.fillStyle = light > 0 ? `rgba(255, 248, 230, ${0.12 * light})` : `rgba(20, 16, 12, ${0.38 * -light + 0.08})`; g.fill();
     };
     for (let j = 0; j < n; j++) {
@@ -1488,16 +1498,43 @@ const relax = (() => {
       for (let i = 0; i < k; i++) {
         const f0 = i / k, f1 = (i + 1) / k, a0 = {x: p.x + (q.x - p.x) * f0, y: p.y + (q.y - p.y) * f0}, b0 = {x: p.x + (q.x - p.x) * f1, y: p.y + (q.y - p.y) * f1};
         const m = {x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2}, gap = gapAt(m);
+        walked += len / k;
         if (!wallFree(a0) || !wallFree(b0)) { skipped++; continue; }   // a building stands there: it is the wall
+        // A ruin keeps its gates whole; the rest of it stands here and there.
+        const left = ruin && !gap ? standing(walked) : 1;
+        if (!left) continue;
         const a = {x: a0.x + sx, y: a0.y + sy}, b = {x: b0.x + sx, y: b0.y + sy}, ia = {x: a0.x - sx, y: a0.y - sy}, ib = {x: b0.x - sx, y: b0.y - sy};
         items.push({x: m.x, y: m.y + (front ? 4 : -4), b: {wall: true, draw: g => {
-          const low = gap ? H * 0.62 : 0, A = lift(a, low), B = lift(b, low), At = lift(a, H), Bt = lift(b, H);
+          const HH = H * left, low = gap ? H * 0.62 : 0, A = lift(a, low), B = lift(b, low), At = lift(a, HH), Bt = lift(b, HH);
           if (!gap) {
-            const ha = H * depth(a.y), hb = H * depth(b.y), [ax, ay] = warp(a.x, a.y), [bx, by] = warp(b.x, b.y);
+            const ha = HH * depth(a.y), hb = HH * depth(b.y), [ax, ay] = warp(a.x, a.y), [bx, by] = warp(b.x, b.y);
             g.fillStyle = 'rgba(12, 28, 12, 0.22)';
             g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.lineTo(bx + 0.6 * hb, by - 0.25 * hb); g.lineTo(ax + 0.6 * ha, ay - 0.25 * ha); g.closePath(); g.fill();
           }
+          if (wood && gap) {                   // a palisade's gate: a beam over the way in
+            const k = 1.25, Ah = lift(a, H * k), Bh = lift(b, H * k), th = 4 * depth(m.y);
+            g.fillStyle = light > 0 ? '#86613a' : '#5a3d22';
+            g.beginPath(); g.moveTo(...Ah); g.lineTo(...Bh); g.lineTo(Bh[0], Bh[1] + th); g.lineTo(Ah[0], Ah[1] + th); g.closePath(); g.fill();
+            return;
+          }
           face(g, [A, B, Bt, At], light);
+          if (wood) {                          // the stakes: a seam between each, a point on top
+            const N = 4;
+            g.strokeStyle = 'rgba(30, 18, 8, 0.5)'; g.lineWidth = 1;
+            g.fillStyle = light > 0 ? '#86613a' : '#5a3d22';
+            for (let s = 0; s < N; s++) {
+              const f0 = s / N, f1 = (s + 1) / N, x0 = A[0] + (B[0] - A[0]) * f0, x1 = A[0] + (B[0] - A[0]) * f1;
+              const t0 = At[1] + (Bt[1] - At[1]) * f0, t1 = At[1] + (Bt[1] - At[1]) * f1, b0 = A[1] + (B[1] - A[1]) * f0;
+              g.beginPath(); g.moveTo(x0, b0); g.lineTo(x0, t0); g.stroke();
+              g.beginPath(); g.moveTo(x0, t0); g.lineTo((x0 + x1) / 2, (t0 + t1) / 2 - 5 * depth(m.y)); g.lineTo(x1, t1); g.closePath(); g.fill();
+            }
+            return;
+          }
+          if (ruin && !gap) {                  // a broken top: no walk, no merlons, rubble at its foot
+            g.fillStyle = 'rgba(120, 112, 100, 0.9)';
+            g.beginPath(); g.moveTo(...At); g.lineTo((At[0] + Bt[0]) / 2, (At[1] + Bt[1]) / 2 - 4 * depth(m.y) * (left > 0.6 ? 1 : -1)); g.lineTo(...Bt); g.lineTo(Bt[0], Bt[1] + 3); g.lineTo(At[0], At[1] + 3); g.closePath(); g.fill();
+            return;
+          }
           if (gap) {
             g.fillStyle = 'rgba(20, 16, 12, 0.55)';
             g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.lineTo(B[0], B[1] - 3 * depth(b.y)); g.lineTo(A[0], A[1] - 3 * depth(a.y)); g.closePath(); g.fill();
@@ -1511,6 +1548,28 @@ const relax = (() => {
     }
     // Towers: at each corner, and each side of an avenue's gate.
     const towers = [];
+    if (wood) {                              // a palisade: a tall post each side of every gate
+      for (const [gx, gy, half] of gaps) for (let j = 0; j < n; j++) {
+        const p = outline[j], q = outline[(j + 1) % n], len = Math.hypot(q.x - p.x, (q.y - p.y) / KY) || 1;
+        const t = ((gx - p.x) * (q.x - p.x) + (gy - p.y) / KY * (q.y - p.y) / KY) / (len * len);
+        if (t < 0 || t > 1 || Math.hypot(p.x + (q.x - p.x) * t - gx, (p.y + (q.y - p.y) * t - gy) / KY) > 2) continue;
+        for (const s of [-1, 1]) {
+          const f = t + s * half / len;
+          if (f <= 0 || f >= 1) continue;
+          const c = {x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f};
+          if (!wallFree(c)) continue;
+          items.push({x: c.x, y: c.y + 6, b: {wall: true, draw: g => {
+            const [X, Y] = warp(c.x, c.y), m = depth(c.y), w = 7 * m, h = H * 1.45 * m;
+            g.fillStyle = 'rgba(12, 28, 12, 0.22)';
+            g.beginPath(); g.moveTo(X - w / 2, Y); g.lineTo(X + w / 2, Y); g.lineTo(X + w / 2 + 0.6 * h, Y - 0.25 * h); g.lineTo(X - w / 2 + 0.6 * h, Y - 0.25 * h); g.closePath(); g.fill();
+            g.fillStyle = '#86613a'; g.fillRect(X - w / 2, Y - h, w / 2, h);
+            g.fillStyle = '#5a3d22'; g.fillRect(X, Y - h, w / 2, h);
+            g.beginPath(); g.moveTo(X - w / 2, Y - h); g.lineTo(X, Y - h - w); g.lineTo(X + w / 2, Y - h); g.closePath(); g.fill();
+          }}});
+        }
+      }
+      wallSkipped = skipped; wallPieces = items.length; return items;
+    }
     for (let j = 0; j < n; j++) {
       const a = outline[(j - 1 + n) % n], c = outline[j], b = outline[(j + 1) % n];
       const t1 = Math.atan2((c.y - a.y) / KY, c.x - a.x), t2 = Math.atan2((b.y - c.y) / KY, b.x - c.x);
@@ -1527,10 +1586,14 @@ const relax = (() => {
       }
     }
     wallSkipped = skipped; wallPieces = items.length;
-    for (const [c, big] of towers) {
+    for (const [ti, [c, big]] of towers.entries()) {
       if (!wallFree(c)) continue;
+      // A metropolis keeps its gatehouses whole, and one corner tower in two, unroofed.
+      const broken = ruin && big === 1;
+      if (broken && ti % 2) continue;
+      const tall = broken ? 0.7 : 1;
       items.push({x: c.x, y: c.y + 12, b: {wall: true, draw: g => {
-        const [X, Y] = warp(c.x, c.y), m = depth(c.y), w = 30 * big * m, h = H * 1.75 * big * m, ry = w * 0.3;
+        const [X, Y] = warp(c.x, c.y), m = depth(c.y), w = 30 * big * m, h = H * 1.75 * big * m * tall, ry = w * 0.3;
         g.fillStyle = 'rgba(12, 28, 12, 0.22)';
         g.beginPath(); g.moveTo(X - w / 2, Y); g.lineTo(X + w / 2, Y); g.lineTo(X + w / 2 + 0.6 * h, Y - 0.25 * h); g.lineTo(X - w / 2 + 0.6 * h, Y - 0.25 * h); g.closePath(); g.fill();
         g.beginPath(); g.moveTo(X - w / 2, Y - h); g.lineTo(X - w / 2, Y); g.ellipse(X, Y, w / 2, ry, 0, Math.PI, 0, true); g.lineTo(X + w / 2, Y - h); g.closePath();
@@ -1540,6 +1603,11 @@ const relax = (() => {
         g.fillStyle = round; g.fill();
         g.fillStyle = 'rgba(20, 16, 12, 0.6)';
         g.fillRect(X - w * 0.08, Y - h * 0.62, w * 0.12, h * 0.16);
+        if (broken) {                          // its broken top, open to the sky
+          g.fillStyle = 'rgba(40, 34, 28, 0.75)'; g.beginPath(); g.ellipse(X, Y - h, w / 2, ry, 0, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#9b958a'; g.fillRect(X - w / 2, Y - h - 5 * m, w * 0.22, 5 * m); g.fillRect(X + w * 0.1, Y - h - 3 * m, w * 0.3, 3 * m);
+          return;
+        }
         g.beginPath(); g.moveTo(X - w * 0.62, Y - h); g.lineTo(X, Y - h - w * 1.25); g.lineTo(X + w * 0.62, Y - h); g.ellipse(X, Y - h, w * 0.62, ry * 1.2, 0, 0, Math.PI); g.closePath();
         g.fillStyle = pat(g, roof, '#b5533a'); g.fill();
         const cone = g.createLinearGradient(X - w * 0.62, 0, X + w * 0.62, 0);

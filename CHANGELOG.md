@@ -2,6 +2,23 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-16 – v4.13.0: Relax mode: a town's palisade, a metropolis's old wall
+
+### Added
+- Relax mode: a town has a palisade on the same outline as a city's wall, found between its
+  buildings: pointed stakes, lower than the stone wall (24 against 40), no towers; where a
+  road or the river crosses it, a gate of two tall posts and a beam.
+- Relax mode: a metropolis and a megacity keep the old city wall's gates whole (the arches,
+  and the gatehouse towers by the avenues, roofed), with about six stretches in ten of the
+  rest still standing, broken down to uneven heights, and one corner tower in two, unroofed.
+- README: Relax mode, the walls by era (both languages).
+- Versions: `v4.13.0`.
+- Tagged `v4.13.0`.
+
+### Known
+- The low broken stretches in a metropolis are pale against its grey ground; the towers and
+  gates stand out.
+
 ## 2026-11-16 – v4.12.0: Relax mode's city: a stone wall, cobbles and the square
 
 ### Added
