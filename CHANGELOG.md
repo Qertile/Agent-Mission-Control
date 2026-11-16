@@ -2,6 +2,40 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-16 – v4.12.0: Relax mode's city: a stone wall, cobbles and the square
+
+### Added
+- Relax mode: a city's wall. Stone walls with a walk and merlons, a gate arch over every road
+  and over the river, a gatehouse tower each side of an avenue and a round tower with a tiled
+  roof at each corner, standing up after the perspective warp, depth-sorted with the buildings
+  and with shadows. Its outline is found between what stands, never on a building: in 72
+  directions from the plaza, just out beyond the buildings there, the cheapest closed ring,
+  then straightened into runs and corners. The flat strip along the map's edges is gone.
+- Relax mode: a city's streets are cobbled and its plaza paved with flagstones (the medieval
+  kit's textures, `tex-street.png`, `tex-brick.png`, `tex-roof.png`, about 17 KB); a
+  village's dirt paths get a darker edge.
+- Relax mode: the sessions' buildings round the fountain. Only the avenues run within 330 of
+  the plaza, and the places round it, as near as a building's ground is off the paving and
+  the streets, are offered first; the rest go nearest first. Small town houses, market stalls,
+  trees and lanterns fill the rest of the square's edge in a city.
+- Relax mode: a city's street lights are medieval lanterns (`lantern-post.png`, made by
+  `relax_art.py`): a timber post on a stone foot with an iron bracket and a lantern. At
+  night a lamp lights a pool on the ground under it and glows warm, behind what stands in front.
+
+### Changed
+- Relax mode: every session's building moves once, to the new places round the square.
+
+### Fixed
+- Relax mode: the animals and paddocks could move between the first draw and the next (their
+  random numbers depended on which pictures had loaded), so the view jumped once.
+- README: Relax mode's city (both languages).
+- Versions: `v4.12.0`.
+- Tagged `v4.12.0`.
+
+### Known
+- A full redraw of a city in real WebKit takes about 195–207 ms (about 145 ms before), the wall's
+  share; a town's is unchanged.
+
 ## 2026-11-13 – v4.11.3: Relax mode switches in at once
 
 ### Fixed

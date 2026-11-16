@@ -13,7 +13,7 @@ const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
   const PICS_METRO = ['metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
   const PICS_BASE = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people', 'animals',
-                'fence', 'signpost', 'lantern', 'lamp', 'lamp-double', 'stall', 'stall-green', 'fountain', 'tree-city',
+                'fence', 'signpost', 'lantern', 'lantern-post', 'lamp', 'lamp-double', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
                 'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
                 'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall'];
@@ -22,7 +22,7 @@ const relax = (() => {
   const PACKS = {
     Metropolis: [...PICS_METRO, 'metro-meeting', ...LIT_NAMES],
     City: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'shop', 'tavern', 'smithy', 'warehouse', 'sawmill', 'church', 'townhall', 'farm', 'windmill', 'watermill', 'level2', 'level3', 'level4'].map(k => `med-${k}`)};
-  PACKS.City.push(...PACKS.City.filter(k => k !== 'med-farm').map(k => k + '-lit'));   // tools/relax_lit.py's
+  PACKS.City.push(...PACKS.City.filter(k => k !== 'med-farm').map(k => k + '-lit'), 'tex-street', 'tex-brick', 'tex-roof');   // tools/relax_lit.py's; the medieval kit's textures
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
   // facing lower left; of each 14, F says which (relax_art.html's ACTS).
   const PEOPLE_ROW = {claude: 0, codex: 1, agy: 2}, CELL = 128, TICK = 200;   // 5 Hz
@@ -222,6 +222,11 @@ const relax = (() => {
     [[0.64, 0.62], [0.46, 0.84], [0.3, 1]],
     [[0.3, 0.13], [0.22, 0.34], [0.26, 0.62], [0.17, 0.82], [0.2, 1]]];
   const groundGap = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) / KY);
+  // A city's wall (cityWall below) finds its way between what stands; onWall says whether a
+  // point is on it, so that no lamp or tree is put there.
+  let wallLine = null, plazaCount = 0;
+  const onWall = (x, y) => !!wallLine && wallLine.some((a, i) => { const b = wallLine[(i + 1) % wallLine.length], dx = b.x - a.x, dy = b.y - a.y;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy || 1))); return Math.hypot(x - a.x - dx * t, (y - a.y - dy * t) / KY) < 26; });
   // Evenly spaced points along a smooth line through the given ones (Catmull-Rom).
   function spline(ctrl, step = 20) {
     const line = [ctrl[0]];
@@ -236,6 +241,9 @@ const relax = (() => {
     }
     return line;
   }
+  // Round the plaza only the avenues run, so that the blocks between them hold the buildings
+  // nearest the fountain: no side street comes within SQUARE of it.
+  const SQUARE = 330;
   function growStreets() {
     const rnd = rng(23), all = [], pts = [];
     const add = (line, width, gen) => {
@@ -262,7 +270,7 @@ const relax = (() => {
         turn = turn * 0.8 + (rnd() - 0.5) * 0.09;
         h += turn;
         q = {x: q.x + Math.cos(h) * 20, y: q.y + Math.sin(h) * 20 * KY};
-        if (outside(q) || riverGap(q.x, q.y) < 48) return len > 140 ? line : null;
+        if (outside(q) || riverGap(q.x, q.y) < 48 || groundGap(q, PLAZA) < SQUARE) return len > 140 ? line : null;
         let best = null, gap = Infinity;
         for (const p of pts) {
           if (len < 100 && p.r === parent) continue;
@@ -287,6 +295,7 @@ const relax = (() => {
         for (let i = 5 + Math.floor(rnd() * 6); i < r.line.length - 4; i += 8 + Math.floor(rnd() * 6)) {
           const q = r.line[i], p = r.line[i - 1], m = r.line[i + 1];
           if (rnd() > 1.2 - groundGap(q, PLAZA) / 1100) continue;   // fewer further out
+          if (groundGap(q, PLAZA) < SQUARE) continue;
           const h = Math.atan2((m.y - p.y) / KY, m.x - p.x) + side * (Math.PI / 2 + (rnd() - 0.5) * 0.7);
           const line = walk(q, h, [700, 460, 300][r.gen], r);
           if (line) add(line, 0.12, r.gen + 1);
@@ -316,7 +325,7 @@ const relax = (() => {
       const off = plot * r.width / 2 + 6 + Math.hypot(rx * nx, ry * ny);
       const x = r.line[i].x + nx * off, y = r.line[i].y + ny * off;
       if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || !clear(x, y)) continue;
-      if (Math.hypot((x - PLAZA.x) / 170, (y - PLAZA.y) / 100) < 1) continue;
+      if (Math.hypot((x - PLAZA.x) / 150, (y - PLAZA.y) / 88) < 1) continue;
       if (bridge.some(p => Math.abs(p.x - x) < plot * 0.5 && p.y > y - plot * 1.3 && p.y < y)) continue;
       free.push({x, y, far: groundGap({x, y}, PLAZA) / 1100, flip: facing(nx, x, y)});
     }
@@ -379,18 +388,37 @@ const relax = (() => {
       const off = plot * r.width / 2 + 6 + Math.hypot(rx * nx, ry * ny);
       const x = r.line[i].x + nx * off, y = r.line[i].y + ny * off;
       if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || wet(x, y)) continue;
-      if (Math.hypot((x - PLAZA.x) / 190, (y - PLAZA.y) / 115) < 1) continue;
+      if (Math.hypot((x - PLAZA.x) / 160, (y - PLAZA.y) / 95) < 1) continue;
       if (pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1)) continue;
       list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100, flip: facing(nx, x, y)});
     }
     return list.sort((p, q) => p.far - q.far).map((l, n) => ({...l, n: `w${n}`}));
+  }
+  // Round the plaza, between the avenues: the first places a session's building is offered,
+  // facing the fountain, as near it as a building's own ground (nor its name) is clear of
+  // the streets' paving; each clear of the others. Offered before any spot along a road.
+  function plazaSpots({pts}) {
+    const list = [], P = plot * SESSION_SIZE / 1.2;
+    for (let i = 0; i < 60; i++) {
+      const t = i / 60 * Math.PI * 2;
+      for (let k = 0.8; k <= 1.8; k += 0.05) {
+        const x = PLAZA.x + Math.cos(t) * 205 * k, y = PLAZA.y + Math.sin(t) * 122 * k;
+        if (Math.hypot((x - PLAZA.x) / (128 + P * 0.42), (y - PLAZA.y) / (76 + P * 0.22)) < 1) continue;   // its ground off the paving
+        if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || wet(x, y)) continue;
+        if (pts.some(p => Math.hypot((p.x - x) / (plot * 0.5 + p.half), (p.y - y) / (plot * 0.3 + p.half)) < 1)) continue;   // as wideSpots
+        if (list.some(q => Math.abs(q.x - x) < P * 1.15 && Math.abs(q.y - y) < P * 0.62)) continue;
+        list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100 - 0.5, n: `p${list.length}`, flip: facing(Math.cos(t), x, y)});
+        break;
+      }
+    }
+    return list;
   }
   // Any ground clear of roads and the river, for when so many sessions are open that the spots
   // along the roads have run out.
   function openGround({pts}) {
     const rx = plot * 0.5, ry = plot * 0.3, list = [];
     for (let y = LOW; y <= HIGH; y += 36) for (let x = LEFT; x <= RIGHT; x += 44) {
-      if (wet(x, y) || Math.hypot((x - PLAZA.x) / 190, (y - PLAZA.y) / 115) < 1) continue;
+      if (wet(x, y) || Math.hypot((x - PLAZA.x) / 160, (y - PLAZA.y) / 95) < 1) continue;
       if (pts.some(p => Math.hypot((p.x - x) / (rx + p.half), (p.y - y) / (ry + p.half)) < 1)) continue;
       list.push({x, y, far: groundGap({x, y}, PLAZA) / 1100, n: `o${list.length}`, flip: facing(0, x, y)});
     }
@@ -404,7 +432,7 @@ const relax = (() => {
     for (const r of grown.all)
       for (let i = 0; i < r.line.length - 1; i += 15)
         edges.push({line: r.line.slice(i, i + 16), width: r.width});
-    return (cityMemo = {edges, lots: streetLots(grown), wide: wideSpots(grown), open: openGround(grown), bridge: grown.pts.filter(p => riverGap(p.x, p.y) < riverWidth() / 2 + plot * 0.05)});
+    return (cityMemo = {edges, lots: streetLots(grown), wide: [...plazaSpots(grown), ...wideSpots(grown)], open: openGround(grown), bridge: grown.pts.filter(p => riverGap(p.x, p.y) < riverWidth() / 2 + plot * 0.05)});
   }
   // Everyone's place, the same in every era, so that the camp grows round what is there and
   // only what stands there changes. The fountain is on the plaza; each session takes the first
@@ -415,11 +443,17 @@ const relax = (() => {
     for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: {base: [PLAZA.x - plot * 0.45, PLAZA.y - plot * 0.25, PLAZA.x + plot * 0.45, PLAZA.y + plot * 0.16]}, b});
     for (const b of sorted(list)) {
       const rnd = rng(hash(b.id));
-      const order = wide.map(l => [l.far + rnd() * 0.25, l]).sort((a, c) => a[0] - c[0]);
+      const order = wide.map(l => [l.far + rnd() * 0.04, l]).sort((a, c) => a[0] - c[0]);
       // Room for a skyscraper if there is any; with many sessions, for less: a later tower
       // may then stand in front of a neighbour, which is better than on top of it.
       let found = null, high = 2;
-      for (const h of [2, 1.4, 0.7].filter(h => h <= cap)) {
+      // A place on the square first, with what room above it there is there.
+      for (const [, l] of order) {
+        if (found || used.has(l) || !String(l.n).startsWith('p')) continue;
+        const h = [2, 1.4, 0.7].find(h => h <= cap && l.y - plot * h >= 0 && !placed.some(q => clash(room(l.x, l.y, false, h), q.r)));
+        if (h) { found = [0, l]; high = h; }
+      }
+      if (!found) for (const h of [2, 1.4, 0.7].filter(h => h <= cap)) {
         // A skyscraper's room must also be on the map.
         found = order.find(([, l]) => !used.has(l) && l.y - plot * h >= 0 && !placed.some(q => clash(room(l.x, l.y, false, h), q.r)));
         if (found) { high = h; break; }
@@ -699,7 +733,7 @@ const relax = (() => {
     const road = roadPoints(edges);
     const clear = plot * (e[4] / 2 + 0.12);
     const onBuilding = (x, y, s) => placed.some(p => Math.abs(p.x - x) < plot * 0.6 && y > p.y - plot * 0.9 && y < p.y + plot * 0.45 + s * 0.8);
-    const free = (x, y, s) => !road.some(p => Math.hypot(p.x - x, p.y - y) < clear) && riverGap(x, y) > riverWidth() / 2 + s * 0.2
+    const free = (x, y, s) => !road.some(p => Math.hypot(p.x - x, p.y - y) < clear) && riverGap(x, y) > riverWidth() / 2 + s * 0.2 && !(e[1] === 'City' && onWall(x, y))
       && y > plot * 0.98 && y < h - 10 && !onBuilding(x, y, s) && !ponds.some(q => Math.hypot((q.x - x) / (q.rx + 12), (q.y - y) / (q.ry + 8)) < 1);
     // Ponds where there is room, a reed or two at their edge; fewer as the camp grows.
     const ponds = [];
@@ -762,7 +796,10 @@ const relax = (() => {
       }
     }
     // Where the animals live: tame ones near the buildings, wild ones anywhere on the grass.
+    // Their own numbers, so that what was drawn before them (pictures still loading) does not
+    // move them from one draw to the next.
     herd = [];
+    const pr = rng(41);
     const {pens = [], loose: wild = []} = HERDS[e[1]] || {}, loose = [...wild], pensMade = [];
     rails = [];
     for (const group of pens) {
@@ -772,11 +809,11 @@ const relax = (() => {
       for (let a = 0; a <= 1; a += 0.25) for (let b = 0; b <= 1; b += 0.25) probe.push([a, b]);
       const n = urban(e) ? 3 : 4, taken = (q) => pensMade.some(o => penHas(o, q.x, q.y, plot * 0.4));
       for (let t = 0; t < 400 && !pen && placed.length; t++) {
-        const near = placed[Math.floor(rnd() * placed.length)];
+        const near = placed[Math.floor(pr() * placed.length)];
         // Then out on the land beyond the sides, high enough on the map to be in view there.
-        const fy = plot * 1.6 + rnd() * plot * 3.5, out = beyond(fy) * 0.7 - PEN_W * n / 2;
-        const c = t < 200 ? {x: near.x + (rnd() - 0.5) * plot * 4, y: near.y + (rnd() - 0.3) * plot * 2, n}
-          : {x: rnd() < 0.5 ? -rnd() * Math.max(0, out) : w + rnd() * Math.max(0, out), y: fy, n};
+        const fy = plot * 1.6 + pr() * plot * 3.5, out = beyond(fy) * 0.7 - PEN_W * n / 2;
+        const c = t < 200 ? {x: near.x + (pr() - 0.5) * plot * 4, y: near.y + (pr() - 0.3) * plot * 2, n}
+          : {x: pr() < 0.5 ? -pr() * Math.max(0, out) : w + pr() * Math.max(0, out), y: fy, n};
         if (probe.every(([a, b]) => { const q = inPen(c, a, b); const edge = t < 200 ? -plot * 0.4 : beyond(q.y) * 0.7;   // in view
           return q.x > -edge && q.x < w + edge && free(q.x, q.y, 30) && !taken(q); })) pen = c;
       }
@@ -785,16 +822,16 @@ const relax = (() => {
       // Its four sides, as lines of posts on the ground (drawn after the warp, so they follow it).
       const line = (k, f) => Array.from({length: k + 1}, (_, i) => inPen(pen, ...f(i / k))), across = pen.n * 2, deep = pen.n;
       rails.push(line(across, t => [t, 0]), line(deep, t => [0, t]), line(deep, t => [1, t]), Object.assign(line(across, t => [t, 1]), {front: true}));
-      group.forEach((kind, i) => { const q = inPen(pen, 0.25 + rnd() * 0.5, 0.25 + rnd() * 0.5); herd.push({kind, x: q.x, y: q.y, pen}); });
+      group.forEach((kind, i) => { const q = inPen(pen, 0.25 + pr() * 0.5, 0.25 + pr() * 0.5); herd.push({kind, x: q.x, y: q.y, pen}); });
     }
     // Nothing grows in a paddock: the woods placed before it are cleared out of it.
     const inside = (x, y) => pensMade.some(o => penHas(o, x, y, 8));
     for (let i = woods.length - 1; i >= 0; i--) if (inside(woods[i][1], woods[i][2])) woods.splice(i, 1);
     for (const kind of loose) {
       for (let t = 0; t < 40; t++) {
-        const near = !WILD.has(kind) && placed.length ? placed[Math.floor(rnd() * placed.length)] : null;
-        const x = near ? near.x + (rnd() - 0.5) * plot * 2.4 : plot * 0.6 + rnd() * (w - plot * 1.2);
-        const y = near ? near.y + (rnd() - 0.2) * plot * 0.9 : plot * 1.3 + rnd() * (h - plot * 1.6);
+        const near = !WILD.has(kind) && placed.length ? placed[Math.floor(pr() * placed.length)] : null;
+        const x = near ? near.x + (pr() - 0.5) * plot * 2.4 : plot * 0.6 + pr() * (w - plot * 1.2);
+        const y = near ? near.y + (pr() - 0.2) * plot * 0.9 : plot * 1.3 + pr() * (h - plot * 1.6);
         if (free(x, y, 50)) { herd.push({kind, x, y}); break; }
       }
     }
@@ -864,13 +901,16 @@ const relax = (() => {
     g.fillRect(-PAD, -PADY, w + 2 * PAD, h + PADY);
     land(g, w, h, e);
     const {lamps: allLamps, edges} = roads(g, placed, e);
-    const lamps = allLamps.filter(l => riverGap(l.x, l.y) > riverWidth() / 2 + plot * 0.04);
+    wallLine = e[1] === 'City' ? wallOutline(placed) : null;
+    const lamps = allLamps.filter(l => riverGap(l.x, l.y) > riverWidth() / 2 + plot * 0.04 && !(e[1] === 'City' && onWall(l.x, l.y)));
     lampCount = lamps.length;
     bridges(g, edges, e);
-    const trees = urban(e) ? streetTrees(edges, placed, lamps, e, w, h) : [];
+    const trees = urban(e) ? streetTrees(edges, placed, lamps, e, w, h).filter(t => !(e[1] === 'City' && onWall(t.x, t.y))) : [];
+    if (e[1] === 'City') trees.push(...plazaEdge(edges, placed, lamps, trees));
+    plazaCount = trees.filter(t => t.b.house).length;
+    const ramparts = wallLine ? cityWall(edges, wallLine) : [];
     const woods = [];
     scenery(g, w, h, placed, plot, e, edges, woods);
-    if (e[1] === 'City') wall(g, w, h);
     // The ground is done: warp it, then stand everything upright on it. Each thing is drawn
     // flat about its ground point, moved and sized there, so its walls stay straight up.
     bg = bg || document.createElement('canvas');
@@ -914,7 +954,8 @@ const relax = (() => {
     litList = [];
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
-    for (const {x: cx, y: ground, b, flip} of [...placed, ...lamps, ...trees].sort((a, c) => a.y - c.y)) {
+    for (const {x: cx, y: ground, b, flip} of [...placed, ...lamps, ...trees, ...ramparts].sort((a, c) => a.y - c.y)) {
+      if (b.wall) { b.draw(g); continue; }        // a stretch of the city wall, or one of its towers
       const [GX, GY] = warp(cx, ground), gm = depth(ground);
       g.save(); g.translate(GX, GY); g.scale(gm, gm); g.translate(-cx, -ground);
       try {
@@ -964,7 +1005,11 @@ const relax = (() => {
     }
     // What is lit at night: each building with someone in it, the fires, the lanterns.
     lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
-              ...lamps.filter(l => /^(lantern|lamp)/.test(l.b.kind)).map(l => ({x: l.x, y: l.y - plot * 0.25, r: plot * 0.5}))];
+              ...[...lamps, ...trees].filter(l => /^(lantern|lamp)/.test(l.b.kind)).map(l => {
+                // A city's lantern hangs out to one side of its post, a metropolis's lamp over the road.
+                const side = (l.flip ? -1 : 1) * plot * (l.b.kind === 'lantern-post' ? 0.13 : 0.18);
+                return {x: l.x + side, y: l.y, r: plot * 0.5, lamp: true, head: plot * (l.b.kind === 'lantern-post' ? 0.36 : 0.58)};
+              })];
     // What the view must hold: the buildings, and every paddock's four corners.
     const pens = [...new Set(herd.filter(a => a.pen).map(a => a.pen))];
     const xs = [...placed.map(p => warp(p.x, p.y)[0]), ...pens.flatMap(pen => [[0, 0], [1, 0], [0, 1], [1, 1]].map(([a, b]) => { const q = inPen(pen, a, b); return warp(q.x, q.y)[0]; }))];
@@ -1159,11 +1204,16 @@ const relax = (() => {
       edges.push(route(curve(pts[best[0]], pts[best[1]], e[8]), placed));
     }
     g.lineCap = 'round'; g.lineJoin = 'round';
-    for (const [color, extra] of [[e[5], plot * 0.035], [e[3], 0]]) {
+    // A city's streets are cobbled (the medieval kit's stone), a little darker along their
+    // edges; a village's dirt paths get a darker edge of their own.
+    const city = e[1] === 'City', cobble = city && texture(g, 'tex-street');
+    const layers = [[e[5] || (e[3] ? '#5f4a2f' : null), plot * 0.035], [cobble || e[3], 0]];
+    if (city) layers.push(['rgba(40, 32, 24, 0.22)', 0], [cobble || e[3], -plot * 0.05]);
+    for (const [color, extra] of layers) {
       if (!color) continue;
       g.strokeStyle = color;
       for (const {line, width} of edges) {
-        g.lineWidth = plot * (width || e[4]) + extra;
+        g.lineWidth = Math.max(1, plot * (width || e[4]) + extra);
         groundPath(g, line);
         groundStroke(g);
       }
@@ -1181,8 +1231,14 @@ const relax = (() => {
     if (urban(e)) {                        // a paved plaza where the avenues meet
       g.fillStyle = e[5];
       g.beginPath(); g.ellipse(PLAZA.x, PLAZA.y, 128, 76, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = metro(e) ? '#c9c5b8' : e[3];
+      g.fillStyle = metro(e) ? '#c9c5b8' : texture(g, 'tex-brick') || e[3];
       g.beginPath(); g.ellipse(PLAZA.x, PLAZA.y, 124, 73, 0, 0, Math.PI * 2); g.fill();
+      if (!metro(e)) {                     // its flagstones worn darker towards the edge
+        const rim = g.createRadialGradient(PLAZA.x, PLAZA.y, 0, PLAZA.x, PLAZA.y, 124);
+        rim.addColorStop(0.55, 'rgba(40, 32, 24, 0)'); rim.addColorStop(1, 'rgba(40, 32, 24, 0.3)');
+        g.save(); g.translate(PLAZA.x, PLAZA.y); g.scale(1, 73 / 124); g.translate(-PLAZA.x, -PLAZA.y);
+        g.fillStyle = rim; g.beginPath(); g.arc(PLAZA.x, PLAZA.y, 124, 0, Math.PI * 2); g.fill(); g.restore();
+      }
     }
     if (!urban(e)) return {lamps: [], edges};      // street lights come with a city
     const lamps = [];
@@ -1198,7 +1254,7 @@ const relax = (() => {
         if (lamps.some(q => Math.hypot(q.x - x, q.y - y) < plot * 0.5)) continue;
         if (placed.some(p => Math.abs(p.x - x) < plot * 0.45 && y > p.y - plot * 0.2 && y < p.y + plot * 0.5)) continue;
         // A city's lanterns; a metropolis's lamps, with two arms over an avenue.
-        lamps.push({x, y, flip: m.dy * way < 0, b: {prop: true, kind: !metro(e) ? 'lantern' : r.width >= 0.2 ? 'lamp-double' : 'lamp'}});
+        lamps.push({x, y, flip: m.dy * way < 0, b: {prop: true, kind: !metro(e) ? 'lantern-post' : r.width >= 0.2 ? 'lamp-double' : 'lamp'}});
       }
     }
     return {lamps, edges};
@@ -1210,6 +1266,39 @@ const relax = (() => {
   }
   function roadPoints(edges) {
     return edges.flatMap(r => r.line);
+  }
+  // Round a city's plaza: a ring of town houses facing it, where the avenues leave room
+  // between them, and on the plaza's edge market stalls, trees and lanterns. Not part of the
+  // layout, so nobody's place changes for them; nothing on a road, a building or each other.
+  function plazaEdge(edges, placed, lamps, trees) {
+    const road = roadPoints(edges), out = [], near = (x, y, d) => road.some(p => Math.hypot(p.x - x, (p.y - y) / KY) < d);
+    const taken = (x, y, d) => [...lamps, ...trees, ...out].some(q => Math.hypot(q.x - x, (q.y - y) / KY) < d);
+    const onBuilding = (x, y, w) => placed.some(p => Math.abs(p.x - x) < plot * (0.5 + w) && y > p.y - plot * 0.5 && y < p.y + plot * 0.35);
+    const HOUSES = ['med-a', 'med-c', 'med-e', 'med-b', 'med-g', 'med-d', 'med-f', 'med-h'];
+    let h = 0;
+    for (let i = 0; i < 48 && img['med-a']; i++) {
+      const t = i / 48 * Math.PI * 2;
+      // As near the plaza as there is room, between the streets.
+      for (const k of [1, 1.12, 1.25, 1.4]) {
+        const x = PLAZA.x + Math.cos(t) * 200 * k, y = PLAZA.y + Math.sin(t) * 120 * k;
+        // A house's own ground (as the town's houses have) clear of the streets' paving.
+        // Small town houses (the blocks by the plaza are small): 0.6 of a session's size.
+        const half = plot * 0.36 * 0.6 + 9, onStreet = road.some(p => Math.abs(p.x - x) < half && p.y > y - plot * 0.15 - 9 && p.y < y + plot * 0.1 + 9);
+        if (onStreet || onBuilding(x, y, 0.1) || out.some(q => Math.hypot(q.x - x, (q.y - y) / KY) < plot * 0.5) || onWall(x, y) || wet(x, y)) continue;
+        out.push({x, y, flip: Math.cos(t) > 0, b: {prop: true, house: true, scale: 2 * 0.6 / DECOR_SIZE, kind: HOUSES[h++ % HOUSES.length]}});
+        break;
+      }
+    }
+    // The houses come first: a street lamp or tree on one's ground goes.
+    const onHouse = q => out.some(o => Math.abs(o.x - q.x) < plot * 0.3 && q.y > o.y - plot * 0.25 && q.y < o.y + plot * 0.18);
+    for (const list of [lamps, trees]) for (let i = list.length - 1; i >= 0; i--) if (onHouse(list[i])) list.splice(i, 1);
+    const KINDS = ['stall', 'tree-city', 'lantern-post', 'stall-green', 'tree-city', 'lantern-post'];
+    for (let i = 0; i < 20; i++) {
+      const t = i / 20 * Math.PI * 2 + 0.08, x = PLAZA.x + Math.cos(t) * 150, y = PLAZA.y + Math.sin(t) * 89, kind = KINDS[i % KINDS.length];
+      if (near(x, y, plot * 0.2) || onBuilding(x, y, 0) || taken(x, y, plot * 0.28)) continue;
+      out.push({x, y, flip: Math.cos(t) > 0, b: {prop: true, kind, scale: kind === 'tree-city' ? 0.8 : undefined}});
+    }
+    return out;
   }
   // A city's street trees: beside its roads, a third of the way along each, where there is
   // room: clear of every road, building and lantern, and of each other.
@@ -1265,14 +1354,200 @@ const relax = (() => {
             c2: {x: a.x + dx * 2 / 3 + nx * k2, y: a.y + dy * 2 / 3 + ny * k2}};
   }
   // A city's wall: stone along the sides and the bottom, battlements on top.
-  function wall(g, w, h) {
-    const t = 9;
-    g.fillStyle = '#6e6a62';
-    const y0 = plot * 0.95;                // from the foot of the hills, not up the sky
-    g.fillRect(0, y0, t, h - y0); g.fillRect(w - t, y0, t, h - y0); g.fillRect(0, h - t, w, t);
-    g.fillStyle = '#57534c';
-    for (let y = y0 + 4; y < h - t; y += 16) { g.fillRect(0, y, t + 3, 8); g.fillRect(w - t - 3, y, t + 3, 8); }
-    for (let x = 4; x < w; x += 16) g.fillRect(x, h - t - 3, 8, t + 3);
+  // A texture from the medieval kit as a pattern, or null before it has loaded.
+  function texture(g, name) { return img[name] ? g.createPattern(img[name], 'repeat') : null; }
+  // A city's wall: its outline, found between what stands so that nothing has to move. From the
+  // plaza out, in each of 72 directions, a distance 260 to 900 on the ground, just out beyond the
+  // buildings there and changing little from one direction to the next, where no
+  // building's own ground is and the stretch to the next point clears them too (crossing one
+  // only if there is no other way): the cheapest such ring, closed on itself. Then straightened: points dropped
+  // while the straight run that is left still clears everything, so the wall has long runs and
+  // corners. Kept until the buildings change.
+  let outlineKey = '', outlineMemo = null, wallFree = () => true, wallSkipped = 0, wallPieces = 0;
+  function wallOutline(placed) {
+    const key = placed.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(';');
+    if (key === outlineKey) return outlineMemo;
+    // Where nothing may be, on a grid of 8.
+    const C = 8, cols = Math.ceil(MAP_W / C), rows = Math.ceil(MAP_H / C), busy = new Uint8Array(cols * rows);
+    // Each one's own ground (not the room kept above it, nor its name under it, which the
+    // wall may pass behind): a session's building, a house, or a stall or fountain.
+    for (const p of placed) {
+      const [hw, up, down] = !p.b.prop ? [0.5, 0.34, 0.16] : p.b.house ? [0.36, 0.26, 0.12] : [0.26, 0.2, 0.1];
+      const l = p.x - plot * hw, r = p.x + plot * hw, t = p.y - plot * up, b = p.y + plot * down;
+      for (let y = Math.max(0, Math.floor(t / C)); y <= Math.min(rows - 1, Math.floor(b / C)); y++)
+        for (let x = Math.max(0, Math.floor(l / C)); x <= Math.min(cols - 1, Math.floor(r / C)); x++) busy[y * cols + x] = 1;
+    }
+    const ok = q => q.x > 30 && q.x < MAP_W - 30 && q.y > plot * 1.25 && q.y < MAP_H - 30 && !busy[Math.floor(q.y / C) * cols + Math.floor(q.x / C)];
+    // How much of a run is on something (0: none of it).
+    const blocked = (a, b) => { const n = Math.ceil(Math.hypot(b.x - a.x, (b.y - a.y) / KY) / 6); let k = 0; for (let i = 0; i <= n; i++) if (!ok({x: a.x + (b.x - a.x) * i / n, y: a.y + (b.y - a.y) * i / n})) k++; return k; };
+    const clearRun = (a, b) => !blocked(a, b);
+    const A = 72, RS = [];
+    for (let r = 260; r <= 900; r += 10) RS.push(r);
+    const pt = (i, r) => { const t = i / A * Math.PI * 2; return {x: PLAZA.x + Math.cos(t) * r, y: PLAZA.y + Math.sin(t) * r * KY}; };
+    // How far out it wants to be, in each direction: just beyond the buildings there, so most
+    // are in town and the wall keeps close round them, not out in the fields. The farthest
+    // session's building within 35 degrees of the direction, plus 50; at least 320 (the
+    // plaza and its first ring), at most 880.
+    const own = placed.filter(p => !p.b.prop), dirAt = i => i / A * Math.PI * 2;
+    const wantAt = i => {
+      let w = 320;
+      for (const p of own) {
+        const t = Math.atan2((p.y - PLAZA.y) / KY, p.x - PLAZA.x), d = Math.abs(Math.atan2(Math.sin(t - dirAt(i)), Math.cos(t - dirAt(i))));
+        if (d < 0.6) w = Math.max(w, groundGap(p, PLAZA) + 50);
+      }
+      return Math.min(880, w);
+    };
+    const wants = Array.from({length: A}, (_, i) => wantAt(i));
+    const nodeAt = (i, k) => { const r = RS[k], w = wants[i % A]; return r < w ? (w - r) * 1.0 : (r - w) * 0.8; };
+    const node = RS.map((_, k) => nodeAt(0, k));
+    let best = null;
+    // Closed on itself: try the start's few best distances, keep the cheapest ring.
+    const starts = RS.map((r, k) => k).sort((a, b) => (ok(pt(0, RS[a])) ? 0 : 5000) + node[a] - (ok(pt(0, RS[b])) ? 0 : 5000) - node[b]).slice(0, 4);
+    for (const k0 of starts) {
+      let cost = RS.map((_, k) => (k === k0 ? 0 : Infinity)), from = [];
+      for (let i = 1; i <= A; i++) {
+        const next = RS.map(() => Infinity), back = RS.map(() => -1);
+        for (let k = 0; k < RS.length; k++) {
+          if (i === A && k !== k0) continue;
+          // Only where nothing stands, if it can; else as little across it as it can.
+          const q = pt(i % A, RS[k]);
+          for (let j = Math.max(0, k - 15); j <= Math.min(RS.length - 1, k + 15); j++) {
+            if (cost[j] === Infinity) continue;
+            let c = cost[j] + Math.abs(RS[k] - RS[j]) * 1.2 + nodeAt(i, k);
+            if (c >= next[k]) continue;
+            c += blocked(pt(i - 1, RS[j]), q) * 5000;
+            if (c < next[k]) { next[k] = c; back[k] = j; }
+          }
+        }
+        from.push(back); cost = next;
+      }
+      if (cost[k0] < (best ? best.cost : Infinity)) {
+        // Back from the end (direction A, the start again) to direction 1; from[i - 1] is step i's.
+        const ks = [];
+        for (let i = A, k = k0; i >= 2; i--) { k = from[i - 1][k]; ks.unshift(k); }
+        ks.unshift(k0);
+        best = {cost: cost[k0], pts: ks.map((k, i) => pt(i, RS[k]))};
+      }
+    }
+    let line = best ? best.pts : null;
+    // Straight runs: drop a point while the run from the one before to the one after clears.
+    if (line) for (let changed = true; changed && line.length > 8;) {
+      changed = false;
+      for (let i = 0; i < line.length && line.length > 8; i++) {
+        const a = line[(i - 1 + line.length) % line.length], b = line[(i + 1) % line.length];
+        if (clearRun(a, b) && Math.hypot(b.x - a.x, (b.y - a.y) / KY) < 420) { line.splice(i, 1); changed = true; }
+      }
+    }
+    outlineKey = key; outlineMemo = line; wallFree = ok;
+    return line;
+  }
+  // The wall on that outline, standing up after the warp like the buildings: stretches of
+  // stone with a walk and merlons along the top, a gate arch over each road and over the
+  // river, a gatehouse tower each side of an avenue, and a round tower with a tiled roof at
+  // each corner. Each stretch and tower is drawn in its place among the buildings, the side
+  // facing the camera, lit from the left, with its shadow to the right.
+  function cityWall(edges, outline) {
+    const T = 8, H = 40, PIECE = 24, n = outline.length;
+    let skipped = 0;
+    // The middle of the outline, and each point's way out from it (for which face shows).
+    const mid = outline.reduce((a, q) => ({x: a.x + q.x / n, y: a.y + q.y / n}), {x: 0, y: 0});
+    // Where roads and the river cross it: [x, y, half width, an avenue?].
+    const gaps = [];
+    const hit = (p, q, a, b) => {
+      const d = (q.x - p.x) * (b.y - a.y) - (q.y - p.y) * (b.x - a.x);
+      if (!d) return null;
+      const t = ((a.x - p.x) * (b.y - a.y) - (a.y - p.y) * (b.x - a.x)) / d, u = ((a.x - p.x) * (q.y - p.y) - (a.y - p.y) * (q.x - p.x)) / d;
+      return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? {x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t} : null;
+    };
+    const cross = (line, half, big) => {
+      for (let i = 1; i < line.length; i++) for (let j = 0; j < n; j++) {
+        const c = hit(line[i - 1], line[i], outline[j], outline[(j + 1) % n]);
+        if (c && !gaps.some(g => Math.hypot(g[0] - c.x, (g[1] - c.y) / KY) < g[2] + half)) gaps.push([c.x, c.y, half, big]);
+      }
+    };
+    for (const {line, width} of edges) cross(line, plot * width / 2 + 8, width >= 0.2);
+    cross(river, riverWidth() / 2 + 10, false);
+    const gapAt = q => gaps.find(g => Math.hypot(g[0] - q.x, (g[1] - q.y) / KY) < g[2]);
+    const items = [], brick = img['tex-brick'], roof = img['tex-roof'], pats = new Map();
+    const pat = (g, im, none) => { if (!im) return none; if (!pats.has(g)) pats.set(g, [g.createPattern(brick, 'repeat'), roof && g.createPattern(roof, 'repeat')]); return pats.get(g)[im === brick ? 0 : 1] || none; };
+    const lift = (q, h) => { const [X, Y] = warp(q.x, q.y); return [X, Y - h * depth(q.y)]; };
+    const face = (g, P, light) => {
+      g.beginPath(); P.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.closePath();
+      g.fillStyle = pat(g, brick, '#9b958a'); g.fill();
+      g.fillStyle = light > 0 ? `rgba(255, 248, 230, ${0.12 * light})` : `rgba(20, 16, 12, ${0.38 * -light + 0.08})`; g.fill();
+    };
+    for (let j = 0; j < n; j++) {
+      const p = outline[j], q = outline[(j + 1) % n], gx = q.x - p.x, gy = (q.y - p.y) / KY, len = Math.hypot(gx, gy) || 1;
+      // Its normal on the ground, pointing out of the town.
+      let nx = gy / len, ny = -gx / len;
+      const mx = (p.x + q.x) / 2 - mid.x, my = ((p.y + q.y) / 2 - mid.y) / KY;
+      if (nx * mx + ny * my < 0) { nx = -nx; ny = -ny; }
+      const front = ny > 0, sx = (front ? nx : -nx) * T, sy = (front ? ny : -ny) * T * KY;    // the face seen
+      const light = front ? -nx : nx;
+      const k = Math.max(1, Math.round(len / PIECE));
+      for (let i = 0; i < k; i++) {
+        const f0 = i / k, f1 = (i + 1) / k, a0 = {x: p.x + (q.x - p.x) * f0, y: p.y + (q.y - p.y) * f0}, b0 = {x: p.x + (q.x - p.x) * f1, y: p.y + (q.y - p.y) * f1};
+        const m = {x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2}, gap = gapAt(m);
+        if (!wallFree(a0) || !wallFree(b0)) { skipped++; continue; }   // a building stands there: it is the wall
+        const a = {x: a0.x + sx, y: a0.y + sy}, b = {x: b0.x + sx, y: b0.y + sy}, ia = {x: a0.x - sx, y: a0.y - sy}, ib = {x: b0.x - sx, y: b0.y - sy};
+        items.push({x: m.x, y: m.y + (front ? 4 : -4), b: {wall: true, draw: g => {
+          const low = gap ? H * 0.62 : 0, A = lift(a, low), B = lift(b, low), At = lift(a, H), Bt = lift(b, H);
+          if (!gap) {
+            const ha = H * depth(a.y), hb = H * depth(b.y), [ax, ay] = warp(a.x, a.y), [bx, by] = warp(b.x, b.y);
+            g.fillStyle = 'rgba(12, 28, 12, 0.22)';
+            g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.lineTo(bx + 0.6 * hb, by - 0.25 * hb); g.lineTo(ax + 0.6 * ha, ay - 0.25 * ha); g.closePath(); g.fill();
+          }
+          face(g, [A, B, Bt, At], light);
+          if (gap) {
+            g.fillStyle = 'rgba(20, 16, 12, 0.55)';
+            g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.lineTo(B[0], B[1] - 3 * depth(b.y)); g.lineTo(A[0], A[1] - 3 * depth(a.y)); g.closePath(); g.fill();
+          }
+          const Ia = lift(ia, H), Ib = lift(ib, H);
+          g.fillStyle = '#7d776c'; g.beginPath(); g.moveTo(...At); g.lineTo(...Bt); g.lineTo(...Ib); g.lineTo(...Ia); g.closePath(); g.fill();
+          const kk = 7 * depth(m.y), cx = (At[0] + Bt[0]) / 2, cy = (At[1] + Bt[1]) / 2, dx = (Bt[0] - At[0]) * 0.27, dy = (Bt[1] - At[1]) * 0.27;
+          face(g, [[cx - dx, cy - dy], [cx + dx, cy + dy], [cx + dx, cy + dy - kk], [cx - dx, cy - dy - kk]], light);
+        }}});
+      }
+    }
+    // Towers: at each corner, and each side of an avenue's gate.
+    const towers = [];
+    for (let j = 0; j < n; j++) {
+      const a = outline[(j - 1 + n) % n], c = outline[j], b = outline[(j + 1) % n];
+      const t1 = Math.atan2((c.y - a.y) / KY, c.x - a.x), t2 = Math.atan2((b.y - c.y) / KY, b.x - c.x);
+      if (Math.abs(Math.atan2(Math.sin(t2 - t1), Math.cos(t2 - t1))) > 0.25 && !gapAt(c)) towers.push([c, 1]);
+    }
+    for (const [gx, gy, half, big] of gaps) {
+      if (!big) continue;
+      // The two points on the outline either side of the gate.
+      for (let j = 0; j < n; j++) {
+        const p = outline[j], q = outline[(j + 1) % n], len = Math.hypot(q.x - p.x, (q.y - p.y) / KY) || 1;
+        const t = ((gx - p.x) * (q.x - p.x) + (gy - p.y) / KY * (q.y - p.y) / KY) / (len * len);
+        if (t < 0 || t > 1 || Math.hypot(p.x + (q.x - p.x) * t - gx, (p.y + (q.y - p.y) * t - gy) / KY) > 2) continue;
+        for (const s of [-1, 1]) { const f = t + s * (half + 14) / len; if (f > 0 && f < 1) towers.push([{x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f}, 1.15]); }
+      }
+    }
+    wallSkipped = skipped; wallPieces = items.length;
+    for (const [c, big] of towers) {
+      if (!wallFree(c)) continue;
+      items.push({x: c.x, y: c.y + 12, b: {wall: true, draw: g => {
+        const [X, Y] = warp(c.x, c.y), m = depth(c.y), w = 30 * big * m, h = H * 1.75 * big * m, ry = w * 0.3;
+        g.fillStyle = 'rgba(12, 28, 12, 0.22)';
+        g.beginPath(); g.moveTo(X - w / 2, Y); g.lineTo(X + w / 2, Y); g.lineTo(X + w / 2 + 0.6 * h, Y - 0.25 * h); g.lineTo(X - w / 2 + 0.6 * h, Y - 0.25 * h); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(X - w / 2, Y - h); g.lineTo(X - w / 2, Y); g.ellipse(X, Y, w / 2, ry, 0, Math.PI, 0, true); g.lineTo(X + w / 2, Y - h); g.closePath();
+        g.fillStyle = pat(g, brick, '#9b958a'); g.fill();
+        const round = g.createLinearGradient(X - w / 2, 0, X + w / 2, 0);
+        round.addColorStop(0, 'rgba(255, 248, 230, 0.16)'); round.addColorStop(0.35, 'rgba(255, 248, 230, 0)'); round.addColorStop(1, 'rgba(20, 16, 12, 0.45)');
+        g.fillStyle = round; g.fill();
+        g.fillStyle = 'rgba(20, 16, 12, 0.6)';
+        g.fillRect(X - w * 0.08, Y - h * 0.62, w * 0.12, h * 0.16);
+        g.beginPath(); g.moveTo(X - w * 0.62, Y - h); g.lineTo(X, Y - h - w * 1.25); g.lineTo(X + w * 0.62, Y - h); g.ellipse(X, Y - h, w * 0.62, ry * 1.2, 0, 0, Math.PI); g.closePath();
+        g.fillStyle = pat(g, roof, '#b5533a'); g.fill();
+        const cone = g.createLinearGradient(X - w * 0.62, 0, X + w * 0.62, 0);
+        cone.addColorStop(0, 'rgba(255, 240, 220, 0.12)'); cone.addColorStop(0.45, 'rgba(0, 0, 0, 0)'); cone.addColorStop(1, 'rgba(30, 10, 5, 0.42)');
+        g.fillStyle = cone; g.fill();
+      }}});
+    }
+    return items;
   }
   // Top left: what the camp is now, and how far the next one is.
   let eraNow = null;
@@ -1526,7 +1801,21 @@ const relax = (() => {
       g.fillRect(-PAD, -PADY, MAP_W + 2 * PAD, MAP_H + PADY);
       // The lights come on as it gets dark: each lets the daylight through around it.
       g.globalCompositeOperation = 'destination-out';
-      for (const {x, y, r} of lights) {
+      for (const {x, y, r, lamp, head} of lights) {
+        if (lamp) {
+          // A lamp: a pool of light on the ground under it, wide and flat, and its light itself.
+          g.save(); g.translate(x, y); g.scale(1, 0.42);
+          const pool = g.createRadialGradient(0, 0, 0, 0, 0, r);
+          pool.addColorStop(0, `rgba(0, 0, 0, ${Math.min(0.85, dark * 1.25)})`);
+          pool.addColorStop(0.55, `rgba(0, 0, 0, ${Math.min(0.42, dark * 0.6)})`);
+          pool.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          g.fillStyle = pool; g.fillRect(-r, -r, r * 2, r * 2);
+          g.restore();
+          const hy = y - head, hr = plot * 0.13, halo = g.createRadialGradient(x, hy, 0, x, hy, hr);
+          halo.addColorStop(0, `rgba(0, 0, 0, ${Math.min(0.9, dark * 1.3)})`); halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          g.fillStyle = halo; g.fillRect(x - hr, hy - hr, hr * 2, hr * 2);
+          continue;
+        }
         const glow = g.createRadialGradient(x, y, 0, x, y, r);
         glow.addColorStop(0, `rgba(0, 0, 0, ${Math.min(0.85, dark * 1.3)})`);
         glow.addColorStop(0.4, `rgba(0, 0, 0, ${Math.min(0.5, dark * 0.75)})`);
@@ -1547,11 +1836,19 @@ const relax = (() => {
       litMap = litMap || document.createElement('canvas');
       litMap.width = MAP_W; litMap.height = MAP_H;
       const g = litMap.getContext('2d');
-      for (const [kind, x, y, s, flip, gx, gy] of litList) onGround(g, gx, gy, () => {
-        if (img[kind]) { g.globalCompositeOperation = 'destination-out'; put(g, img[kind], x, y, s, flip); }
-        g.globalCompositeOperation = 'source-over';
-        if (img[kind + '-lit']) put(g, img[kind + '-lit'], x, y, s, flip);
-      });
+      // Back to front, buildings and lamps together, so a building in front of a lamp hides
+      // its glow: each building first wipes out what it stands in front of.
+      const order = [...litList.map(([kind, x, y, s, flip, gx, gy]) => [gy, () => onGround(g, gx, gy, () => {
+          if (img[kind]) { g.globalCompositeOperation = 'destination-out'; put(g, img[kind], x, y, s, flip); }
+          g.globalCompositeOperation = 'source-over';
+          if (img[kind + '-lit']) put(g, img[kind + '-lit'], x, y, s, flip);
+        })]),
+        ...lights.filter(l => l.lamp).map(({x, y, head}) => [y, () => onGround(g, x, y, () => {
+          const hy = y - head, hr = plot * 0.2, warm = g.createRadialGradient(x, hy, 0, x, hy, hr);
+          warm.addColorStop(0, 'rgba(255, 214, 140, 0.85)'); warm.addColorStop(0.3, 'rgba(255, 190, 110, 0.35)'); warm.addColorStop(1, 'rgba(255, 170, 90, 0)');
+          g.fillStyle = warm; g.fillRect(x - hr, hy - hr, hr * 2, hr * 2);
+        })])];
+      for (const [, paint] of order.sort((p, q) => p[0] - q[0])) paint();
       litOn = true;
     }
     drawNight();
@@ -2021,6 +2318,9 @@ const relax = (() => {
   return {wire, set, update, stamina, loadTasks, get on() { return on; },
           _people: () => people, _fires: () => fires.length, _era: () => era(camp)[1],   // for tests
           _hour: h => { hourForTest = h; skySig = ''; sky(); },
+          _wall: () => wallLine && [wallLine.length, wallSkipped, wallPieces],
+          _plaza: () => plazaCount,
+          _inWall: () => { const L = wallLine; if (!L) return null; const inside = (x, y) => { let c = false; for (let i = 0, j = L.length - 1; i < L.length; j = i++) if ((L[i].y > y) !== (L[j].y > y) && x < (L[j].x - L[i].x) * (y - L[i].y) / (L[j].y - L[i].y) + L[i].x) c = !c; return c; }; const own = layoutMemo.filter(p => !p.b.prop); return [own.filter(p => inside(p.x, p.y)).length, own.length]; },
           _season: k => { seasonForTest = k; update(true); },
           _celebrate: (a, b) => celebrate(a, b),
           _weather: (kind, from = kind, t = 1) => { weatherForTest = {kind, from, t}; update(true); },

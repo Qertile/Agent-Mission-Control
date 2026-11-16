@@ -90,6 +90,16 @@ const LAMP_LIGHT = '#fff2c2', POLE = '#5d636e';
 const lampArm = side => [['solid', POLE, 0.22 * side, 1.62, 0, 0, [0.46, 0.035, 0.035]], ['solid', POLE, 0.42 * side, 1.6, 0, 0, [0.2, 0.05, 0.11]],
                          ['solid', LAMP_LIGHT, 0.42 * side, 1.57, 0, 0, [0.16, 0.02, 0.08]]];
 const lampPole = [['cyl', POLE, 0, 0.05, 0, 0, [0.07, 0.1]], ['cyl', POLE, 0, 0.83, 0, 0, [0.038, 1.6]]];
+// A city's street lantern, in the medieval kit's style: a dark timber post on a stone foot,
+// an iron bracket, and an iron-framed lantern with warm glass hanging from it.
+const LANTERN_GLASS = '#ffc56b', POST = '#4a3524', IRON = '#2c2a28', FOOT = '#8d877c';
+const lanternPost = [['solid', FOOT, 0, 0.07, 0, 45, [0.2, 0.14, 0.2]], ['solid', POST, 0, 0.8, 0, 45, [0.085, 1.35, 0.085]],
+  ['solid', POST, 0, 1.5, 0, 45, [0.13, 0.06, 0.13]],
+  // The bracket out to the right as the camera sees it, a brace under it, the lantern on a hook.
+  ['solid', IRON, 0.16, 1.42, -0.16, 45, [0.42, 0.035, 0.035]], ['solid', IRON, 0.08, 1.33, -0.08, 45, [0.2, 0.025, 0.025], 0, 40],
+  ['solid', IRON, 0.29, 1.37, -0.29, 45, [0.02, 0.07, 0.02]],
+  ['solid', IRON, 0.29, 1.32, -0.29, 45, [0.15, 0.03, 0.15]], ['solid', LANTERN_GLASS, 0.29, 1.21, -0.29, 45, [0.11, 0.17, 0.11]],
+  ['solid', IRON, 0.29, 1.11, -0.29, 45, [0.13, 0.025, 0.13]]];
 const PICTURES = {
   'level0': [['sk', 'campfire-pit', 0, 0, 0, 0, SK], ['sk', 'resource-wood', 0.45, 0, -0.25, 40, SK]],
   'level1': [['sk', 'tent', 0, 0, -0.15, 0, SK], ['sk', 'tent-canvas', 0, 0, -0.15, 0, SK], ['sk', 'campfire-pit', 0.55, 0, 0.6, 0, SK]],
@@ -120,6 +130,7 @@ const PICTURES = {
   'fountain': [['ftk', 'fountain-round-detail', 0, 0, 0, 0, 0.9]],
   'tree-city': [['ftk', 'tree-high-round', 0, 0, 0, 0]],
   'lamp': [...lampPole, ...lampArm(1)],
+  'lantern-post': lanternPost,
   'lamp-double': [...lampPole, ...lampArm(1), ...lampArm(-1)],
   // A city's houses, nobody's: none has the sessions' teal or red roofs, so those stand out.
   // Some in colours of our own (paint, below), some in the kit's own second colour map.
@@ -337,7 +348,7 @@ async function picture(name, parts) {
     if (kit === 'solid' || kit === 'cyl') {      // a lit shape of one colour: a modern street lamp's parts
       const geo = kit === 'solid' ? new THREE.BoxGeometry(...scale) : new THREE.CylinderGeometry(scale[0], scale[0], scale[1], 12);
       const b = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: m, roughness: 0.6, metalness: 0.2,
-        emissive: m === LAMP_LIGHT ? m : 0x000000, emissiveIntensity: m === LAMP_LIGHT ? 0.9 : 0}));
+        emissive: m === LAMP_LIGHT || m === LANTERN_GLASS ? m : 0x000000, emissiveIntensity: m === LAMP_LIGHT ? 0.9 : m === LANTERN_GLASS ? 0.7 : 0}));
       b.position.set(x, y, z);
       b.rotation.y = turn * Math.PI / 180;
       scene.add(b);
