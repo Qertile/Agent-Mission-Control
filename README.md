@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.14.1` (current) | `v4.14.0` plus a ✥ *Rearrange* button in Relax mode: buildings move only while it is on, and ↺ *Reset all* puts them all back. See `CHANGELOG.md`. |
+| `v4.14.2` (current) | `v4.14.1` plus a lower camera and a stronger perspective in Relax mode, with less sky in view. See `CHANGELOG.md`. |
+| `v4.14.1` | `v4.14.0` plus a ✥ *Rearrange* button in Relax mode: buildings move only while it is on, and ↺ *Reset all* puts them all back. See `CHANGELOG.md`. |
 | `v4.14.0` | `v4.13.0` plus moving the sessions' buildings in Relax mode by dragging them (right-click → *Reset place* puts one back), a landing with a pier and a moored ship, boats on the river, the city era named Medieval City, and fixes for the wall over the river and a camp at start without its buildings. See `CHANGELOG.md`. |
 | `v4.13.0` | `v4.12.0` plus a town's palisade of stakes with gates, and in a metropolis the old city wall's gates kept whole among broken stretches and towers. See `CHANGELOG.md`. |
 | `v4.12.0` | `v4.11.3` plus a city in Relax mode with a stone wall, gates and towers winding round its buildings, cobbled streets, the sessions' buildings round the fountain, and medieval street lanterns. See `CHANGELOG.md`. |
@@ -312,7 +313,8 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   towers). Each also has a yard of one or two smaller buildings behind it, such as a farm, a
   stall or a shed.
 - **The map** is the same size in every window, seen in perspective: its far side (the top)
-  is drawn at about half the width of the near side, the ground hazier with distance, and
+  is drawn at about a third of the width of the near side, seen from low down (about 26
+  degrees over the ground), the ground hazier with distance, and
   every building and tree casts the shadow of its own outline. Zoomed all the way out the
   window shows the part where the buildings are; the wheel zooms around the pointer and
   dragging moves the map; names stay one size, and those that would overlap wait for you
@@ -610,7 +612,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.14.1`（目前） | `v4.14.0` 再加上 Relax mode 的 ✥ *Rearrange* 按鈕：只有按下後才能移動建築，↺ *Reset all* 全部放回原位。詳見 `CHANGELOG.md`。 |
+| `v4.14.2`（目前） | `v4.14.1` 再加上：Relax mode 的視角更低、遠近更明顯，畫面裡的天空變少。詳見 `CHANGELOG.md`。 |
+| `v4.14.1` | `v4.14.0` 再加上 Relax mode 的 ✥ *Rearrange* 按鈕：只有按下後才能移動建築，↺ *Reset all* 全部放回原位。詳見 `CHANGELOG.md`。 |
 | `v4.14.0` | `v4.13.0` 再加上：Relax mode 裡可以拖曳移動 session 的建築（右鍵 → *Reset place* 放回原位）、有棧橋和停泊帆船的碼頭、河上的船、城市時期改名為 Medieval City，並修正城牆壓在河上和啟動時營地沒有建築的問題。詳見 `CHANGELOG.md`。 |
 | `v4.13.0` | `v4.12.0` 再加上：小鎮有一圈帶門的木柵欄，大都會保留舊城牆完整的城門，以及幾段殘破的牆和塔。詳見 `CHANGELOG.md`。 |
 | `v4.12.0` | `v4.11.3` 再加上 Relax mode 城市的改造：在建築之間繞一圈有城門和塔樓的石牆、石板街道、session 建築圍著噴水池，以及中世紀風格的提燈。詳見 `CHANGELOG.md`。 |
@@ -842,7 +845,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   一種行業，每個 session 固定：房子可能是商店、鐵匠鋪、酒館、鋸木廠或倉庫，高塔可能是教堂、
   市政廳或風車（大都會裡是咖啡廳、商場或其他高樓）。每棟後面還有一兩棟小建築，例如農田、
   攤販或倉庫，組成一個建築群。
-- **地圖**在所有視窗都一樣大，有透視：遠的一邊（上方）寬度大約只有近處的一半，遠處的地面
+- **地圖**在所有視窗都一樣大，有透視：從低處看（離地約 26 度），遠的一邊（上方）寬度大約只有近處的三分之一，遠處的地面
   比較朦朧，每棟建築和每棵樹都有照自己輪廓投下的影子。縮到最小時，視窗框住有建築的範圍；
   滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，會重疊的要放大才顯示。地圖兩側
   外面是丘陵和樹林。

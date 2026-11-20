@@ -95,6 +95,8 @@ const relax = (() => {
   const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
   const MAP_W = 1800, MAP_H = 1350, ZOOM_MAX = 1.6;   // the map, in world units; a building's plot is 150
   const img = {};
+  let skyTop = '#9cc8e6';                  // the sky's colour at its top, for the view above it
+  let signs = [];                          // the name signs drawn, {rect in the view, b}: a click on one is for its building
   let moving = null;                       // a building being dragged: {b, from, x, y, to, ok}
   let arranging = false;                   // ✥ Rearrange is on: dragging a building moves it
   let on = false, sig = '', spots = [], hover = null, msgTimer = 0;
@@ -107,14 +109,19 @@ const relax = (() => {
   // The far side is narrowed more than it is shortened (FAR_SCALE across, FAR_V up and down),
   // so the lines that run away from the camera close in strongly without the map losing much
   // of its height to the sky. A thing standing on the ground is sized by the narrowing.
-  const PAD = 760, PADY = 260, FAR_SCALE = 0.55, FAR_V = 0.75, HORIZON = plot * 0.9;
+  // SQ: the ground squashed up and down on top of that, for a lower camera (about 26 degrees
+  // over the ground; the pictures are drawn from 31). PAD and PADY: as much margin as the
+  // narrowest far side and the sky above the horizon then need; the view goes no higher than
+  // the sky's top (SKY_TOP, in the warped picture).
+  const PAD = 1640, PADY = 700, FAR_SCALE = 0.36, FAR_V = 0.55, HORIZON = plot * 0.9, SQ = 0.72;
   const farness = y => Math.min(1, Math.max(0, (y - HORIZON) / (MAP_H - HORIZON)));
   const depth = y => FAR_SCALE + (1 - FAR_SCALE) * farness(y);
-  const Y_H = MAP_H - (MAP_H - HORIZON) * (1 + FAR_V) / 2;     // where the horizon lands
+  const Y_H = MAP_H - SQ * (MAP_H - HORIZON) * (1 + FAR_V) / 2;     // where the horizon lands
+  const SKY_TOP = Math.max(0, Y_H - FAR_V * (HORIZON + PADY));
   function warpY(y) {
     if (y < HORIZON) return Y_H - FAR_V * (HORIZON - y);
     const d = Math.min(y, MAP_H) - HORIZON;
-    return Y_H + FAR_V * d + (1 - FAR_V) * d * d / (2 * (MAP_H - HORIZON)) + Math.max(0, y - MAP_H);
+    return Y_H + SQ * (FAR_V * d + (1 - FAR_V) * d * d / (2 * (MAP_H - HORIZON))) + Math.max(0, y - MAP_H);
   }
   const warp = (x, y) => [MAP_W / 2 + (x - MAP_W / 2) * depth(y), warpY(y)];
   // A flat world canvas (at `sr` pixels a unit, the margin included) onto a map-sized one, in
@@ -618,7 +625,8 @@ const relax = (() => {
     const X0 = -PAD, WW = w + 2 * PAD;      // the margin round the map is land too
     const sky = g.createLinearGradient(0, -PADY, 0, plot * 0.7), wk = weatherDrawn;
     const tops = {cloudy: '#a3b1bf', rain: '#7f8c9a', snow: '#b9c3cc', fog: '#c9d0d6'}, lows = {cloudy: '#dde2e6', rain: '#b8c0c7', snow: '#e8ecef', fog: '#e4e7ea'};
-    sky.addColorStop(0, tops[wk] || (metro(e) ? '#a9bccb' : '#9cc8e6'));
+    skyTop = tops[wk] || (metro(e) ? '#a9bccb' : '#9cc8e6');
+    sky.addColorStop(0, skyTop);
     sky.addColorStop(1, lows[wk] || (metro(e) ? '#dfe3e2' : '#e3eff3'));
     g.fillStyle = sky;
     g.fillRect(X0, -PADY, WW, PADY + plot * 0.75);
@@ -1074,7 +1082,9 @@ const relax = (() => {
     const left = Math.max(0, Math.min(...xs, MAP_W * 0.3) - plot * 0.9), right = Math.min(MAP_W, Math.max(...xs, MAP_W * 0.7) + plot * 0.9);
     const wasFit = !zoom || zoom - fitZoom() < 0.001;
     const bottom = Math.min(MAP_H, Math.max(...placed.map(p => warp(p.x, p.y)[1])) + plot * 0.55);
-    FIT = {x: left, y: 120, w: right - left, h: bottom - 120};
+    // From a little above the horizon (the mountains' tops), so not much sky shows.
+    const fitTop = Y_H - plot * 1.1;
+    FIT = {x: left, y: fitTop, w: right - left, h: bottom - fitTop};
     if (wasFit && zoom) zoom = fitZoom();      // still all the way out
     eraNow = e;
     eraCheck(e);
@@ -1090,18 +1100,22 @@ const relax = (() => {
   // the whole map can be dragged into view.
   // FIT is set by each draw: from the mountain tops down, across what stands on the map.
   let FIT = {x: 0, y: 0, w: MAP_W, h: MAP_H};
-  function fitZoom() { return Math.min(viewW / FIT.w, viewH / FIT.h); }
+  // All the way out it may leave a tenth of that width (the empty ground at the sides) out.
+  function fitZoom() { return Math.min(viewW / (FIT.w * 0.9), viewH / FIT.h); }
   // Within the map; a map smaller than the window sits in its middle.
   function clampView() {
     const fit = fitZoom();
     zoom = Math.max(fit, Math.min(ZOOM_MAX, zoom || fit));
     if (zoom - fit < 0.001) {             // all the way out: FIT in the middle, but not past the map's edge
       const vw = viewW / zoom, vh = viewH / zoom, keep = (o, v, M) => (v >= M ? (M - v) / 2 : Math.max(0, Math.min(M - v, o)));
-      ox = keep(FIT.x + (FIT.w - vw) / 2, vw, MAP_W); oy = keep(FIT.y + (FIT.h - vh) / 2, vh, MAP_H);
+      // Taller than the map from the sky's top down: the bottom at the map's, more sky above.
+      ox = keep(FIT.x + (FIT.w - vw) / 2, vw, MAP_W);
+      oy = vh >= MAP_H - SKY_TOP ? MAP_H - vh : SKY_TOP + keep(FIT.y - SKY_TOP + (FIT.h - vh) / 2, vh, MAP_H - SKY_TOP);
       return;
     }
     ox = MAP_W * zoom <= viewW ? -(viewW / zoom - MAP_W) / 2 : Math.max(0, Math.min(MAP_W - viewW / zoom, ox));
-    oy = MAP_H * zoom <= viewH ? -(viewH / zoom - MAP_H) / 2 : Math.max(0, Math.min(MAP_H - viewH / zoom, oy));
+    const MH = MAP_H - SKY_TOP;
+    oy = MH * zoom <= viewH ? MAP_H - viewH / zoom : Math.max(SKY_TOP, Math.min(MAP_H - viewH / zoom, oy));
   }
   function measure() {
     const box = $('relax');
@@ -1131,6 +1145,7 @@ const relax = (() => {
     v.setTransform(1, 0, 0, 1, 0, 0);
     v.fillStyle = '#3f6a3b';
     v.fillRect(0, 0, W, H);
+    if (oy < SKY_TOP) { v.fillStyle = skyTop; v.fillRect(0, 0, W, Math.ceil((SKY_TOP - oy) * k) + 1); }
     v.imageSmoothingQuality = 'high';
     const fade = bgPrev ? weatherNow().t : 1;
     if (fade < 1) { v.drawImage(bgPrev, -ox * k, -oy * k, MAP_W * k, MAP_H * k); v.globalAlpha = fade; }
@@ -1196,6 +1211,7 @@ const relax = (() => {
       cv.style.width = viewW + 'px'; cv.style.height = viewH + 'px';
     }
     const g = cv.getContext('2d'), full = zoom >= 0.8, taken = [];
+    signs = [];
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, viewW, viewH);
     g.textAlign = 'center';
@@ -1215,6 +1231,7 @@ const relax = (() => {
       if (b.status === 'waiting') badge(g, bx, by, '!', STATUS_COLORS.waiting);
       if (taken.some(q => rect[0] < q[0] + q[2] && q[0] < rect[0] + rect[2] && rect[1] < q[1] + q[3] && q[1] < rect[1] + rect[3])) continue;
       taken.push(rect);
+      signs.push({rect, b});
       // The name on a little wooden sign like the task board's, with the tool's colour as a
       // dot and the status under it; an ended session's sign is weathered grey, with no status.
       plank(g, rect, ended);
@@ -2340,7 +2357,10 @@ const relax = (() => {
 
   function at(e) {
     const r = $('relax-canvas').getBoundingClientRect();
-    const x = (e.clientX - r.left) / zoom + ox, y = (e.clientY - r.top) / zoom + oy;
+    const vx = e.clientX - r.left, vy = e.clientY - r.top;
+    const sign = signs.find(({rect: [x, y, w, h]}) => vx >= x && vx < x + w && vy >= y && vy < y + h);
+    if (sign) return sign.b;
+    const x = vx / zoom + ox, y = vy / zoom + oy;
     const s = spots.find(s => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h);
     return s ? s.b : null;
   }
@@ -2570,5 +2590,5 @@ const relax = (() => {
           _season: k => { seasonForTest = k; update(true); },
           _celebrate: (a, b) => celebrate(a, b),
           _weather: (kind, from = kind, t = 1) => { weatherForTest = {kind, from, t}; update(true); },
-          _warp: warp, _unwarp: unwarp, _places: () => places, _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
+          _warp: warp, _unwarp: unwarp, _places: () => places, _signs: () => signs.map(s => ({id: s.b.id, rect: s.rect})), _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
 })();

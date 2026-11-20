@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-20 – v4.14.2: Relax mode: a lower camera, a stronger perspective
+
+### Changed
+- Relax mode: the camp is seen from lower down and its far side closes in more: the ground at
+  about 26 degrees instead of 38 (squashed up and down by 0.72 more), the far side drawn at
+  36% of the near side's width instead of 55% and 55% of its height instead of 75%.
+- Relax mode: zoomed all the way out, the view starts just above the mountains' tops and may
+  leave a tenth of the camp's width out at the sides (empty ground), so less sky shows; in a
+  window taller than the map, the map's bottom stays at the window's and the sky's colour
+  fills the top.
+- Relax mode: a double-click on a name sign is for that sign's building, even where a
+  building in front covers the one behind.
+- README: Relax mode, the perspective (both languages).
+- Versions: `v4.14.2`.
+- Tagged `v4.14.2`.
+
+### Known
+- Redrawing (when a session's status changes) takes a little longer: in the test page a city
+  349 ms → 427 ms, a metropolis with 20 sessions 299 ms → 342 ms.
+
 ## 2026-11-20 – v4.14.1: Relax mode: a Rearrange button
 
 ### Changed
