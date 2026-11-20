@@ -4,6 +4,8 @@
 
 The metro-* pictures need RELAX_CITY_KIT and RELAX_CAR_KIT, the kits' zip files; the med-*
 ones need RELAX_MEDIEVAL, the folder of the Medieval Village MegaKit's glTF files.
+The boats need RELAX_WATERCRAFT_KIT (Kenney's Watercraft Kit zip) and the name 'boats'; the
+moored ship and rowboat pictures need it too.
 The animals need RELAX_ANIMALS, the folder of Quaternius' Ultimate Animated Animal Pack's
 glTF files, and the name 'animals'. Name pictures to make only those; with none it makes them all. It opens a window that puts the kits' models together (relax_art.html, three.js) and
 saves one transparent PNG per picture, plus people.png: the walking people, one row per
@@ -83,7 +85,7 @@ def main():
     if len(sys.argv) < 4:
         sys.exit(__doc__)
     kits = {'sk': zipfile.ZipFile(sys.argv[1]), 'ftk': zipfile.ZipFile(sys.argv[2]), 'mc': zipfile.ZipFile(sys.argv[3])}
-    for kit, var in (('ck', 'RELAX_CITY_KIT'), ('car', 'RELAX_CAR_KIT')):
+    for kit, var in (('ck', 'RELAX_CITY_KIT'), ('car', 'RELAX_CAR_KIT'), ('wc', 'RELAX_WATERCRAFT_KIT'), ('tr', 'RELAX_TRAIN_KIT')):
         if os.environ.get(var):
             kits[kit] = zipfile.ZipFile(os.environ[var])
     if os.environ.get('RELAX_MEDIEVAL'):

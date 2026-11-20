@@ -360,6 +360,7 @@
 </div>
 
 <div class="menu" id="row-menu">
+  <div data-act="place" style="display:none">Reset place</div>
   <div data-act="copy">Copy</div>
   <div data-act="copyall">Copy all rows</div>
   <hr>
@@ -2091,6 +2092,8 @@ function rowMenu(r, e) {
   m.querySelector('[data-act="term"]').textContent = many ? `Terminate ${menuRows.length} sessions` : 'Terminate';
   if (many) for (const it of m.querySelectorAll('[data-act="auto"], [data-act="fork"], [data-act="settings"], [data-act="model"]'))
     it.classList.add('disabled');
+  // Relax mode's Reset place: relax.js shows it, for a building you moved.
+  m.querySelector('[data-act="place"]').style.display = 'none';
   showAt(m, e.clientX, e.clientY);
 }
 $('row-menu').addEventListener('click', async e => {

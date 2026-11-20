@@ -131,6 +131,10 @@ const PICTURES = {
   'tree-city': [['ftk', 'tree-high-round', 0, 0, 0, 0]],
   'lamp': [...lampPole, ...lampArm(1)],
   'lantern-post': lanternPost,
+  // On the water by a dock (Kenney's Watercraft Kit): a small sailing ship, a rowboat, a fishing boat.
+  'ship-moored': [['wc', 'ship-small', 0, 0, 0, 30, 0.3]],
+  'rowboat': [['wc', 'boat-row-small', 0, 0, 0, 20, 0.5]],
+  'fishing-boat': [['wc', 'boat-fishing-small', 0, 0, 0, -30, 0.5]],
   'lamp-double': [...lampPole, ...lampArm(1), ...lampArm(-1)],
   // A city's houses, nobody's: none has the sessions' teal or red roofs, so those stand out.
   // Some in colours of our own (paint, below), some in the kit's own second colour map.
@@ -478,6 +482,35 @@ async function animals() {
   return api().save('animals', sheet.toDataURL('image/png'));
 }
 
+// The boats that go up and down the river: a row each, 8 frames, turned 0, 45, ... 315 degrees.
+const BOATS = [['boat-row-small', 0.5], ['boat-row-large', 0.45], ['boat-fishing-small', 0.45], ['boat-sail-a', 0.5]];
+async function boats() {
+  const cam = new THREE.OrthographicCamera(-FRAME / 4, FRAME / 4, FRAME / 2 * 0.88, -FRAME / 2 * 0.12, 0.1, 100);
+  cam.position.copy(camera.position);
+  cam.lookAt(0, 0, 0);
+  const sheet = document.createElement('canvas');
+  sheet.width = CELL * 8; sheet.height = CELL * BOATS.length;
+  const g = sheet.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  renderer.setSize(SIZE, SIZE);
+  for (const [row, [name, size]] of BOATS.entries()) {
+    for (let d = 0; d < 8; d++) {
+      const scene = new THREE.Scene();
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 2.4));
+      const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+      sun.position.set(4, 8, 3);
+      scene.add(sun);
+      const o = await model('wc', name);
+      o.rotation.y = d * Math.PI / 4;
+      o.scale.setScalar(size);
+      scene.add(o);
+      renderer.render(scene, cam);
+      g.drawImage(renderer.domElement, d * CELL, row * CELL, CELL, CELL);
+    }
+  }
+  return api().save('boats', sheet.toDataURL('image/png'));
+}
+
 // The module may load after pywebview is ready, or before.
 async function run() {
   const done = [];
@@ -487,6 +520,7 @@ async function run() {
       if (!only.length || only.includes(name)) done.push(await picture(name, parts));
     if (!only.length) done.push(await people());
     if (only.includes('animals')) done.push(await animals());
+    if (only.includes('boats')) done.push(await boats());
     await api().done('saved:\n' + done.join('\n'));
   } catch (e) {
     log('failed: ' + e);

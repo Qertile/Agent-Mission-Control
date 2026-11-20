@@ -13,7 +13,7 @@ const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
   const PICS_METRO = ['metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
   const PICS_BASE = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people', 'animals',
-                'fence', 'signpost', 'lantern', 'lantern-post', 'lamp', 'lamp-double', 'stall', 'stall-green', 'fountain', 'tree-city',
+                'fence', 'signpost', 'lantern', 'lantern-post', 'ship-moored', 'rowboat', 'boats', 'lamp', 'lamp-double', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
                 'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
                 'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall'];
@@ -56,6 +56,8 @@ const relax = (() => {
     [100, 'Village', '#4b7a46', '#8a6d45', 0.1, null, 0.8, ['signpost'], 0.24],
     [0, 'Tribe', '#4b7a46', null, 0, null, 1, [], 0]];
   const ICON = {Tribe: '🏕', Village: '🏘', Town: '🏰', City: '🏯', Metropolis: '🏙', Megacity: '🌃'};
+  // What an era is called on screen (its key stays as it is).
+  const SHOWN = {City: 'Medieval City'}, named = k => SHOWN[k] || k;
   const metro = e => e[1] === 'Metropolis' || e[1] === 'Megacity';
   const urban = e => e[1] === 'City' || metro(e);
   // A session's house or tower is, from a village on, one of the camp's trades instead, fixed
@@ -93,6 +95,7 @@ const relax = (() => {
   const TASK_COLORS = {Ongoing: '#0b5a7a', Checking: '#8a5a00', Pending: '#3a2a1a'};
   const MAP_W = 1800, MAP_H = 1350, ZOOM_MAX = 1.6;   // the map, in world units; a building's plot is 150
   const img = {};
+  let moving = null;                       // a building being dragged: {b, from, x, y, to, ok}
   let on = false, sig = '', spots = [], hover = null, msgTimer = 0;
   const plot = 150;
   // The camera looks down at a slant: the far side of the map (its top) is drawn smaller than
@@ -142,6 +145,10 @@ const relax = (() => {
   const people = new Map();                // session id (a participant: discussion id#i) -> its person
   let fires = [];                          // the discussions under way: {x, y} of their fire
 
+  // Where you moved each building to (dragging it): {session id: {x, y}} on the ground, per computer.
+  const PLACES_KEY = 'amc-relax-places';
+  let places = (() => { try { return JSON.parse(localStorage.getItem(PLACES_KEY)) || {}; } catch (e) { return {}; } })();
+  function savePlaces() { try { localStorage.setItem(PLACES_KEY, JSON.stringify(places)); } catch (e) {} }
   function saved() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function save(mode) { try { localStorage.setItem(KEY, mode); } catch (e) {} }
 
@@ -153,7 +160,9 @@ const relax = (() => {
     im.onerror = ok;
     im.src = 'relax/' + n + '.png';
   })));
-  function load() { return (loading = loading || fetchAll(PICS_BASE)); }
+  // ready: the pictures are in; bare: the picture last drawn was drawn before they were.
+  let ready = false, bare = false;
+  function load() { return (loading = loading || fetchAll(PICS_BASE).then(() => { ready = true; })); }
   const packs = {};
 
   // One building per session: the running ones (the session list's rows), then the
@@ -441,8 +450,17 @@ const relax = (() => {
   function arrange(list, props, turns, cap = 2) {
     const {lots, wide, open} = cityPlan(), placed = [], used = new Set(), houses = [];
     for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: {base: [PLAZA.x - plot * 0.45, PLAZA.y - plot * 0.25, PLAZA.x + plot * 0.45, PLAZA.y + plot * 0.16]}, b});
+    // The ones you moved stand where you put them, before the rest find theirs.
+    const moved = list.filter(b => places[b.id]), all = placed;
+    for (const b of moved) {
+      // Only the room it stands on (as when it was dropped), so none of the others has to move.
+      const {x, y} = places[b.id];
+      placed.push({x, y, r: room(x, y, false, 0.7), b, flip: facing(0, x, y) && b.kind !== 'meeting'});
+    }
+    // Every one then finds the spot it would have, so the others keep theirs: one you moved
+    // keeps its spot empty, standing where you put it.
     for (const b of sorted(list)) {
-      const rnd = rng(hash(b.id));
+      const rnd = rng(hash(b.id)), placed = places[b.id] ? all.filter(q => q.b !== b) : all;
       const order = wide.map(l => [l.far + rnd() * 0.04, l]).sort((a, c) => a[0] - c[0]);
       // Room for a skyscraper if there is any; with many sessions, for less: a later tower
       // may then stand in front of a neighbour, which is better than on top of it.
@@ -464,7 +482,8 @@ const relax = (() => {
       if (free) high = 0.7;
       const l = free || (found || order[0])[1];
       used.add(l);
-      placed.push({x: l.x, y: l.y, r: room(l.x, l.y, false, high), b, flip: !!l.flip && b.kind !== 'meeting'});
+      // (One you moved leaves a stand-in here, holding its old room, taken out at the end.)
+      all.push({x: l.x, y: l.y, r: room(l.x, l.y, false, high), b, flip: !!l.flip && b.kind !== 'meeting', gone: !!places[b.id]});
     }
     for (const b of props.filter(q => q.kind !== 'fountain')) {
       const rnd = rng(hash(b.id));
@@ -494,13 +513,13 @@ const relax = (() => {
       houses.push(r.base);
       placed.push({x: l.x, y: l.y, r, flip: !!l.flip, b: {id: `~d${k}`, prop: true, house: true, kind: pics[style - 1]}});
     });
-    return placed;
+    return placed.filter(q => !q.gone);
   }
   // Everyone's place, worked out again only when who is there or the era changes.
   let layoutKey = '', layoutMemo = [];
   function layout(list, e) {
     const props = e[7].map((kind, i) => ({id: '~' + kind + i, kind, prop: true}));
-    const key = JSON.stringify([list.map(b => b.id), e[1], decorCount(camp), amc.order]);
+    const key = JSON.stringify([list.map(b => b.id), e[1], decorCount(camp), amc.order, places]);
     if (key !== layoutKey) {
       layoutKey = key;
       // Room for skyscrapers first; if that leaves any two sessions on each other (many of
@@ -835,6 +854,41 @@ const relax = (() => {
         if (free(x, y, 50)) { herd.push({kind, x, y}); break; }
       }
     }
+    // A landing on the river nearest the plaza, from a village on: a wooden pier out from the
+    // bank, a rowboat tied to it, and from a town a ship too. Then the boats that come and go.
+    fleet = [];
+    if (e[1] !== 'Tribe') {
+      const br = rng(53), side = (i, d) => { const a = river[Math.max(0, i - 1)], b = river[Math.min(river.length - 1, i + 1)], l = Math.hypot(b.x - a.x, b.y - a.y) || 1; return [-(b.y - a.y) / l * d, (b.x - a.x) / l * d]; };
+      let best = null;
+      for (let i = 3; i < river.length - 3; i++) {
+        const q = river[i];
+        if (q.y < plot * 2 || q.y > h - plot * 1.2) continue;
+        for (const way of [-1, 1]) {
+          const [nx, ny] = side(i, way * (riverWidth() / 2 + plot * 0.25)), land = {x: q.x + nx, y: q.y + ny};
+          // A city's quay is its bank road: there only no building may be in the way.
+          if (!(urban(e) ? riverGap(land.x, land.y) > riverWidth() / 2 : free(land.x, land.y, 40)) || placed.some(p => Math.hypot(p.x - land.x, (p.y - land.y) / KY) < plot * 0.7)) continue;
+          const d = groundGap(land, PLAZA);
+          if (!best || d < best.d) best = {i, way, d};
+        }
+      }
+      if (best) {
+        const q = river[best.i], [ox, oy] = side(best.i, best.way), [tx, ty] = side(best.i, 1), along = [ty, -tx];
+        const at = (o, a) => ({x: q.x + ox * o + along[0] * a, y: q.y + oy * o + along[1] * a});
+        // The pier: planks from the bank to the middle of the water, on two posts.
+        const W = 9, ends = [at(riverWidth() / 2 + 16, 0), at(-2, 0)];
+        g.save(); g.lineCap = 'butt';
+        g.strokeStyle = '#4f3a24'; g.lineWidth = W * 2 + 4; g.beginPath(); g.moveTo(ends[0].x, ends[0].y); g.lineTo(ends[1].x, ends[1].y); g.stroke();
+        g.strokeStyle = '#a57c4c'; g.lineWidth = W * 2; g.stroke();
+        g.strokeStyle = 'rgba(60, 40, 20, 0.5)'; g.lineWidth = 1; g.setLineDash([1.5, 5]); g.lineWidth = W * 2; g.stroke(); g.setLineDash([]);
+        g.restore();
+        const boat = (name, o, a, sz, flip) => { const p = at(o, a); if (img[name]) woods.push([img[name], p.x, p.y, sz, flip]); };
+        boat('rowboat', 2, -16, plot * 0.55, false);
+        if (e[1] !== 'Village') boat('ship-moored', -2, 26, plot * 0.95, best.way < 0);
+      }
+      // Rowboats on the river (a modern one or two in a metropolis), going up and down.
+      for (let k = 0, n = metro(e) ? 3 : e[1] === 'Village' ? 1 : 2; k < n; k++)
+        fleet.push({row: metro(e) ? [2, 3, 0][k] : k % 2, at: 0.15 + br() * 0.7, way: br() < 0.5 ? 1 : -1, lane: (br() - 0.5) * 0.4});
+    }
     // And inside the map, a fringe of trees along both sides wherever there is room.
     for (let i = 0, n = Math.round(h / 40); i < n; i++) {
       const y = plot * 1.0 + rnd() * (h - plot * 1.0), d = rnd() * plot * 0.7, x = rnd() < 0.5 ? d : w - d;
@@ -881,6 +935,7 @@ const relax = (() => {
   }
   function draw(list) {
     const w = MAP_W, h = MAP_H, e = era(camp);
+    bare = !ready;
     weatherDrawn = weatherNow().kind;
     // The pictures of this era and those before it first, then draw: a city's old houses
     // stand on in a metropolis.
@@ -1087,8 +1142,31 @@ const relax = (() => {
     for (const f of fires) onGround(out, f.x, f.y, () => flames(out, f));
     for (const p of [...people.values()].sort((a, c) => a.y - c.y)) onGround(out, p.x, p.y, () => person(out, p));
     frontOver(out, null);
+    if (moving && moving.to) ghost(out, moving.to, moving.ok);
     drawTags();
     drawNight();
+  }
+  // Moving a building: where it would go, green if it can, red if not.
+  function ghost(g, {x, y}, ok) {
+    const [X, Y] = warp(x, y), m = depth(y), w = plot * 0.57 * m;
+    g.save();
+    g.fillStyle = ok ? 'rgba(120, 230, 120, 0.35)' : 'rgba(240, 90, 80, 0.35)';
+    g.strokeStyle = ok ? 'rgba(60, 170, 60, 0.9)' : 'rgba(200, 50, 40, 0.9)'; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(X, Y, w, w * 0.45, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.restore();
+  }
+  // The ground under a point of the warped picture (warp's other way).
+  function unwarp(X, Y) {
+    let lo = -PADY, hi = MAP_H + 200;
+    for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (warpY(mid) < Y) lo = mid; else hi = mid; }
+    const y = (lo + hi) / 2;
+    return {x: MAP_W / 2 + (X - MAP_W / 2) / depth(y), y};
+  }
+  // Can a session's building stand there: on the map, off the water, clear of the other sessions'.
+  function canStand(id, x, y) {
+    if (x < LEFT || x > RIGHT || y < LOW || y > HIGH || riverGap(x, y) < riverWidth() / 2 + plot * 0.3) return false;
+    const r = room(x, y, false, 0.7);
+    return !layoutMemo.some(q => !q.b.prop && q.b.id !== id && clash(r, q.r));
   }
   // The front fence over each animal in a paddock (only there, so a tree in front of the fence
   // keeps its place): of those whose box `hit` takes, or all of them.
@@ -1444,8 +1522,8 @@ const relax = (() => {
     return line;
   }
   // The wall on that outline, standing up after the warp like the buildings: stretches of
-  // stone with a walk and merlons along the top, a gate arch over each road and over the
-  // river, a gatehouse tower each side of an avenue, and a round tower with a tiled roof at
+  // stone with a walk and merlons along the top, a gate arch over each road, none over the
+  // river (a tower on each bank), a gatehouse tower each side of an avenue, a round tower with a tiled roof at
   // each corner. Each stretch and tower is drawn in its place among the buildings, the side
   // facing the camera, lit from the left, with its shadow to the right.
   // style: 'stone' (a city), 'wood' (a town: a palisade of pointed stakes, no towers, its gates
@@ -1476,7 +1554,16 @@ const relax = (() => {
       }
     };
     for (const {line, width} of edges) cross(line, plot * width / 2 + 8, width >= 0.2);
-    cross(river, riverWidth() / 2 + 10, false);
+    // The river: no wall over the water, a tower (a palisade: a post) on each bank instead.
+    const wetAt = q => riverGap(q.x, q.y) < riverWidth() / 2 + 6, banks = [];
+    // Each bank: walking round the outline in steps of 4, where it goes into or out of the water.
+    for (let j = 0; j < n; j++) {
+      const p = outline[j], q = outline[(j + 1) % n], s = Math.max(1, Math.round(Math.hypot(q.x - p.x, (q.y - p.y) / KY) / 4));
+      for (let i = 0; i < s; i++) {
+        const u = {x: p.x + (q.x - p.x) * i / s, y: p.y + (q.y - p.y) * i / s}, v = {x: p.x + (q.x - p.x) * (i + 1) / s, y: p.y + (q.y - p.y) * (i + 1) / s};
+        if (wetAt(u) !== wetAt(v)) banks.push(wetAt(u) ? v : u);
+      }
+    }
     const gapAt = q => gaps.find(g => Math.hypot(g[0] - q.x, (g[1] - q.y) / KY) < g[2]);
     const items = [], brick = img['tex-brick'], roof = img['tex-roof'], pats = new Map();
     const pat = (g, im, none) => { if (!im) return none; if (!pats.has(g)) pats.set(g, [g.createPattern(brick, 'repeat'), roof && g.createPattern(roof, 'repeat')]); return pats.get(g)[im === brick ? 0 : 1] || none; };
@@ -1499,6 +1586,8 @@ const relax = (() => {
         const f0 = i / k, f1 = (i + 1) / k, a0 = {x: p.x + (q.x - p.x) * f0, y: p.y + (q.y - p.y) * f0}, b0 = {x: p.x + (q.x - p.x) * f1, y: p.y + (q.y - p.y) * f1};
         const m = {x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2}, gap = gapAt(m);
         walked += len / k;
+        const wet = wetAt(a0) || wetAt(b0) || wetAt(m);
+        if (wet) continue;
         if (!wallFree(a0) || !wallFree(b0)) { skipped++; continue; }   // a building stands there: it is the wall
         // A ruin keeps its gates whole; the rest of it stands here and there.
         const left = ruin && !gap ? standing(walked) : 1;
@@ -1549,6 +1638,7 @@ const relax = (() => {
     // Towers: at each corner, and each side of an avenue's gate.
     const towers = [];
     if (wood) {                              // a palisade: a tall post each side of every gate
+      const posts = [];
       for (const [gx, gy, half] of gaps) for (let j = 0; j < n; j++) {
         const p = outline[j], q = outline[(j + 1) % n], len = Math.hypot(q.x - p.x, (q.y - p.y) / KY) || 1;
         const t = ((gx - p.x) * (q.x - p.x) + (gy - p.y) / KY * (q.y - p.y) / KY) / (len * len);
@@ -1556,7 +1646,10 @@ const relax = (() => {
         for (const s of [-1, 1]) {
           const f = t + s * half / len;
           if (f <= 0 || f >= 1) continue;
-          const c = {x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f};
+          posts.push({x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f});
+        }
+      }
+      for (const c of [...posts, ...banks]) {
           if (!wallFree(c)) continue;
           items.push({x: c.x, y: c.y + 6, b: {wall: true, draw: g => {
             const [X, Y] = warp(c.x, c.y), m = depth(c.y), w = 7 * m, h = H * 1.45 * m;
@@ -1566,14 +1659,13 @@ const relax = (() => {
             g.fillStyle = '#5a3d22'; g.fillRect(X, Y - h, w / 2, h);
             g.beginPath(); g.moveTo(X - w / 2, Y - h); g.lineTo(X, Y - h - w); g.lineTo(X + w / 2, Y - h); g.closePath(); g.fill();
           }}});
-        }
       }
       wallSkipped = skipped; wallPieces = items.length; return items;
     }
     for (let j = 0; j < n; j++) {
       const a = outline[(j - 1 + n) % n], c = outline[j], b = outline[(j + 1) % n];
       const t1 = Math.atan2((c.y - a.y) / KY, c.x - a.x), t2 = Math.atan2((b.y - c.y) / KY, b.x - c.x);
-      if (Math.abs(Math.atan2(Math.sin(t2 - t1), Math.cos(t2 - t1))) > 0.25 && !gapAt(c)) towers.push([c, 1]);
+      if (Math.abs(Math.atan2(Math.sin(t2 - t1), Math.cos(t2 - t1))) > 0.25 && !gapAt(c) && !wetAt(c)) towers.push([c, 1]);
     }
     for (const [gx, gy, half, big] of gaps) {
       if (!big) continue;
@@ -1585,6 +1677,7 @@ const relax = (() => {
         for (const s of [-1, 1]) { const f = t + s * (half + 14) / len; if (f > 0 && f < 1) towers.push([{x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f}, 1.15]); }
       }
     }
+    for (const c of banks) towers.push([c, 1.15]);
     wallSkipped = skipped; wallPieces = items.length;
     for (const [ti, [c, big]] of towers.entries()) {
       if (!wallFree(c)) continue;
@@ -1621,7 +1714,7 @@ const relax = (() => {
   let eraNow = null;
   function eraLabel(g, e) {
     const next = ERAS[ERAS.indexOf(e) - 1];
-    const text = `${ICON[e[1]]} ${e[1]} · ${camp} messages` + (next ? ` · ${next[1]} at ${next[0]}` : '') + ` · ${SEASON_ICON[seasonNow()]} ${seasonNow()} · ${WEATHER_ICON[weatherDrawn]} ${weatherDrawn}`;
+    const text = `${ICON[e[1]]} ${named(e[1])} · ${camp} messages` + (next ? ` · ${named(next[1])} at ${next[0]}` : '') + ` · ${SEASON_ICON[seasonNow()]} ${seasonNow()} · ${WEATHER_ICON[weatherDrawn]} ${weatherDrawn}`;
     g.font = "11px 'DejaVu Sans Mono', Consolas, monospace";
     g.textAlign = 'left';
     const tw = g.measureText(text).width;
@@ -1664,7 +1757,7 @@ const relax = (() => {
   const inPen = (pen, a, b) => ({x: pen.x + (a - 0.5) * PEN_W * pen.n, y: pen.y + (b - 0.5) * PEN_D * pen.n});
   const penHas = (o, x, y, more = 0) => Math.abs(x - o.x) < PEN_W * o.n / 2 + more && Math.abs(y - o.y) < PEN_D * o.n / 2 + more;
   const FAST = new Set([BEAST.fox, BEAST.wolf, BEAST.husky, BEAST.shiba]);
-  let herd = [];                            // this draw's animals: {kind, x, y}, x and y their home
+  let herd = [], fleet = [];   // fleet: this draw's boats on the river: {row, at (0 to 1 along it), way, lane}                            // this draw's animals: {kind, x, y}, x and y their home
   let rails = [], frontFence = null;        // this draw's paddock fences: lines of post points; the front ones' layer
   // A paddock's fence, after the warp: a post at each point, two rails between them, and their
   // shadow on the ground, all sized for how far away they stand. Back sides first.
@@ -1728,6 +1821,13 @@ const relax = (() => {
                           want: w, mode: 'at', goal: g, flip: !!flip, wait: 5 + Math.random() * 30, laps: 0, pause: 0});
       }
     }
+    fleet.forEach((f, i) => {
+      const id = 'boat#' + i, p = people.get(id);
+      keep.add(id);
+      if (p && p.row === f.row) return;
+      people.set(id, {boat: true, row: f.row, s: f.at, way: f.way, lane: f.lane, x: 0, y: 0, frame: 0, dir: 0, tick: 0});
+      boatStep(people.get(id), 0);
+    });
     herd.forEach(({kind, x, y, pen}, i) => {
       const id = 'animal#' + i, p = people.get(id);
       keep.add(id);
@@ -1747,9 +1847,9 @@ const relax = (() => {
     return [Math.floor(p.x - s / 2) - 1, Math.floor(p.y - s * ANCHOR) - 1, Math.ceil(s * 1.35) + 2, Math.ceil(s) + 2];
   }
   function person(g, p) {
-    const pic = p.animal ? img.animals : img.people, s = size();
+    const pic = p.boat ? img.boats : p.animal ? img.animals : img.people, s = size() * (p.boat ? 0.62 : 1);   // a boat fits the river
     if (!pic || p.frame < 0) return;
-    const row = p.animal ? p.kind : PEOPLE_ROW[p.tool] ?? 0, col = p.dir * (p.animal ? 9 : PER_DIR) + p.frame;
+    const row = p.boat ? p.row : p.animal ? p.kind : PEOPLE_ROW[p.tool] ?? 0, col = p.boat ? p.frame : p.dir * (p.animal ? 9 : PER_DIR) + p.frame;
     // Its shadow, from its own outline, as the buildings'.
     g.save();
     g.globalAlpha = 0.28;
@@ -1780,7 +1880,27 @@ const relax = (() => {
   }
 
   // One step of a session's person. Returns whether it looks different now.
+  // A boat on the river: along it slowly, turning at either end of the stretch below the hills,
+  // facing the way the water runs there (8 pictures, every 45 degrees).
+  function boatStep(p, dt) {
+    const before = [Math.round(p.x), Math.round(p.y), p.frame].join();
+    const out = river.filter(q => q.y > plot * 1.4 && q.y < MAP_H - 20);
+    if (out.length < 4) return false;
+    p.s += p.way * dt * 0.012;
+    if (p.s > 0.95 || p.s < 0.05) { p.way = -p.way; p.s = Math.max(0.05, Math.min(0.95, p.s)); }
+    const f = p.s * (out.length - 1), i = Math.min(out.length - 2, Math.floor(f)), t = f - i, a = out[i], b = out[i + 1];
+    const gx = (b.x - a.x) * p.way, gy = (b.y - a.y) / KY * p.way, gl = Math.hypot(gx, gy) || 1;
+    p.x = a.x + (b.x - a.x) * t - gy / gl * riverWidth() * p.lane; p.y = a.y + (b.y - a.y) * t + gx / gl * riverWidth() * p.lane * KY;
+    let best = 0, most = -2;
+    for (let k = 0; k < 8; k++) {
+      const r = k * Math.PI / 4, fx = Math.sin(r), fz = Math.cos(r), dot = ((fx - fz) * gx + (fx + fz) * gy) / Math.SQRT2 / gl;
+      if (dot > most) { most = dot; best = k; }
+    }
+    p.frame = best;
+    return [Math.round(p.x), Math.round(p.y), p.frame].join() !== before;
+  }
   function step(p, dt) {
+    if (p.boat) return boatStep(p, dt);
     if (p.animal) return animalStep(p, dt);
     const before = [p.x, p.y, p.dir, p.frame].join();
     const w = want(p.status);
@@ -2135,7 +2255,7 @@ const relax = (() => {
     // count, the real one, set the fireworks off again at every start.
     if (was !== null && now <= Number(was)) return;
     try { localStorage.setItem(ERA_KEY, String(now)); } catch (x) {}
-    if (was !== null) celebrate(ERAS[ERAS.length - 1 - Number(was)][1], e[1]);
+    if (was !== null) celebrate(named(ERAS[ERAS.length - 1 - Number(was)][1]), named(e[1]));
   }
   function celebrate(from, to) {
     let cv = $('relax-fx');
@@ -2306,11 +2426,12 @@ const relax = (() => {
     clock();
     weatherClock();
     // Back in Relax: the picture drawn last time shows at once, and is drawn anew only if what
-    // it shows changed meanwhile (the same check as every refresh), a moment later.
+    // it shows changed meanwhile (the same check as every refresh), a moment later; or if it
+    // was drawn before the pictures were in (a refresh at start can come first).
     if (on) {
       loadTasks();
       if (bg) { measure(); compose(); }
-      load().then(() => setTimeout(() => update(false), 30));
+      load().then(() => setTimeout(() => update(bare), 30));
     }
   }
 
@@ -2328,6 +2449,14 @@ const relax = (() => {
       e.preventDefault();
       const b = at(e);
       rowMenu(b ? b.row : null, e);
+      // A building you moved: Reset place puts it back where it would be.
+      const it = $('row-menu').querySelector('[data-act="place"]');
+      if (it && b && places[b.id]) { it.style.display = ''; it.classList.remove('disabled'); it.dataset.id = b.id; }
+    });
+    if ($('row-menu')) $('row-menu').addEventListener('click', e => {
+      const id = e.target.dataset.act === 'place' && e.target.dataset.id;
+      if (!id || !places[id]) return;
+      delete places[id]; savePlaces(); update(true);
     });
     // The wheel zooms around the pointer; dragging moves the map.
     cv.addEventListener('wheel', e => {
@@ -2338,23 +2467,47 @@ const relax = (() => {
       ox = wx - mx / zoom; oy = wy - my / zoom;
       viewChanged();
     }, {passive: false});
+    // Dragging a session's building moves it (a little way first, so a click is still a click);
+    // dragging anywhere else moves the map.
     let drag = null;
-    cv.addEventListener('mousedown', e => { if (e.button === 0) drag = {x: e.clientX, y: e.clientY, ox, oy}; });
+    const ground = e => { const r = cv.getBoundingClientRect(); return unwarp((e.clientX - r.left) / zoom + ox, (e.clientY - r.top) / zoom + oy); };
+    cv.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      const b = at(e), home = b && b.kind !== 'meeting' && layoutMemo.find(q => q.b.id === b.id);
+      if (home) { moving = {b, from: {x: home.x, y: home.y}, x: e.clientX, y: e.clientY, at: ground(e), to: null, ok: false}; return; }
+      drag = {x: e.clientX, y: e.clientY, ox, oy};
+    });
     window.addEventListener('mousemove', e => {
+      if (moving) {
+        if (!moving.to && Math.hypot(e.clientX - moving.x, e.clientY - moving.y) < 6) return;
+        const g = ground(e), to = {x: moving.from.x + g.x - moving.at.x, y: moving.from.y + g.y - moving.at.y};
+        moving.to = to; moving.ok = canStand(moving.b.id, to.x, to.y);
+        cv.style.cursor = moving.ok ? 'move' : 'not-allowed';
+        viewChanged();
+        return;
+      }
       if (!drag) return;
       ox = drag.ox - (e.clientX - drag.x) / zoom; oy = drag.oy - (e.clientY - drag.y) / zoom;
       viewChanged();
     });
-    window.addEventListener('mouseup', () => { drag = null; });
+    window.addEventListener('mouseup', () => {
+      drag = null;
+      if (!moving) return;
+      const {b, to, ok} = moving;
+      moving = null;
+      if (!to) return;
+      if (ok) { places[b.id] = {x: Math.round(to.x), y: Math.round(to.y)}; savePlaces(); update(true); }
+      else { say(`${b.name} can't stand there`); compose(); }
+    });
     cv.addEventListener('mousemove', e => {
-      if (drag) return;
+      if (drag || moving) return;
       const b = at(e);
       if (b === hover) return;
       hover = b;
       cv.style.cursor = b ? 'pointer' : 'grab';
       cv.title = !b ? '' : b.kind === 'meeting' ? `⚖ ${b.name} · ${b.status === 'busy' ? 'under way' : 'done'} (double-click to open)`
-        : b.status === 'ended' ? `${b.name} · ended (double-click to start)`
-        : `${b.name} · ${b.status} · ${b.tool === 'agy' ? (b.row.up || '') + ' open' : (b.row.turns || 0) + ' messages'}`;
+        : (b.status === 'ended' ? `${b.name} · ended (double-click to start)`
+        : `${b.name} · ${b.status} · ${b.tool === 'agy' ? (b.row.up || '') + ' open' : (b.row.turns || 0) + ' messages'}`) + ' · drag to move';
     });
     // A task's status and date on the board open the same menu and calendar as in the Tasks
     // column; History swaps the list, and a finished one's status restores it.
@@ -2392,5 +2545,5 @@ const relax = (() => {
           _season: k => { seasonForTest = k; update(true); },
           _celebrate: (a, b) => celebrate(a, b),
           _weather: (kind, from = kind, t = 1) => { weatherForTest = {kind, from, t}; update(true); },
-          _warp: warp, _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
+          _warp: warp, _unwarp: unwarp, _places: () => places, _layout: () => ({lamps: lampCount, zoom, fit: fitZoom(), ox, oy, things: layoutMemo.map(p => ({id: p.b.id, prop: !!p.b.prop, house: !!p.b.house, kind: p.b.kind, x: p.x, y: p.y, r: p.r})), roads: cityMemo ? cityMemo.edges.map(r => r.line) : [], bridge: cityMemo ? cityMemo.bridge : []})};
 })();

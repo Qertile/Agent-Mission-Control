@@ -2,6 +2,37 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-20 – v4.14.0: Relax mode: move the buildings, a harbour and boats
+
+### Added
+- Relax mode: drag a session's building to move it (after 6 pixels, so a click and a
+  double-click are as before; dragging elsewhere still moves the map). While dragging, a ring
+  under the pointer shows where it goes, green where it can stand, red on the water, off the
+  map or on another session's building; dropped there it goes back, with a message. The
+  other buildings keep their places (the moved one's old spot is left empty); the paths, a
+  town's palisade, a city's wall and the houses and stalls round it are laid out anew round
+  it. Kept per computer (`amc-relax-places` in the window's storage), by session.
+- Relax mode: right-click on a building you moved → *Reset place* puts it back where it was
+  laid out.
+- Relax mode: a landing from a village on, on the river bank nearest the plaza with room on
+  land (in a city, on the road along the river): a wooden pier, a rowboat tied to it, and
+  from a town on a moored sailing ship sized to the river.
+- Relax mode: boats on the river, rowing slowly up and down and turning with it: a rowboat in
+  a village, two in a town and a city; in a metropolis and a megacity three, fishing boats
+  and small sailing boats. Pictures from Kenney's *Watercraft Kit* (CC0): `boats.png`,
+  `rowboat.png`, `ship-moored.png`, `fishing-boat.png`.
+- Relax mode: the era called City is shown as *Medieval City*.
+- README: Relax mode, moving buildings, the landing and the boats (both languages).
+- Versions: `v4.14.0`.
+- Tagged `v4.14.0`.
+
+### Fixed
+- Relax mode: a city's wall no longer stands on the river where it crosses it at a slant; it
+  stops at each bank with a round tower there (a town's palisade: a tall post).
+- Relax mode: a picture drawn at start before the pictures had loaded (fields and roads, no
+  buildings) is drawn again once they are in; since `v4.11.3` it could stay until the next
+  change, and a weather fade then started from it, the buildings showing only faintly.
+
 ## 2026-11-16 – v4.13.0: Relax mode: a town's palisade, a metropolis's old wall
 
 ### Added

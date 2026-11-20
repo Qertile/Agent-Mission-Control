@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.13.0` (current) | `v4.12.0` plus a town's palisade of stakes with gates, and in a metropolis the old city wall's gates kept whole among broken stretches and towers. See `CHANGELOG.md`. |
+| `v4.14.0` (current) | `v4.13.0` plus moving the sessions' buildings in Relax mode by dragging them (right-click → *Reset place* puts one back), a landing with a pier and a moored ship, boats on the river, the city era named Medieval City, and fixes for the wall over the river and a camp at start without its buildings. See `CHANGELOG.md`. |
+| `v4.13.0` | `v4.12.0` plus a town's palisade of stakes with gates, and in a metropolis the old city wall's gates kept whole among broken stretches and towers. See `CHANGELOG.md`. |
 | `v4.12.0` | `v4.11.3` plus a city in Relax mode with a stone wall, gates and towers winding round its buildings, cobbled streets, the sessions' buildings round the fountain, and medieval street lanterns. See `CHANGELOG.md`. |
 | `v4.11.3` | `v4.11.2` plus Relax mode showing its last picture at once when switched to again. See `CHANGELOG.md`. |
 | `v4.11.2` | `v4.11.1` plus Relax mode's fireworks no longer going off at every start. See `CHANGELOG.md`. |
@@ -289,7 +290,7 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   house from 50, a tower from 200 (Antigravity, whose conversations cannot be read: 6 per
   hour open). An ended session is a wreck with its name on a weathered grey sign.
 - **The whole camp grows too**, with the messages of all the sessions in `agents.json`,
-  ended ones included: a tribe from 0, a village from 100, a town from 500, a city from 1000,
+  ended ones included: a tribe from 0, a village from 100, a town from 500, a medieval city from 1000,
   a metropolis from 5000 and a megacity from 10000. Roads go from dirt paths to stone to a
   city's cobbled streets round a paved square, the sessions' buildings round its fountain,
   with a stone wall, gates and towers winding round the town between its buildings (a town
@@ -322,10 +323,16 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   horses' paddock lies outside the wall, with dogs in the streets; in a metropolis dogs, a
   deer and a fox. They graze, wander and stand, and keep still at night (20:00 to 5:30).
   People and animals cast shadows too.
+- **The river:** from a village on a wooden landing on the bank nearest the plaza with a
+  rowboat tied to it, and from a town a moored sailing ship; rowboats go slowly up and down
+  the river (fishing and small sailing boats in a metropolis).
 - **A Cross-check discussion** is a campfire with its models on the logs around it; the one
   answering stands, and the fire burns while a step runs.
 - **Mouse:** hovering shows the name, status and messages; double-click shows the tab
   (an ended one starts again, a discussion opens); right-click is the session list's menu.
+  Dragging a session's building moves it: a green ring shows where it can go, red where not
+  (the water, off the map, another session's building); the others stay where they are, and
+  the place is kept on this computer. Right-click on it → *Reset place* puts it back.
 - **Top:** the open tasks on a board (click a date or a status to change it, as in the
   Tasks column; *History* shows the finished and discarded ones, and a click on a status
   there restores it), *⚡ Stamina*, each tool's limits left, and the box to Task Reminder.
@@ -346,8 +353,8 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
 - It draws only what changes, and nothing while the window is hidden or in Office mode. In
   the full window at a town (measured at `v4.0.1`) it took about 9% of one CPU core, as much as Office mode did then;
   at the biggest era, measured only on a test page without terminals, about 5%.
-- The pictures come from Kenney's *Survival Kit*, *Fantasy Town Kit*, *City Kit (Commercial)*
-  and *Car Kit* (CC0, [kenney.nl](https://www.kenney.nl)) and Quaternius' *Medieval Village
+- The pictures come from Kenney's *Survival Kit*, *Fantasy Town Kit*, *City Kit (Commercial)*,
+  *Car Kit* and *Watercraft Kit* (CC0, [kenney.nl](https://www.kenney.nl)) and Quaternius' *Medieval Village
   MegaKit* and *Ultimate Animated Animal Pack* (CC0, [quaternius.com](https://quaternius.com)), some of them recoloured or stretched; `Session HUD/tools/relax_art.py` makes them, once
   (`relax_lit.py` then makes the city's lit windows from them).
 
@@ -601,7 +608,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.13.0`（目前） | `v4.12.0` 再加上：小鎮有一圈帶門的木柵欄，大都會保留舊城牆完整的城門，以及幾段殘破的牆和塔。詳見 `CHANGELOG.md`。 |
+| `v4.14.0`（目前） | `v4.13.0` 再加上：Relax mode 裡可以拖曳移動 session 的建築（右鍵 → *Reset place* 放回原位）、有棧橋和停泊帆船的碼頭、河上的船、城市時期改名為 Medieval City，並修正城牆壓在河上和啟動時營地沒有建築的問題。詳見 `CHANGELOG.md`。 |
+| `v4.13.0` | `v4.12.0` 再加上：小鎮有一圈帶門的木柵欄，大都會保留舊城牆完整的城門，以及幾段殘破的牆和塔。詳見 `CHANGELOG.md`。 |
 | `v4.12.0` | `v4.11.3` 再加上 Relax mode 城市的改造：在建築之間繞一圈有城門和塔樓的石牆、石板街道、session 建築圍著噴水池，以及中世紀風格的提燈。詳見 `CHANGELOG.md`。 |
 | `v4.11.3` | `v4.11.2` 再加上：再次切到 Relax mode 時，立刻顯示上次的畫面。詳見 `CHANGELOG.md`。 |
 | `v4.11.2` | `v4.11.1` 再加上：Relax mode 的煙火不會每次啟動都放。詳見 `CHANGELOG.md`。 |
@@ -818,7 +826,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   （Antigravity 的對話讀不到，改用開著的時間，每小時算 6 則）。結束的 session 變成廢墟，
   名字在褪色的灰木牌上。
 - **整個營地也會成長**，依 `agents.json` 裡所有 session 的訊息總數計算，已結束的也算：
-  0 則起是部落，100 則起是村莊，500 則起是小鎮，1000 則起是城市，5000 則起是大都會，10000 則起
+  0 則起是部落，100 則起是村莊，500 則起是小鎮，1000 則起是中世紀城市（Medieval City），5000 則起是大都會，10000 則起
   是超級都市。路從泥土路、石板路，變成城市的石板街道和鋪石廣場，session 的建築圍著廣場的噴水池，一圈有城門
   和塔樓的石牆在建築之間繞住市區（小鎮是一圈木柵欄）；再變成柏油路，舊城牆只剩城門和幾段殘破的牆與塔。城市和大都會的窗戶晚上會亮，城市的提燈會
   在地上照出一圈光。營地左上角會顯示目前的階段和下一階段的門檻。從 `agents.json` 刪除
@@ -841,8 +849,12 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   吃草、走動、站著，晚上（20:00 到 5:30）不動。小人和動物也有影子。
 - **Cross-check 討論**是一堆營火，參與的模型坐在周圍的木頭上；正在回答的站著，步驟進行
   中時有火焰。
+- **河**：從村莊起，離廣場最近的河岸有木棧橋碼頭，綁著一艘划艇，小鎮起再停一艘帆船；划艇在河上
+  慢慢來回划（大都會是漁船和小帆船）。
 - **滑鼠**：移到上面顯示名稱、狀態和訊息數；雙擊切到它的分頁（結束的會重新啟動，討論會
-  打開）；右鍵是 session 清單的選單。
+  打開）；右鍵是 session 清單的選單。拖曳 session 的建築可以移動它：綠圈表示可以放，紅圈表示
+  不行（河上、地圖外、別的 session 的建築上）；其他建築留在原位，位置存在這台電腦。在它上面
+  按右鍵 → *Reset place* 放回原位。
 - **上方**：公告板列出未完成的任務（點日期或狀態可以改，和 Tasks 欄一樣；*History* 列出已完成
   和已捨棄的任務，點狀態可以還原），*⚡ Stamina* 顯示各工具剩下的用量，下面是給 Task Reminder 的輸入框。
 - **日夜**：依這台電腦的時鐘，8:00 到 16:30 是白天，接著是黃昏，19:30 到 5:00 是夜晚，有人的建築和
@@ -856,7 +868,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   每個時期只放一次；第一次打開 Relax mode 時不放。
 - 只重畫有變的部分，視窗隱藏或在 Office 模式時完全不跑。完整視窗在小鎮階段（`v4.0.1` 時量的）約占一個 CPU 核心的 9%，
   和當時的 Office 模式一樣；最大時代只在沒有終端機的測試頁量過，約 5%。
-- 圖片來自 Kenney 的 *Survival Kit*、*Fantasy Town Kit*、*City Kit (Commercial)*、*Car Kit*
+- 圖片來自 Kenney 的 *Survival Kit*、*Fantasy Town Kit*、*City Kit (Commercial)*、*Car Kit*、*Watercraft Kit*
   （CC0，[kenney.nl](https://www.kenney.nl)）和 Quaternius 的 *Medieval Village MegaKit*、*Ultimate Animated Animal Pack*
   （CC0，[quaternius.com](https://quaternius.com)），部分重新上色或拉長，由
   `Session HUD/tools/relax_art.py` 產生一次（城市亮著的窗戶再由 `relax_lit.py` 從這些圖片產生）。

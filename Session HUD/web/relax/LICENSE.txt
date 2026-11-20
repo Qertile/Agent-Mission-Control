@@ -7,6 +7,7 @@ Kenney (www.kenney.nl):
   Mini Characters
   City Kit Commercial (2.1)
   Car Kit (3.1)
+  Watercraft Kit (2.1) (boats.png, rowboat.png, ship-moored.png, fishing-boat.png)
 
 Quaternius (quaternius.com):
   Medieval Village MegaKit, Standard version
