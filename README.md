@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.14.0` (current) | `v4.13.0` plus moving the sessions' buildings in Relax mode by dragging them (right-click → *Reset place* puts one back), a landing with a pier and a moored ship, boats on the river, the city era named Medieval City, and fixes for the wall over the river and a camp at start without its buildings. See `CHANGELOG.md`. |
+| `v4.14.1` (current) | `v4.14.0` plus a ✥ *Rearrange* button in Relax mode: buildings move only while it is on, and ↺ *Reset all* puts them all back. See `CHANGELOG.md`. |
+| `v4.14.0` | `v4.13.0` plus moving the sessions' buildings in Relax mode by dragging them (right-click → *Reset place* puts one back), a landing with a pier and a moored ship, boats on the river, the city era named Medieval City, and fixes for the wall over the river and a camp at start without its buildings. See `CHANGELOG.md`. |
 | `v4.13.0` | `v4.12.0` plus a town's palisade of stakes with gates, and in a metropolis the old city wall's gates kept whole among broken stretches and towers. See `CHANGELOG.md`. |
 | `v4.12.0` | `v4.11.3` plus a city in Relax mode with a stone wall, gates and towers winding round its buildings, cobbled streets, the sessions' buildings round the fountain, and medieval street lanterns. See `CHANGELOG.md`. |
 | `v4.11.3` | `v4.11.2` plus Relax mode showing its last picture at once when switched to again. See `CHANGELOG.md`. |
@@ -330,9 +331,10 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   answering stands, and the fire burns while a step runs.
 - **Mouse:** hovering shows the name, status and messages; double-click shows the tab
   (an ended one starts again, a discussion opens); right-click is the session list's menu.
-  Dragging a session's building moves it: a green ring shows where it can go, red where not
-  (the water, off the map, another session's building); the others stay where they are, and
-  the place is kept on this computer. Right-click on it → *Reset place* puts it back.
+  ✥ *Rearrange* (top right) lets you move the sessions' buildings: drag one, a green ring
+  shows where it can go, red where not (the water, off the map, another session's building);
+  the others stay where they are, and the place is kept on this computer. ✓ *Done* ends it;
+  ↺ *Reset all* puts them all back, right-click on one → *Reset place* only that one.
 - **Top:** the open tasks on a board (click a date or a status to change it, as in the
   Tasks column; *History* shows the finished and discarded ones, and a click on a status
   there restores it), *⚡ Stamina*, each tool's limits left, and the box to Task Reminder.
@@ -608,7 +610,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.14.0`（目前） | `v4.13.0` 再加上：Relax mode 裡可以拖曳移動 session 的建築（右鍵 → *Reset place* 放回原位）、有棧橋和停泊帆船的碼頭、河上的船、城市時期改名為 Medieval City，並修正城牆壓在河上和啟動時營地沒有建築的問題。詳見 `CHANGELOG.md`。 |
+| `v4.14.1`（目前） | `v4.14.0` 再加上 Relax mode 的 ✥ *Rearrange* 按鈕：只有按下後才能移動建築，↺ *Reset all* 全部放回原位。詳見 `CHANGELOG.md`。 |
+| `v4.14.0` | `v4.13.0` 再加上：Relax mode 裡可以拖曳移動 session 的建築（右鍵 → *Reset place* 放回原位）、有棧橋和停泊帆船的碼頭、河上的船、城市時期改名為 Medieval City，並修正城牆壓在河上和啟動時營地沒有建築的問題。詳見 `CHANGELOG.md`。 |
 | `v4.13.0` | `v4.12.0` 再加上：小鎮有一圈帶門的木柵欄，大都會保留舊城牆完整的城門，以及幾段殘破的牆和塔。詳見 `CHANGELOG.md`。 |
 | `v4.12.0` | `v4.11.3` 再加上 Relax mode 城市的改造：在建築之間繞一圈有城門和塔樓的石牆、石板街道、session 建築圍著噴水池，以及中世紀風格的提燈。詳見 `CHANGELOG.md`。 |
 | `v4.11.3` | `v4.11.2` 再加上：再次切到 Relax mode 時，立刻顯示上次的畫面。詳見 `CHANGELOG.md`。 |
@@ -852,9 +855,10 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **河**：從村莊起，離廣場最近的河岸有木棧橋碼頭，綁著一艘划艇，小鎮起再停一艘帆船；划艇在河上
   慢慢來回划（大都會是漁船和小帆船）。
 - **滑鼠**：移到上面顯示名稱、狀態和訊息數；雙擊切到它的分頁（結束的會重新啟動，討論會
-  打開）；右鍵是 session 清單的選單。拖曳 session 的建築可以移動它：綠圈表示可以放，紅圈表示
-  不行（河上、地圖外、別的 session 的建築上）；其他建築留在原位，位置存在這台電腦。在它上面
-  按右鍵 → *Reset place* 放回原位。
+  打開）；右鍵是 session 清單的選單。按右上角的 ✥ *Rearrange* 後可以移動 session 的建築：
+  拖曳時綠圈表示可以放，紅圈表示不行（河上、地圖外、別的 session 的建築上）；其他建築留在原位，
+  位置存在這台電腦。按 ✓ *Done* 結束；↺ *Reset all* 全部放回原位，在某一棟上按右鍵 → *Reset place*
+  只放回那一棟。
 - **上方**：公告板列出未完成的任務（點日期或狀態可以改，和 Tasks 欄一樣；*History* 列出已完成
   和已捨棄的任務，點狀態可以還原），*⚡ Stamina* 顯示各工具剩下的用量，下面是給 Task Reminder 的輸入框。
 - **日夜**：依這台電腦的時鐘，8:00 到 16:30 是白天，接著是黃昏，19:30 到 5:00 是夜晚，有人的建築和

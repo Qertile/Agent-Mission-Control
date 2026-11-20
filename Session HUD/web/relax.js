@@ -96,6 +96,7 @@ const relax = (() => {
   const MAP_W = 1800, MAP_H = 1350, ZOOM_MAX = 1.6;   // the map, in world units; a building's plot is 150
   const img = {};
   let moving = null;                       // a building being dragged: {b, from, x, y, to, ok}
+  let arranging = false;                   // ✥ Rearrange is on: dragging a building moves it
   let on = false, sig = '', spots = [], hover = null, msgTimer = 0;
   const plot = 150;
   // The camera looks down at a slant: the far side of the map (its top) is drawn smaller than
@@ -2453,10 +2454,34 @@ const relax = (() => {
       const it = $('row-menu').querySelector('[data-act="place"]');
       if (it && b && places[b.id]) { it.style.display = ''; it.classList.remove('disabled'); it.dataset.id = b.id; }
     });
+    // ✥ Rearrange, top right of the camp: only while it is on does dragging a building move it;
+    // ↺ Reset all (shown then, if any were moved) puts them all back.
+    const tools = document.createElement('div');
+    tools.id = 'relax-tools';
+    tools.style.cssText = 'position:absolute;right:8px;top:8px;z-index:5;display:flex;gap:6px;line-height:normal';
+    const button = (id, text) => {
+      const k = document.createElement('button');
+      k.id = id; k.textContent = text;
+      k.style.cssText = "font:12px 'DejaVu Sans Mono',Consolas,monospace;color:#fff3dc;background:#8a5a32;border:2px solid #4a3019;border-radius:4px;padding:3px 9px;cursor:pointer";
+      tools.append(k); return k;
+    };
+    const arrange = button('relax-arrange', '✥ Rearrange'), resetAll = button('relax-reset', '↺ Reset all');
+    const showTools = () => {
+      arrange.textContent = arranging ? '✓ Done' : '✥ Rearrange';
+      arrange.style.background = arranging ? '#3d7a3a' : '#8a5a32';
+      resetAll.style.display = arranging && Object.keys(places).length ? '' : 'none';
+    };
+    arrange.addEventListener('click', () => {
+      arranging = !arranging; showTools();
+      say(arranging ? 'Drag a building to move it; ✓ Done when finished' : '');
+    });
+    resetAll.addEventListener('click', () => { places = {}; savePlaces(); showTools(); update(true); say('All buildings back in their places'); });
+    cv.parentNode.append(tools);
+    showTools();
     if ($('row-menu')) $('row-menu').addEventListener('click', e => {
       const id = e.target.dataset.act === 'place' && e.target.dataset.id;
       if (!id || !places[id]) return;
-      delete places[id]; savePlaces(); update(true);
+      delete places[id]; savePlaces(); showTools(); update(true);
     });
     // The wheel zooms around the pointer; dragging moves the map.
     cv.addEventListener('wheel', e => {
@@ -2473,7 +2498,7 @@ const relax = (() => {
     const ground = e => { const r = cv.getBoundingClientRect(); return unwarp((e.clientX - r.left) / zoom + ox, (e.clientY - r.top) / zoom + oy); };
     cv.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
-      const b = at(e), home = b && b.kind !== 'meeting' && layoutMemo.find(q => q.b.id === b.id);
+      const b = arranging && at(e), home = b && b.kind !== 'meeting' && layoutMemo.find(q => q.b.id === b.id);
       if (home) { moving = {b, from: {x: home.x, y: home.y}, x: e.clientX, y: e.clientY, at: ground(e), to: null, ok: false}; return; }
       drag = {x: e.clientX, y: e.clientY, ox, oy};
     });
@@ -2496,7 +2521,7 @@ const relax = (() => {
       const {b, to, ok} = moving;
       moving = null;
       if (!to) return;
-      if (ok) { places[b.id] = {x: Math.round(to.x), y: Math.round(to.y)}; savePlaces(); update(true); }
+      if (ok) { places[b.id] = {x: Math.round(to.x), y: Math.round(to.y)}; savePlaces(); showTools(); update(true); }
       else { say(`${b.name} can't stand there`); compose(); }
     });
     cv.addEventListener('mousemove', e => {
@@ -2504,10 +2529,10 @@ const relax = (() => {
       const b = at(e);
       if (b === hover) return;
       hover = b;
-      cv.style.cursor = b ? 'pointer' : 'grab';
+      cv.style.cursor = b ? (arranging && b.kind !== 'meeting' ? 'move' : 'pointer') : 'grab';
       cv.title = !b ? '' : b.kind === 'meeting' ? `⚖ ${b.name} · ${b.status === 'busy' ? 'under way' : 'done'} (double-click to open)`
         : (b.status === 'ended' ? `${b.name} · ended (double-click to start)`
-        : `${b.name} · ${b.status} · ${b.tool === 'agy' ? (b.row.up || '') + ' open' : (b.row.turns || 0) + ' messages'}`) + ' · drag to move';
+        : `${b.name} · ${b.status} · ${b.tool === 'agy' ? (b.row.up || '') + ' open' : (b.row.turns || 0) + ' messages'}`) + (arranging ? ' · drag to move' : '');
     });
     // A task's status and date on the board open the same menu and calendar as in the Tasks
     // column; History swaps the list, and a finished one's status restores it.

@@ -2,6 +2,18 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-20 – v4.14.1: Relax mode: a Rearrange button
+
+### Changed
+- Relax mode: buildings move only after ✥ *Rearrange* (top right of the camp) is clicked; it
+  turns into a green ✓ *Done*, which ends it. Otherwise dragging a building moves the map, as
+  dragging anywhere else does.
+- Relax mode: while rearranging, ↺ *Reset all* beside it (once any building was moved) puts
+  them all back. Right-click → *Reset place* still puts back one.
+- README: Relax mode, the Rearrange button (both languages).
+- Versions: `v4.14.1`.
+- Tagged `v4.14.1`.
+
 ## 2026-11-20 – v4.14.0: Relax mode: move the buildings, a harbour and boats
 
 ### Added
