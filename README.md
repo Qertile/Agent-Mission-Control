@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.14.2` (current) | `v4.14.1` plus a lower camera and a stronger perspective in Relax mode, with less sky in view. See `CHANGELOG.md`. |
+| `v4.15.0` (current) | `v4.14.2` plus a bay in Relax mode's bottom-left corner with a wharf that grows with the camp (wooden, then stone with a warehouse, then concrete with an ocean liner and a container ship). See `CHANGELOG.md`. |
+| `v4.14.2` | `v4.14.1` plus a lower camera and a stronger perspective in Relax mode, with less sky in view. See `CHANGELOG.md`. |
 | `v4.14.1` | `v4.14.0` plus a ✥ *Rearrange* button in Relax mode: buildings move only while it is on, and ↺ *Reset all* puts them all back. See `CHANGELOG.md`. |
 | `v4.14.0` | `v4.13.0` plus moving the sessions' buildings in Relax mode by dragging them (right-click → *Reset place* puts one back), a landing with a pier and a moored ship, boats on the river, the city era named Medieval City, and fixes for the wall over the river and a camp at start without its buildings. See `CHANGELOG.md`. |
 | `v4.13.0` | `v4.12.0` plus a town's palisade of stakes with gates, and in a metropolis the old city wall's gates kept whole among broken stretches and towers. See `CHANGELOG.md`. |
@@ -328,7 +329,13 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   People and animals cast shadows too.
 - **The river:** from a village on a wooden landing on the bank nearest the plaza with a
   rowboat tied to it, and from a town a moored sailing ship; rowboats go slowly up and down
-  the river (fishing and small sailing boats in a metropolis).
+  the river (fishing and small sailing boats in a metropolis; at its landing a speedboat and
+  a tug).
+- **The bay:** the bottom-left corner is a bay of the sea, with a beach. From a village a
+  wharf runs along it, standing above the water: wooden on posts with 2 piers, fishing boats
+  and goods; from a town a stone quay with 3 piers, a moored ship and a warehouse on a
+  platform over the water (a Medieval City: 4 piers, two ships); a metropolis's is concrete,
+  with an ocean liner, a container ship, tugs, speedboats and shipping containers.
 - **A Cross-check discussion** is a campfire with its models on the logs around it; the one
   answering stands, and the fire burns while a step runs.
 - **Mouse:** hovering shows the name, status and messages; double-click shows the tab
@@ -612,7 +619,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.14.2`（目前） | `v4.14.1` 再加上：Relax mode 的視角更低、遠近更明顯，畫面裡的天空變少。詳見 `CHANGELOG.md`。 |
+| `v4.15.0`（目前） | `v4.14.2` 再加上：Relax mode 左下角的海灣，和隨營地長大的碼頭（木造，之後是有倉庫的石砌碼頭，大都會是有郵輪和貨櫃船的水泥碼頭）。詳見 `CHANGELOG.md`。 |
+| `v4.14.2` | `v4.14.1` 再加上：Relax mode 的視角更低、遠近更明顯，畫面裡的天空變少。詳見 `CHANGELOG.md`。 |
 | `v4.14.1` | `v4.14.0` 再加上 Relax mode 的 ✥ *Rearrange* 按鈕：只有按下後才能移動建築，↺ *Reset all* 全部放回原位。詳見 `CHANGELOG.md`。 |
 | `v4.14.0` | `v4.13.0` 再加上：Relax mode 裡可以拖曳移動 session 的建築（右鍵 → *Reset place* 放回原位）、有棧橋和停泊帆船的碼頭、河上的船、城市時期改名為 Medieval City，並修正城牆壓在河上和啟動時營地沒有建築的問題。詳見 `CHANGELOG.md`。 |
 | `v4.13.0` | `v4.12.0` 再加上：小鎮有一圈帶門的木柵欄，大都會保留舊城牆完整的城門，以及幾段殘破的牆和塔。詳見 `CHANGELOG.md`。 |
@@ -856,7 +864,11 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **Cross-check 討論**是一堆營火，參與的模型坐在周圍的木頭上；正在回答的站著，步驟進行
   中時有火焰。
 - **河**：從村莊起，離廣場最近的河岸有木棧橋碼頭，綁著一艘划艇，小鎮起再停一艘帆船；划艇在河上
-  慢慢來回划（大都會是漁船和小帆船）。
+  慢慢來回划（大都會是漁船和小帆船，碼頭停的是快艇和拖船）。
+- **海灣**：左下角是一片海灣，岸邊有沙灘。從村莊起沿岸有碼頭，比水面高一截：村莊是立在木樁
+  上的木碼頭，2 座棧橋、漁船和貨物；小鎮起是石砌碼頭，3 座棧橋、一艘停泊的帆船，水上的石台
+  上有倉庫（Medieval City 是 4 座棧橋、兩艘船）；大都會是水泥碼頭，有郵輪、貨櫃船、拖船、
+  快艇和貨櫃。
 - **滑鼠**：移到上面顯示名稱、狀態和訊息數；雙擊切到它的分頁（結束的會重新啟動，討論會
   打開）；右鍵是 session 清單的選單。按右上角的 ✥ *Rearrange* 後可以移動 session 的建築：
   拖曳時綠圈表示可以放，紅圈表示不行（河上、地圖外、別的 session 的建築上）；其他建築留在原位，

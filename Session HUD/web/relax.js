@@ -13,14 +13,14 @@ const relax = (() => {
   const KEY = 'amc-mode';                  // 'relax' or 'office', per computer
   const PICS_METRO = ['metro-a', 'metro-b', 'metro-c', 'metro-d', 'metro-e', 'metro-f', 'metro-g', 'metro-h', 'metro-tower-a', 'metro-tower-b', 'metro-tower-c', 'metro-tower-d', 'metro-tower-e', 'metro-mall', 'metro-cafe', 'metro-park', 'metro-lot', 'metro-level0', 'metro-level1', 'metro-level2', 'metro-level3', 'metro-level4', 'metro-ruin'];
   const PICS_BASE = ['level0', 'level1', 'level2', 'level3', 'level4', 'ruin', 'meeting', 'tree', 'tree-autumn', 'rock', 'people', 'animals',
-                'fence', 'signpost', 'lantern', 'lantern-post', 'ship-moored', 'rowboat', 'boats', 'lamp', 'lamp-double', 'stall', 'stall-green', 'fountain', 'tree-city',
+                'fence', 'signpost', 'lantern', 'lantern-post', 'ship-moored', 'rowboat', 'boats', 'fishing-boat', 'dock-goods', 'dock-goods-b', 'lamp', 'lamp-double', 'stall', 'stall-green', 'fountain', 'tree-city',
                 'house-a', 'house-b', 'house-c', 'house-d', 'house-e', 'house-f', 'house-g', 'house-h',
                 'house-i', 'house-j', 'house-k', 'house-l', 'house-m', 'house-n',
                 'shop', 'tavern', 'smithy', 'sawmill', 'warehouse', 'farm', 'windmill', 'watermill', 'church', 'townhall'];
   // Pictures only one era uses are loaded when it comes, and never before.
   const LIT_NAMES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'tower-a', 'tower-b', 'tower-c', 'tower-d', 'tower-e', 'mall', 'cafe', 'level1', 'level2', 'level3', 'level4'].map(k => `metro-${k}-lit`);
   const PACKS = {
-    Metropolis: [...PICS_METRO, 'metro-meeting', ...LIT_NAMES],
+    Metropolis: [...PICS_METRO, 'metro-meeting', ...LIT_NAMES, 'ship-liner', 'ship-cargo', 'boat-tug', 'boat-speed', 'dock-cargo'],
     City: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'shop', 'tavern', 'smithy', 'warehouse', 'sawmill', 'church', 'townhall', 'farm', 'windmill', 'watermill', 'level2', 'level3', 'level4'].map(k => `med-${k}`)};
   PACKS.City.push(...PACKS.City.filter(k => k !== 'med-farm').map(k => k + '-lit'), 'tex-street', 'tex-brick', 'tex-roof');   // tools/relax_lit.py's; the medieval kit's textures
   // people.png: a row per tool, 28 frames of 128 px: 14 facing lower right, then the same
@@ -269,13 +269,17 @@ const relax = (() => {
       for (const q of line) pts.push({x: q.x, y: q.y, r, half: width * plot / 2});
       return r;
     };
-    for (const a of AVENUES) add(spline(a.map(([x, y]) => ({x: x * MAP_W, y: y * MAP_H}))), 0.22, 0);
+    // An avenue that runs down to the sea stops at the wharf.
+    for (const a of AVENUES) {
+      const line = spline(a.map(([x, y]) => ({x: x * MAP_W, y: y * MAP_H}))), i = line.findIndex(q => bayGap(q.x, q.y) < 20);
+      add(i < 0 ? line : line.slice(0, i), 0.22, 0);
+    }
     // Along each bank, from below the mountains down.
     for (const side of [-1, 1]) {
       const bank = river.map((q, i) => {
         const p = river[Math.max(0, i - 1)], n = river[Math.min(river.length - 1, i + 1)], d = Math.hypot(n.x - p.x, n.y - p.y);
         return {x: q.x - (n.y - p.y) / d * 42 * side, y: q.y + (n.x - p.x) / d * 42 * side};
-      }).filter(q => q.y > plot * 1.1 && q.y < MAP_H - 15 && q.x > 15 && q.x < MAP_W - 15);
+      }).filter(q => q.y > plot * 1.1 && q.y < MAP_H - 15 && q.x > 15 && q.x < MAP_W - 15 && bayGap(q.x, q.y) > 40);
       add(spline(bank), 0.13, 0);
     }
     const outside = q => q.x < 25 || q.x > MAP_W - 25 || q.y < plot * 1.1 || q.y > MAP_H - 25;
@@ -455,20 +459,22 @@ const relax = (() => {
   // only what stands there changes. The fountain is on the plaza; each session takes the first
   // free wide spot, nearest the plaza give or take a little (from the id); then the era's props;
   // then the buildings, each with room for the tallest it may become.
+  // Where you put a building, unless that is on the water now (the sea came after it).
+  const placeOf = id => { const p = places[id]; return p && !wet(p.x, p.y) ? p : null; };
   function arrange(list, props, turns, cap = 2) {
     const {lots, wide, open} = cityPlan(), placed = [], used = new Set(), houses = [];
     for (const b of props.filter(q => q.kind === 'fountain')) placed.push({...PLAZA, r: {base: [PLAZA.x - plot * 0.45, PLAZA.y - plot * 0.25, PLAZA.x + plot * 0.45, PLAZA.y + plot * 0.16]}, b});
     // The ones you moved stand where you put them, before the rest find theirs.
-    const moved = list.filter(b => places[b.id]), all = placed;
+    const moved = list.filter(b => placeOf(b.id)), all = placed;
     for (const b of moved) {
       // Only the room it stands on (as when it was dropped), so none of the others has to move.
-      const {x, y} = places[b.id];
+      const {x, y} = placeOf(b.id);
       placed.push({x, y, r: room(x, y, false, 0.7), b, flip: facing(0, x, y) && b.kind !== 'meeting'});
     }
     // Every one then finds the spot it would have, so the others keep theirs: one you moved
     // keeps its spot empty, standing where you put it.
     for (const b of sorted(list)) {
-      const rnd = rng(hash(b.id)), placed = places[b.id] ? all.filter(q => q.b !== b) : all;
+      const rnd = rng(hash(b.id)), placed = placeOf(b.id) ? all.filter(q => q.b !== b) : all;
       const order = wide.map(l => [l.far + rnd() * 0.04, l]).sort((a, c) => a[0] - c[0]);
       // Room for a skyscraper if there is any; with many sessions, for less: a later tower
       // may then stand in front of a neighbour, which is better than on top of it.
@@ -491,7 +497,7 @@ const relax = (() => {
       const l = free || (found || order[0])[1];
       used.add(l);
       // (One you moved leaves a stand-in here, holding its old room, taken out at the end.)
-      all.push({x: l.x, y: l.y, r: room(l.x, l.y, false, high), b, flip: !!l.flip && b.kind !== 'meeting', gone: !!places[b.id]});
+      all.push({x: l.x, y: l.y, r: room(l.x, l.y, false, high), b, flip: !!l.flip && b.kind !== 'meeting', gone: !!placeOf(b.id)});
     }
     for (const b of props.filter(q => q.kind !== 'fountain')) {
       const rnd = rng(hash(b.id));
@@ -556,7 +562,23 @@ const relax = (() => {
     return line;
   }
   const riverWidth = () => plot * 0.3;
-  function riverGap(x, y) { return Math.min(...river.map(q => Math.hypot(q.x - x, q.y - y))); }
+  // The sea in the bottom left corner: its shore runs in from past the map's left edge and
+  // round to the bottom edge, past the river's mouth. A quarter ellipse, its edge a little
+  // uneven. riverGap counts it as water, so nothing stands, grows or runs on it.
+  const BAY = {rx: 760, ry: 380}, bayK = a => 1 + 0.05 * Math.sin(a * 5 + 1) + 0.025 * Math.sin(a * 13);
+  const SHORE = (() => {
+    const line = [];
+    for (let x = -PAD; x < 0; x += 40) line.push({x, y: MAP_H - BAY.ry * bayK(Math.PI / 2)});
+    for (let i = 0; i <= 48; i++) { const a = Math.PI / 2 * (1 - i / 48), k = bayK(a); line.push({x: BAY.rx * k * Math.cos(a), y: MAP_H - BAY.ry * k * Math.sin(a)}); }
+    return line;
+  })();
+  function bayGap(x, y) {
+    const u = Math.max(0, x) / BAY.rx, v = (MAP_H - Math.min(y, MAP_H)) / BAY.ry, r = Math.hypot(u, v);
+    if (r < bayK(Math.atan2(v, u))) return 0;
+    if (r > 1.5) return (r - 1.1) * BAY.ry;                  // far off: near enough, and quick
+    return Math.min(...SHORE.map(q => Math.hypot(q.x - x, q.y - y)));
+  }
+  function riverGap(x, y) { return Math.min(bayGap(x, y), ...river.map(q => Math.hypot(q.x - x, q.y - y))); }
   // A building with its person and its name keeps off the river: its ground point, sides,
   // and name below.
   function wet(x, y) {
@@ -725,6 +747,14 @@ const relax = (() => {
     strokeLine(g, out, urban(e) ? '#8b887d' : '#c7b27a', riverWidth() + plot * 0.07);
     strokeLine(g, out, '#3c86bd', riverWidth());
     strokeLine(g, out, 'rgba(160, 215, 240, 0.35)', riverWidth() * 0.34);
+    // The sea: a beach round it (a city's: stone), the water, paler where it is shallow.
+    strokeLine(g, SHORE, urban(e) ? '#8b887d' : '#c7b27a', 44);
+    g.save();
+    g.beginPath(); g.moveTo(-PAD, MAP_H); for (const q of SHORE) g.lineTo(q.x, q.y); g.closePath();
+    g.fillStyle = '#3a82b9'; g.fill(); g.clip();
+    strokeLine(g, SHORE, 'rgba(160, 215, 240, 0.35)', 60);
+    strokeLine(g, SHORE, 'rgba(190, 230, 245, 0.3)', 26);
+    g.restore();
     const spring = g.createRadialGradient(out[0].x, out[0].y, 0, out[0].x, out[0].y, plot * 0.28);
     spring.addColorStop(0, 'rgba(70, 110, 60, 0.9)');
     spring.addColorStop(1, 'rgba(70, 110, 60, 0)');
@@ -807,6 +837,7 @@ const relax = (() => {
       if (out < 20) break;
       for (const side of [-1, 1]) {
         const x = side < 0 ? -rnd() * out : w + rnd() * out, hw = plot * (0.5 + rnd() * 0.6), hh = plot * (0.12 + rnd() * 0.1);
+        if (bayGap(x, y) < 20) continue;
         const fill = g.createLinearGradient(0, y - hh, 0, y);
         if (weatherDrawn === 'snow') { fill.addColorStop(0, '#ffffff'); fill.addColorStop(1, '#e6ecf3'); }
         else { fill.addColorStop(0, '#6a9659'); fill.addColorStop(1, e[2]); }
@@ -820,7 +851,7 @@ const relax = (() => {
       for (let k = 0, n = Math.ceil((out + 30) / 170); k < n * 2; k++) {
         const side = k % 2 ? 1 : -1, x = side < 0 ? -rnd() * (out + 30) : w + rnd() * (out + 30), kind = rnd() < 0.1 ? 'rock' : rnd() < 0.85 ? 'tree' : 'tree-autumn';
         const pic = img[kind];
-        if (pic) woods.push([pic, x, y, kind === 'rock' ? 40 + rnd() * 25 : 60 + rnd() * 40]);
+        if (pic && bayGap(x, y) > 25) woods.push([pic, x, y, kind === 'rock' ? 40 + rnd() * 25 : 60 + rnd() * 40]);
       }
     }
     // Where the animals live: tame ones near the buildings, wild ones anywhere on the grass.
@@ -864,8 +895,8 @@ const relax = (() => {
       }
     }
     // A landing on the river nearest the plaza, from a village on: a wooden pier out from the
-    // bank, a rowboat tied to it, and from a town a ship too. Then the boats that come and go.
-    fleet = [];
+    // bank, a rowboat tied to it, and from a town a ship too (a metropolis: a speedboat, a tug). Then the boats that come and go.
+    fleet = []; docks = []; wharf = [];
     if (e[1] !== 'Tribe') {
       const br = rng(53), side = (i, d) => { const a = river[Math.max(0, i - 1)], b = river[Math.min(river.length - 1, i + 1)], l = Math.hypot(b.x - a.x, b.y - a.y) || 1; return [-(b.y - a.y) / l * d, (b.x - a.x) / l * d]; };
       let best = null;
@@ -891,8 +922,61 @@ const relax = (() => {
         g.strokeStyle = 'rgba(60, 40, 20, 0.5)'; g.lineWidth = 1; g.setLineDash([1.5, 5]); g.lineWidth = W * 2; g.stroke(); g.setLineDash([]);
         g.restore();
         const boat = (name, o, a, sz, flip) => { const p = at(o, a); if (img[name]) woods.push([img[name], p.x, p.y, sz, flip]); };
-        boat('rowboat', 2, -16, plot * 0.55, false);
-        if (e[1] !== 'Village') boat('ship-moored', -2, 26, plot * 0.95, best.way < 0);
+        boat(metro(e) ? 'boat-speed' : 'rowboat', 2, -16, plot * 0.55, false);
+        if (e[1] !== 'Village') boat(metro(e) ? 'boat-tug' : 'ship-moored', -2, 26, plot * (metro(e) ? 0.75 : 0.95), best.way < 0);
+      }
+      // The harbour on the sea: a wharf along the shore, piers out from it on posts, goods
+      // stacked on it and boats tied up. A village's is planks: a wharf on posts, rowboats and
+      // fishing boats. From a town it is stone (a metropolis: concrete), a wall above the water
+      // with bollards along its edge, crates and barrels on it, a warehouse behind it and a
+      // ship at a pier (from a city two). A metropolis's boats are modern: an ocean liner, a
+      // container ship, tugs and speedboats; its goods are containers.
+      const wood = e[1] === 'Village', m = metro(e), [edge, top] = wood ? ['#4f3a24', '#a57c4c'] : m ? ['#4a4c4f', '#9c9e9c'] : ['#4f4b44', '#9a948a'];
+      const quay = SHORE.filter(q => q.x > 120 && q.x < 690);
+      const along = (line, i) => { const a = line[Math.max(0, i - 1)], b = line[Math.min(line.length - 1, i + 1)], l = Math.hypot(b.x - a.x, b.y - a.y) || 1; return [(b.x - a.x) / l, (b.y - a.y) / l]; };
+      const out = d => quay.map((q, i) => { const [tx, ty] = along(quay, i); return {x: q.x - ty * d, y: q.y + tx * d}; });   // d out over the water
+      const post = (p, r, color) => { g.fillStyle = color; g.beginPath(); g.ellipse(p.x, p.y, r, r * KY, 0, 0, Math.PI * 2); g.fill(); };
+      // Its side over the water, stood up after the warp (drawWharf): a stone wall down to the
+      // water (a metropolis: concrete); a village's, planks on posts.
+      const kind = wood ? 'wood' : m ? 'concrete' : 'stone';
+      wharf.push({line: out(19), side: 1, kind});
+      strokeLine(g, quay, edge, 38); strokeLine(g, quay, top, 31);
+      g.setLineDash(wood ? [1.5, 6] : [1.5, 14]); strokeLine(g, quay, wood ? 'rgba(60, 40, 20, 0.45)' : 'rgba(40, 38, 34, 0.35)', 31, 'butt'); g.setLineDash([]);
+      if (!wood) out(11).forEach((p, i) => { if (i % 4 === 2) post(p, 2.6, '#2b2a28'); });
+      // Small boats lie low with the trees; the ships, goods and warehouse stand in turn with
+      // the buildings and the wall, so that what is nearer hides what is behind it.
+      const shed = e[1] === 'City' ? 'med-warehouse' : e[1] === 'Town' ? 'warehouse' : null, from = shed ? 0.22 : 0, span = f => from + (1 - from) * f;
+      const piers = {Village: 2, Town: 3}[e[1]] || 4, put = (name, p, sz, flip) => { if (img[name]) woods.push([img[name], p.x, p.y, sz, flip]); };
+      const stand = (kind, p, sz, flip, house = false) => { if (img[kind]) docks.push({x: p.x, y: p.y, flip, b: {prop: true, kind, house, scale: house ? undefined : sz / (plot * 1.5)}}); };
+      for (let k = 0; k < piers; k++) {
+        const i = Math.round(span((k + 0.5) / piers) * (quay.length - 1)), q = quay[i], [tx, ty] = along(quay, i);
+        const at = (o, s) => ({x: q.x - ty * o + tx * s, y: q.y + tx * o + ty * s});
+        // The pier: planks (a metropolis: concrete) on posts, two rows of them.
+        strokeLine(g, [at(10, 0), at(104, 0)], 'rgba(10, 30, 45, 0.3)', 26, 'butt');
+        strokeLine(g, [at(0, 0), at(100, 0)], m ? edge : '#4f3a24', 24, 'butt'); strokeLine(g, [at(0, 0), at(98, 0)], m ? top : '#a57c4c', 19, 'butt');
+        if (!m) { g.setLineDash([1.5, 5]); strokeLine(g, [at(0, 0), at(98, 0)], 'rgba(60, 40, 20, 0.4)', 19, 'butt'); g.setLineDash([]); }
+        for (const [a, b, side] of [[at(0, 12), at(100, 12), -1], [at(0, -12), at(100, -12), 1], [at(100, -12), at(100, 12), 1]])
+          wharf.push({line: [a, b], side, kind: m ? 'concrete' : 'wood'});
+        const ship = !wood && (k === 1 || (urban(e) && k === 3));
+        if (ship) stand(m ? (k === 1 ? 'ship-liner' : 'ship-cargo') : 'ship-moored', at(70, 34), plot * 0.95, k === 3);
+        else put(m ? 'boat-tug' : 'fishing-boat', at(60, 30), plot * 0.75, k % 2 === 0);
+        put(m ? 'boat-speed' : 'rowboat', at(45, -28), plot * 0.62, k % 2 === 1);
+      }
+      // Goods on the wharf between the piers.
+      for (let k = 0; k < piers - (wood ? 1 : 0); k++) {
+        const i = Math.round(span((k + (wood ? 1 : k < piers - 1 ? 1 : 0.15)) / piers) * (quay.length - 1)), q = quay[Math.min(quay.length - 1, i)], [tx, ty] = along(quay, i);
+        stand(m ? 'dock-cargo' : k % 2 ? 'dock-goods' : 'dock-goods-b', {x: q.x + tx * 18, y: q.y + ty * 18}, plot * 0.8, k % 2 === 1);
+      }
+      // A warehouse at the wharf's end, out on a platform over the water, as a dock's shed is.
+      if (shed) {
+        const i = Math.round(0.09 * (quay.length - 1)), q = quay[i], [tx, ty] = along(quay, i);
+        const at = (o, s) => ({x: q.x - ty * o + tx * s, y: q.y + tx * o + ty * s}), deck = [at(0, -62), at(0, 62), at(96, 62), at(96, -62)];
+        const shape = () => { g.beginPath(); deck.forEach((p, k) => (k ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y))); g.closePath(); };
+        shape(); g.lineWidth = 6; g.strokeStyle = edge; g.stroke(); g.fillStyle = top; g.fill();
+        g.setLineDash([1.5, 14]); strokeLine(g, [at(48, -60), at(48, 60)], 'rgba(40, 38, 34, 0.35)', 92, 'butt'); g.setLineDash([]);
+        for (let s = -48; s <= 48; s += 32) post(at(92, s), 2.6, '#2b2a28');
+        for (const [a, b, side] of [[at(96, -62), at(96, 62), 1], [at(0, 62), at(96, 62), -1], [at(0, -62), at(96, -62), 1]]) wharf.push({line: [a, b], side, kind: 'stone'});
+        stand(shed, at(50, 0), 0, tx < 0, true);
       }
       // Rowboats on the river (a modern one or two in a metropolis), going up and down.
       for (let k = 0, n = metro(e) ? 3 : e[1] === 'Village' ? 1 : 2; k < n; k++)
@@ -907,6 +991,41 @@ const relax = (() => {
   }
 
 
+  // The wharf's sides over the water, after the warp: each stretch that faces the camera
+  // drops from the edge to the water, so the wharf stands above it. Stone in courses, wet at
+  // the foot (a metropolis's concrete plain); a wooden one is the planks' edge on posts.
+  // Lit from the left, as the pictures are.
+  function drawWharf(g) {
+    for (const {line, side, kind} of wharf) {
+      const wood = kind === 'wood', h = wood ? 15 : 17;
+      for (let i = 0; i < line.length - 1; i++) {
+        const a = line[i], b = line[i + 1], l = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        const nx = -(b.y - a.y) / l * side, ny = (b.x - a.x) / l * side;
+        if (ny < 0.05) continue;                                    // it faces away
+        const [AX, AY] = warp(a.x, a.y), [BX, BY] = warp(b.x, b.y), ha = h * depth(a.y), hb = h * depth(b.y);
+        const lit = Math.max(0, -nx) * 22;
+        const quad = (t0, t1, color) => { g.fillStyle = color; g.beginPath(); g.moveTo(AX, AY + ha * t0); g.lineTo(BX, BY + hb * t0); g.lineTo(BX, BY + hb * t1); g.lineTo(AX, AY + ha * t1); g.closePath(); g.fill(); };
+        quad(1, 1.5, 'rgba(10, 30, 45, 0.25)');                     // its shadow on the water
+        if (wood) {
+          quad(0, 0.3, `rgb(${84 + lit}, ${60 + lit}, ${36 + lit})`);
+          g.strokeStyle = '#3a2a18';
+          for (let t = 0; t < 1; t += 26 / l) {
+            const X = AX + (BX - AX) * t, Y = AY + (BY - AY) * t, hh = ha + (hb - ha) * t;
+            g.lineWidth = Math.max(1.5, hh * 0.22); g.beginPath(); g.moveTo(X, Y); g.lineTo(X, Y + hh); g.stroke();
+          }
+          continue;
+        }
+        const [r, gr, bl] = kind === 'concrete' ? [128, 130, 130] : [118, 108, 92];
+        quad(0, 1, `rgb(${r + lit}, ${gr + lit}, ${bl + lit})`);
+        quad(0, 0.12, 'rgba(255, 255, 255, 0.18)');                 // the coping
+        quad(0.72, 1, 'rgba(25, 40, 35, 0.45)');                    // wet, green at the foot
+        if (kind === 'stone') {
+          g.strokeStyle = 'rgba(40, 34, 28, 0.35)'; g.lineWidth = 0.8;
+          for (const t of [0.12, 0.42, 0.72]) { g.beginPath(); g.moveTo(AX, AY + ha * t); g.lineTo(BX, BY + hb * t); g.stroke(); }
+        }
+      }
+    }
+  }
   // The shadow a picture casts on the ground: its own outline, laid down away from the light
   // (the pictures are lit from the left), so a tower's is long, a wreck's or a tent's short.
   // A point h up the picture falls 0.6 h to the right and 0.25 h back.
@@ -1013,6 +1132,7 @@ const relax = (() => {
       f.setTransform(res, 0, 0, res, 0, 0);
       fences(f, true);
     }
+    drawWharf(g);
     for (const [pic, x, y, sz, flip] of woods) onGround(g, x, y, () => castShadow(g, pic, x, y, sz, flip));
     for (const [pic, x, y, sz, flip] of woods.sort((a, c) => a[2] - c[2])) onGround(g, x, y, () => put(g, seasonal(pic, x, y), x, y, sz, flip));
     spots = [];
@@ -1020,7 +1140,7 @@ const relax = (() => {
     litList = [];
     g.textAlign = 'center';
     // Back to front, so a building lower on the screen stands in front of one above it.
-    for (const {x: cx, y: ground, b, flip} of [...placed, ...lamps, ...trees, ...ramparts].sort((a, c) => a.y - c.y)) {
+    for (const {x: cx, y: ground, b, flip} of [...placed, ...lamps, ...trees, ...ramparts, ...docks].sort((a, c) => a.y - c.y)) {
       if (b.wall) { b.draw(g); continue; }        // a stretch of the city wall, or one of its towers
       const [GX, GY] = warp(cx, ground), gm = depth(ground);
       g.save(); g.translate(GX, GY); g.scale(gm, gm); g.translate(-cx, -ground);
@@ -1775,6 +1895,8 @@ const relax = (() => {
   const inPen = (pen, a, b) => ({x: pen.x + (a - 0.5) * PEN_W * pen.n, y: pen.y + (b - 0.5) * PEN_D * pen.n});
   const penHas = (o, x, y, more = 0) => Math.abs(x - o.x) < PEN_W * o.n / 2 + more && Math.abs(y - o.y) < PEN_D * o.n / 2 + more;
   const FAST = new Set([BEAST.fox, BEAST.wolf, BEAST.husky, BEAST.shiba]);
+  let wharf = [];                          // this draw's wharf sides: {line, side, h, kind}, stood up after the warp
+  let docks = [];                          // this draw's harbour things that stand up (ships, goods, a warehouse), drawn in turn with the buildings
   let herd = [], fleet = [];   // fleet: this draw's boats on the river: {row, at (0 to 1 along it), way, lane}                            // this draw's animals: {kind, x, y}, x and y their home
   let rails = [], frontFence = null;        // this draw's paddock fences: lines of post points; the front ones' layer
   // A paddock's fence, after the warp: a post at each point, two rails between them, and their

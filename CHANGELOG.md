@@ -2,6 +2,33 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-22 – v4.15.0: Relax mode: a bay, a wharf and modern ships
+
+### Added
+- Relax mode: the camp's bottom-left corner is a bay of the sea, with a beach round it; the
+  river runs into it. Buildings, trees, streets and the wall keep off it as they do the river,
+  and a building moved onto it goes back to its own place.
+- Relax mode: a wharf along the bay from a village on. It stands above the water: its side
+  facing the camera drops down to it, a wooden one on posts, a stone one in courses, wet at the
+  foot.
+  - Village: a wooden wharf, 2 piers, fishing boats and rowboats, a pile of goods.
+  - Town: a stone quay, 3 piers, a moored sailing ship, goods, a warehouse on a stone platform
+    out over the water.
+  - Medieval City: as a town's, with 4 piers, two ships and the medieval warehouse.
+  - Metropolis: a concrete quay and piers, an ocean liner and a container ship, tugs and
+    speedboats, stacks of shipping containers.
+- Relax mode: a metropolis's river landing has a speedboat and a tug instead of a rowboat and
+  a sailing ship.
+- Pictures: ship-liner, ship-cargo, boat-tug, boat-speed and dock-cargo (Watercraft Kit),
+  dock-goods and dock-goods-b (Survival Kit).
+- README: Relax mode, the bay and the wharf (both languages).
+- Versions: `v4.15.0`.
+- Tagged `v4.15.0`.
+
+### Known
+- Redrawing takes about as long as before: in the test page a city 320–360 ms (v4.14.2:
+  350–403 ms).
+
 ## 2026-11-20 – v4.14.2: Relax mode: a lower camera, a stronger perspective
 
 ### Changed
