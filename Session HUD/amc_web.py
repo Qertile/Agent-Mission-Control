@@ -238,6 +238,24 @@ def agy_usage():
                 proc.terminate(force=True)
         except Exception:
             pass
+        if WINDOWS:
+            free_pty(proc)
+
+
+def free_pty(proc, seconds=5):
+    """Windows: let a closed PtyProcess's pty, and with it its console host, go. pywinpty's
+    own reader thread holds the pty, and its read waits for output that never comes once
+    the program is gone, so the pty and its conhost.exe stayed (one per agy usage read,
+    about 143 a day). close() cancels that read only once, and can miss it; cancelling
+    until the thread ends lets the pty be freed with proc."""
+    thread = getattr(proc, '_thread', None)
+    end = time.time() + seconds
+    while thread is not None and thread.is_alive() and time.time() < end:
+        try:
+            proc.pty.cancel_io()
+        except Exception:
+            return
+        time.sleep(0.1)
 
 
 def agent_argv(entry):

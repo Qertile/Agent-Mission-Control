@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-23 – Windows: the Antigravity usage read leaves no console host behind (to try)
+
+### Fixed
+- Windows: the `conhost.exe` leak of the Antigravity usage read was still there: 432 left
+  (7.2 GB) after about 3 days, one every 10 minutes, all children of `amc_web.py`. pywinpty's
+  own reader thread holds the pty, and its read waits for output that never comes once the
+  hidden `agy` is gone, so the pty and its console host stayed. `close()` cancels that read
+  once and can miss it. `free_pty()` now cancels it every 0.1 s until the thread ends (5 s at
+  most), so the pty is freed. Linux is unchanged.
+
+### Known
+- Tested on Linux with a stand-in pty only, not yet run on Windows, so not in a version.
+- A window still pops up on Windows every 10 minutes, likely started by `agy` itself (the
+  usage read or `agy models`); not yet found.
+
 ## 2026-11-23 – v4.15.1: Relax mode: a smaller wall, a closer view, a larger bay
 
 ### Changed
