@@ -10,7 +10,8 @@
 <link rel="stylesheet" href="xterm.css">
 <style>
   :root { --bg: #060a06; --bar: #0a100a; --line: #16301c; --accent: #33ff66; --title: #8cff8c;
-          --note: #5a9664; --busy: #00dcff; --wait: #ffc400; --idle: #8cff8c; --grey: #8c96a0; --red: #ff5a5a; }
+          --note: #5a9664; --busy: #00dcff; --wait: #ffc400; --idle: #8cff8c; --grey: #8c96a0; --red: #ff5a5a;
+          --sleep: #b48cff; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--title);
                font-family: 'DejaVu Sans Mono', Consolas, monospace; font-size: 14px; }
   body { display: flex; flex-direction: column; height: 100dvh;
@@ -140,7 +141,8 @@ const fromLink = new URLSearchParams(location.hash.slice(1)).get('t');
 if (fromLink) { store('amc-token', fromLink); history.replaceState(null, '', location.pathname); }
 const token = store('amc-token');
 const $ = id => document.getElementById(id);
-const COLORS = {busy: 'var(--busy)', running: 'var(--busy)', waiting: 'var(--wait)', idle: 'var(--idle)'};
+const COLORS = {busy: 'var(--busy)', running: 'var(--busy)', waiting: 'var(--wait)', idle: 'var(--idle)',
+                hibernating: 'var(--sleep)'};
 
 if (!token) {
   document.body.innerHTML = '<div id="login">Open the link with its token (…/#t=&lt;token&gt;), or type the token from hud-config.json:' +
@@ -305,10 +307,14 @@ function showStatus(status) {
 function drawTabs() {
   const sel = $('tabs');
   // Running tabs on top; closed ones under History, as in the desktop's + menu. Picking one opens it.
-  const open = tabs.filter(t => t.running), closed = tabs.filter(t => !t.running);
+  // Hibernating ones (ended after 30 minutes idle) under Hibernating: picking one wakes it.
+  const open = tabs.filter(t => t.running), asleep = tabs.filter(t => t.asleep),
+        closed = tabs.filter(t => !t.running && !t.asleep);
   if (!open.some(t => t.id === current)) reset((open[0] || {}).id || '');
   sel.innerHTML = (open.length ? '' : '<option value="">(no session running)</option>') +
     open.map(t => `<option value="${esc(t.id)}">${esc(t.name)} · ${esc(t.status || '-')}</option>`).join('') +
+    (asleep.length ? '<optgroup label="Hibernating">' +
+      asleep.map(t => `<option value="${esc(t.id)}">${esc(t.name)} · hibernating</option>`).join('') + '</optgroup>' : '') +
     (closed.length ? '<optgroup label="History">' +
       closed.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('') + '</optgroup>' : '');
   sel.value = current;
@@ -418,7 +424,7 @@ $('tabs').onchange = async e => {
   const id = e.target.value, t = tabs.find(t => t.id === id);
   if (t && !t.running) {
     e.target.value = current;
-    say('opening ' + t.name + '…');
+    say((t.asleep ? 'waking ' : 'opening ') + t.name + '…');
     const r = await call('/api/open', {id}).catch(err => ({error: err.message}));
     if (r.error) return say(r.error);
     await loadTabs();

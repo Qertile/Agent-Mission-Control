@@ -8,7 +8,8 @@
   /* Classic (the original HUD colors); the other themes (THEMES below) replace these from script. */
   :root { --bg: #060a06; --bar: #0a100a; --line: #16301c; --accent: #33ff66; --title: #8cff8c;
           --desc: #46a05a; --note: #5a9664; --spark: #124d20; --tabon: #12361b; --attn: #4a3d00;
-          --busy: #00dcff; --wait: #ffc400; --idle: #8cff8c; --grey: #8c96a0; --red: #ff5a5a; }
+          --busy: #00dcff; --wait: #ffc400; --idle: #8cff8c; --grey: #8c96a0; --red: #ff5a5a;
+          --sleep: #b48cff; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--title);
                font-family: 'DejaVu Sans Mono', Consolas, monospace; font-size: 14px; overflow: hidden; }
   body { display: grid; grid-template-columns: var(--c1, 16%) 5px var(--c2, 42%) 5px 1fr; }
@@ -173,6 +174,8 @@
   #tabs::-webkit-scrollbar { display: none; }
   .tab { padding: 6px 14px; cursor: pointer; color: var(--desc); white-space: nowrap; }
   .tab.off { display: none; }
+  .tab.asleep { opacity: 0.6; font-style: italic; }   /* hibernating: a click wakes it */
+  .tab.asleep .dot::after { content: 'z'; font-size: 9px; vertical-align: super; }
   .tab .x { margin-left: 10px; color: var(--note); }
   .tab .x:hover { color: var(--red); }
   /* The tab typed into: bright, lit and underlined (not bold: the tabs would shift); one
@@ -541,13 +544,15 @@ const amc = {
     const list = await api().tabs();
     amc.stopped = list.filter(t => !t.running);
     amc.order = list.map(t => t.id);    // agents.json order: where Relax mode places what first
-    for (const {id, name, running} of list) {
-      if (!running && !amc.tabs[id]) continue;
+    for (const {id, name, running, asleep} of list) {
+      if (!running && !asleep && !amc.tabs[id]) continue;
       if (!amc.tabs[id]) amc.addTab(id, name);
       const t = amc.tabs[id];
       t.running = running;
-      t.tabEl.classList.toggle('off', !running);
-      if (!running) t.el.classList.remove('active');
+      t.asleep = !!asleep;
+      t.tabEl.classList.toggle('off', !running && !asleep);
+      t.tabEl.classList.toggle('asleep', !!asleep);
+      if (!running && !asleep) t.el.classList.remove('active');
       $('tabs').insertBefore(t.tabEl, $('tab-tools'));
     }
     // A tab gone from the list (a finished ⚙ → Accounts login, a session taken out of agents.json).
@@ -559,7 +564,7 @@ const amc = {
       delete amc.tabs[id];
     }
     for (const t of Object.values(amc.tabs)) if (t.disc) $('tabs').insertBefore(t.tabEl, $('tab-tools'));
-    $('no-tabs').style.display = list.some(t => t.running) || Object.values(amc.tabs).some(t => t.disc) ? 'none' : '';
+    $('no-tabs').style.display = list.some(t => t.running || t.asleep) || Object.values(amc.tabs).some(t => t.disc) ? 'none' : '';
     amc.prune();
     amc.fill();
   },
@@ -575,7 +580,21 @@ const amc = {
     return null;
   },
   leafOf(id) { return amc.leaves().find(l => l.id === id) || null; },
-  live(id) { return !!id && ((amc.tabs[id] && amc.tabs[id].running) || amc.keep.has(id)); },
+  live(id) { return !!id && ((amc.tabs[id] && (amc.tabs[id].running || amc.tabs[id].asleep)) || amc.keep.has(id)); },
+
+  // A hibernating tab (its process ended after 30 minutes idle) starts again on a click on
+  // it or its pane, resuming the same conversation, and is then selected.
+  async wake(id) {
+    const t = amc.tabs[id];
+    if (!t || !t.asleep || t.waking) return;
+    t.waking = true;
+    t.term.write('\r\n\x1b[35m[waking…]\x1b[0m\r\n');
+    const err = await api().open_tab(id).catch(e => e.message);
+    t.waking = false;
+    if (err) { t.term.write(`\x1b[31m${err}\x1b[0m\r\n`); return; }
+    await amc.syncTabs();
+    amc.select(id);
+  },
 
   // Closes a pane: its neighbours share its space, a split left with one child becomes
   // that child, and the focus goes to the neighbour. The last pane only empties.
@@ -623,7 +642,7 @@ const amc = {
     if (from === leaf) {
       if (zone === 'center') return;
       // Splitting a tab off its own pane: the pane keeps another tab, if there is one.
-      const spare = Object.keys(amc.tabs).find(k => amc.live(k) && !amc.leafOf(k));
+      const spare = Object.keys(amc.tabs).find(k => amc.live(k) && !amc.tabs[k].asleep && !amc.leafOf(k));
       if (!spare) return;
       leaf.id = spare;
     } else if (from) {
@@ -649,7 +668,7 @@ const amc = {
   fill() {
     amc.active = amc.focusLeaf.id;
     if (!amc.active) {
-      const spare = Object.keys(amc.tabs).find(k => amc.live(k) && !amc.leafOf(k));
+      const spare = Object.keys(amc.tabs).find(k => amc.live(k) && !amc.tabs[k].asleep && !amc.leafOf(k));
       if (spare) { amc.select(spare); return; }
     }
     amc.render();
@@ -786,6 +805,7 @@ const amc = {
       termMenu = {id, text: term.getSelection()};
       showAt($('term-menu'), e.clientX, e.clientY);
     });
+    el.addEventListener('mousedown', () => { if (amc.tabs[id] && amc.tabs[id].asleep) amc.wake(id); });
     amc.tabs[id] = {name, term, fit, el, tabEl, running: false};
     if (amc.pending[id]) { term.write(amc.pending[id]); delete amc.pending[id]; }
   },
@@ -794,6 +814,7 @@ const amc = {
   // focused pane.
   select(id) {
     const t = amc.tabs[id];
+    if (t && t.asleep) { amc.wake(id); return; }
     if (!t || !t.running) return;
     const leaf = amc.leafOf(id);
     if (leaf) amc.focusLeaf = leaf;
@@ -1928,7 +1949,7 @@ function drawGrid() {
     <div class="row-s${selected.has(r.sid) ? ' sel' : ''}" data-i="${i}"${r.listed && !r.disc ? ' draggable="true"' : ''}>
       <div class="who"><div class="txt">${r.disc ? `<span class="${r.tab ? 'tabmark' : ''}">⚖</span>`
                                                 : r.tab ? '<span class="tabmark">▸</span>' : '▹'} ${esc(r.name)}
-        <div class="sub">· ${esc(r.short)}${r.disc ? '' : `  (pid ${esc(r.pid)})`}</div></div>${spark(r.samples, scale)}</div>
+        <div class="sub">· ${esc(r.short)}${r.disc ? '' : r.asleep ? '  (process ended: double-click to wake)' : `  (pid ${esc(r.pid)})`}</div></div>${spark(r.samples, scale)}</div>
       <div class="stat" style="color:${r.color}">${esc(r.status)}</div>
       <div>${esc(r.tokens)}</div><div>${esc(r.up)}</div><div class="upd" title="${esc(r.updated)}">${esc(r.updated.slice(11))}</div>
     </div>`).join('') : '<div class="note" style="padding:8px">No active sessions</div>';
@@ -2365,7 +2386,7 @@ document.addEventListener('keydown', e => {
   if (!e.ctrlKey || e.key !== 'Tab') return;
   e.preventDefault();
   e.stopPropagation();
-  const order = [...$('tabs').querySelectorAll('.tab:not(.off)')]
+  const order = [...$('tabs').querySelectorAll('.tab:not(.off):not(.asleep)')]
     .map(el => Object.keys(amc.tabs).find(k => amc.tabs[k].tabEl === el)).filter(Boolean);
   if (!order.length) return;
   const at = order.indexOf(amc.active);

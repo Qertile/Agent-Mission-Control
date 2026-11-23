@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.15.1` (current) | `v4.15.0` plus a Relax-mode wall round only the 5 sessions nearest the plaza, the camp zoomed in to fill the window with little sky, and a bay about 10% larger. See `CHANGELOG.md`. |
+| `v4.16.0` (current) | `v4.15.1` plus hibernating tabs: a session idle for 30 minutes has its process ended to free its memory (about 150 MB) and wakes with a click on its tab, in the same conversation; on Windows, no `conhost.exe` left behind by the Antigravity usage read or a closed tab. See `CHANGELOG.md`. |
+| `v4.15.1` | `v4.15.0` plus a Relax-mode wall round only the 5 sessions nearest the plaza, the camp zoomed in to fill the window with little sky, and a bay about 10% larger. See `CHANGELOG.md`. |
 | `v4.15.0` | `v4.14.2` plus a bay in Relax mode's bottom-left corner with a wharf that grows with the camp (wooden, then stone with a warehouse, then concrete with an ocean liner and a container ship). See `CHANGELOG.md`. |
 | `v4.14.2` | `v4.14.1` plus a lower camera and a stronger perspective in Relax mode, with less sky in view. See `CHANGELOG.md`. |
 | `v4.14.1` | `v4.14.0` plus a ✥ *Rearrange* button in Relax mode: buildings move only while it is on, and ↺ *Reset all* puts them all back. See `CHANGELOG.md`. |
@@ -388,6 +389,14 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   with a name already there asks first, then replaces that one in its place. Type into a tab as into any terminal. Closing the
   window ends every tab; the conversations are kept and resume next time. A session
   already running in another terminal is left there and gets no tab.
+- **Hibernating:** a tab's session idle for 30 minutes (no turn running, not waiting on a
+  question, nothing typed) has its process ended to free its memory, about 150 MB each. Its
+  tab stays, dimmed and in italics with a small `z`, and the Session Monitor shows it as
+  *hibernating*. A click on the tab or its pane (a double-click in the Session Monitor; on the
+  phone page, the session under *Hibernating*) starts it again in the same conversation; text
+  sent to it from a chat box wakes it first. While hibernating it gets no messages from other
+  sessions, and a question it was waiting on or a `/loop` it ran is gone. A new Codex or
+  Antigravity tab whose conversation is not found yet is left running.
 - **Session list:** double-click a session to show its tab (a session with no terminal,
   such as a scheduled `claude -p` job, says it is a background job). Right-click for Copy,
   Copy all rows, Open on start, Terminate, Fork and Model; right-clicking a tab in the tab bar
@@ -622,7 +631,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.15.1`（目前） | `v4.15.0` 再加上：Relax mode 的城牆只圍離廣場最近的 5 個 session，營地放大填滿視窗、天空變少，海灣大約大 10%。詳見 `CHANGELOG.md`。 |
+| `v4.16.0`（目前） | `v4.15.1` 再加上：分頁休眠，session 閒置 30 分鐘就結束它的程式、釋放記憶體（約 150 MB），點分頁就叫醒並接回同一段對話；Windows 上讀 Antigravity 用量或關掉分頁時，不再留下 `conhost.exe`。詳見 `CHANGELOG.md`。 |
+| `v4.15.1` | `v4.15.0` 再加上：Relax mode 的城牆只圍離廣場最近的 5 個 session，營地放大填滿視窗、天空變少，海灣大約大 10%。詳見 `CHANGELOG.md`。 |
 | `v4.15.0` | `v4.14.2` 再加上：Relax mode 左下角的海灣，和隨營地長大的碼頭（木造，之後是有倉庫的石砌碼頭，大都會是有郵輪和貨櫃船的水泥碼頭）。詳見 `CHANGELOG.md`。 |
 | `v4.14.2` | `v4.14.1` 再加上：Relax mode 的視角更低、遠近更明顯，畫面裡的天空變少。詳見 `CHANGELOG.md`。 |
 | `v4.14.1` | `v4.14.0` 再加上 Relax mode 的 ✥ *Rearrange* 按鈕：只有按下後才能移動建築，↺ *Reset all* 全部放回原位。詳見 `CHANGELOG.md`。 |
@@ -910,6 +920,11 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   `✕` 會先確認，再把已關閉的 session 從 `agents.json` 刪掉，對話仍留在原工具的紀錄裡），`×` 結束
   一個。新增 session 或 fork 時名稱已存在，會先確認，再在原位置取代舊的。在分頁裡打字就跟一般終端機一樣。關掉視窗會結束所有分頁；對話會保留，下次接著
   繼續。已經在別的終端機執行的 session 會留在原處，不會有分頁。
+- **休眠**：分頁的 session 閒置 30 分鐘（沒有在跑、沒有在等你回答、沒有打字），就會結束它的程式來
+  釋放記憶體，每個約 150 MB。分頁會留著，變淡、斜體、帶一個小 `z`，Session Monitor 顯示
+  *hibernating*。點分頁或它的窗格（Session Monitor 裡雙擊；手機頁在 *Hibernating* 底下選它）就會
+  重新啟動並接回同一段對話；從輸入框傳文字給它也會先叫醒它。休眠期間收不到其他 session 的訊息，
+  原本在等你回答的問題或它跑的 `/loop` 也會消失。還沒找到對話的新 Codex 或 Antigravity 分頁不會休眠。
 - **Session 清單**：雙擊 session 會切到它的分頁（沒有終端機的 session，例如排程跑的
   `claude -p`，會顯示它是背景工作）。右鍵有 Copy、Copy all rows、
   Open on start、Terminate、Fork、Model；在分頁列的分頁上按右鍵，也會跳出同一個選單。上下拖曳 session 可以調整順序，順序存進 `agents.json`，

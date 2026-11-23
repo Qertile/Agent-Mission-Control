@@ -2,7 +2,22 @@
 
 All notable changes to this project are listed here, newest first.
 
-## 2026-11-23 – Windows: the Antigravity usage read leaves no console host behind (to try)
+## 2026-11-23 – v4.16.0: hibernating tabs, and no conhost.exe left behind on Windows
+
+### Added
+- Hibernating tabs: a tab's session idle for 30 minutes (status idle, so not busy or waiting
+  on a question, and nothing typed into it) has its process ended to free its memory, about
+  150 MB per Claude session. The tab stays, dimmed and in italics with a small `z`, with a
+  line in its terminal saying so; the Session Monitor lists it as *hibernating* (purple).
+  - A click on the tab or its pane wakes it: the same conversation starts again
+    (`claude --resume`, `codex resume`, `agy --conversation`). The remote desktop does the
+    same; the Session Monitor wakes it on a double-click.
+  - Phone page: hibernating sessions are listed under *Hibernating*; picking one wakes it.
+  - Text sent to it from a chat box (for example *to Task Reminder*) wakes it first.
+  - Terminate on a hibernating session closes its tab.
+  - Not hibernated: a new Codex or Antigravity tab whose conversation is not found yet (it
+    would start afresh), and tabs that are not `agents.json` sessions.
+- Checked every 30 s (`_hibernate_loop`, `HIBERNATE_AFTER` in `amc_web.py`).
 
 ### Fixed
 - Windows: the `conhost.exe` leak of the Antigravity usage read was still there: 432 left
@@ -11,9 +26,18 @@ All notable changes to this project are listed here, newest first.
   hidden `agy` is gone, so the pty and its console host stayed. `close()` cancels that read
   once and can miss it. `free_pty()` now cancels it every 0.1 s until the thread ends (5 s at
   most), so the pty is freed. Linux is unchanged.
+- Windows: closing a tab (×, Terminate, hibernating) left its `conhost.exe` the same way; it is
+  now closed and freed too.
+- Relax mode's camp counted a hibernating session's messages twice; once now.
+- README: Hibernating, under Working in the window (both languages).
+- Versions: `v4.16.0`.
+- Tagged `v4.16.0`.
 
 ### Known
-- Tested on Linux with a stand-in pty only, not yet run on Windows, so not in a version.
+- Tested with stand-ins only (hibernate, wake, terminate, the tab and Session Monitor drawn
+  on a test page); not yet run in a real window or on Windows.
+- While hibernating a session gets no messages from other sessions, and a question it was
+  waiting on or a `/loop` it ran is gone.
 - A window still pops up on Windows every 10 minutes, likely started by `agy` itself (the
   usage read or `agy models`); not yet found.
 

@@ -53,7 +53,11 @@ else:
 
 ACTIVITY_WINDOW = 60
 # The page's theme variables, so the status colors follow the theme.
-STATUS_COLORS = {'busy': 'var(--busy)', 'running': 'var(--busy)', 'waiting': 'var(--wait)', 'idle': 'var(--idle)'}
+STATUS_COLORS = {'busy': 'var(--busy)', 'running': 'var(--busy)', 'waiting': 'var(--wait)', 'idle': 'var(--idle)',
+                 'hibernating': 'var(--sleep)'}
+# A tab's session idle this long (no turn running, nothing typed) has its process ended to
+# free its memory (about 150 MB); a click on the tab starts it again, in the same conversation.
+HIBERNATE_AFTER = 30 * 60
 GREY = 'var(--grey)'
 HISTORY = 400_000                          # characters of each tab's output kept for the phone page
 # The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
@@ -321,6 +325,7 @@ class Term:
         self.proc = PtyProcess.spawn(argv, cwd=WORK_DIR, env=env, dimensions=(30, 100))
         self.lock = threading.Lock()
         self.started = datetime.now()
+        self.typed = time.time()           # when something was last typed in
         self.enters = deque(maxlen=20)     # when Enter was typed: tells apart Codex/agy tabs started together
         self.before = set()                # agy: the conversations there when it started
         self.size = (100, 30)              # cols, rows: the phone page draws at the same size
@@ -337,6 +342,7 @@ class Term:
         on_exit(tid, self)
 
     def write(self, data):
+        self.typed = time.time()
         if '\r' in data:
             self.enters.append(datetime.now())
         with self.lock:
@@ -353,11 +359,16 @@ class Term:
             return False
 
     def close(self):
+        # Windows: close and free the pty, or its conhost.exe stays (see agy_usage).
         try:
-            if self.proc.isalive():
+            if WINDOWS:
+                self.proc.close(force=True)
+            elif self.proc.isalive():
                 self.proc.terminate(force=True)
         except Exception:
             pass
+        if WINDOWS:
+            free_pty(self.proc)
 
 
 class Api:
@@ -384,6 +395,8 @@ class Api:
         self._turns = {}                   # transcript path -> (bytes read, turns counted)
         self._ended_turns = {}             # an ended session's id -> its turns, counted once
         self._sessions = []
+        self._asleep = set()               # the tabs hibernating: process ended after HIBERNATE_AFTER idle
+        self._idle_since = {}              # id -> when its session was first seen idle, this time
         self._codex_models = []
         self._disc_tabs = set()            # the discussions with a tab open on the page
         self._agy_models, self._agy_models_at = [], None
@@ -433,6 +446,7 @@ class Api:
         threading.Thread(target=self._usage_loop, daemon=True).start()
         threading.Thread(target=self._activity_loop, daemon=True).start()
         threading.Thread(target=self._agy_usage_loop, daemon=True).start()
+        threading.Thread(target=self._hibernate_loop, daemon=True).start()
         remote.start(self, self._config.get('remote'), os.path.join(HERE, 'web'))
         self._remote_on = bool((self._config.get('remote') or {}).get('token'))
         running = {s['sid'] for s in active_sessions()}
@@ -447,7 +461,8 @@ class Api:
         return self.tabs()
 
     def tabs(self):
-        return ([{'id': e['id'], 'name': e['name'], 'tool': e.get('tool') or 'claude', 'running': e['id'] in self._terms}
+        return ([{'id': e['id'], 'name': e['name'], 'tool': e.get('tool') or 'claude', 'running': e['id'] in self._terms,
+                  'asleep': e['id'] in self._asleep}
                  for e in core.agents()] +
                 [{'id': tid, 'name': x['name'], 'tool': x['tool'], 'running': True}
                  for tid, x in list(self._extra.items()) if tid in self._terms])
@@ -1270,6 +1285,7 @@ class Api:
         core.save_agents(sessions)
 
     def _forget(self, sid):
+        self._asleep.discard(sid)
         term = self._terms.get(sid)
         if term:
             term.close()
@@ -1428,7 +1444,17 @@ class Api:
                          'headless': s['sid'] not in self._terms and headless(s['pid']),
                          'samples': list(self._samples.get(s['sid'], [])),
                          'turns': self._turn_count(s, (entry or {}).get('tool') or 'claude')})
-        camp = sum(r['turns'] for r in rows) + self._ended_turn_total(listed.values(), {s['sid'] for s in self._sessions})
+        for sid in [e['id'] for e in listed.values() if e['id'] in self._asleep]:
+            if any(r['sid'] == sid for r in rows):
+                continue
+            e = listed[sid]
+            tool = e.get('tool') or 'claude'
+            rows.append({'sid': sid, 'pid': '-', 'name': e['name'], 'short': sid[:8], 'status': 'hibernating',
+                         'color': STATUS_COLORS['hibernating'], 'tokens': '-', 'up': '-', 'updated': '',
+                         'listed': True, 'autoOpen': bool(e.get('autoOpen', True)), 'model': e.get('model', ''),
+                         'tool': tool, 'models': self._models_for(e), 'tab': True, 'headless': False,
+                         'samples': [], 'turns': self._ended_turns.get(sid, 0), 'asleep': True})
+        camp = sum(r['turns'] for r in rows if not r.get('asleep')) + self._ended_turn_total(listed.values(), {s['sid'] for s in self._sessions})
         rows += self._discussion_rows()
         note = f"{len(rows)} active · sessions {datetime.now():%H:%M:%S}"
         if u['fetched']:
@@ -1479,7 +1505,12 @@ class Api:
         return n
 
     def terminate(self, sid, pid):
-        """Ends a session: its tab's process here, otherwise the process itself."""
+        """Ends a session: its tab's process here, otherwise the process itself. A
+        hibernating one only stops hibernating: its tab closes."""
+        if sid in self._asleep:
+            self._asleep.discard(sid)
+            self._js('amc.syncTabs()')
+            return
         term = self._terms.get(sid)
         if term:
             term.close()
@@ -1684,6 +1715,7 @@ class Api:
 
     def _start(self, entry):
         with self._start_lock:
+            self._asleep.discard(entry['id'])
             if entry['id'] not in self._terms:
                 term = Term(entry['id'], agent_argv(entry), self._output, self._exited)
                 # Started with its first message: its rollout / conversation appears without an Enter.
@@ -1862,7 +1894,8 @@ class Api:
     def _remote_tabs(self):
         status = {s['sid']: s['status'] for s in self._sessions}
         return [{'id': e['id'], 'name': e['name'], 'tool': e.get('tool') or 'claude',
-                 'running': e['id'] in self._terms, 'status': status.get(e['id'], '')}
+                 'running': e['id'] in self._terms, 'asleep': e['id'] in self._asleep,
+                 'status': 'hibernating' if e['id'] in self._asleep else status.get(e['id'], '')}
                 for e in core.agents()]
 
     def _remote_out(self, tid, since):
@@ -1950,7 +1983,11 @@ class Api:
     def _exited(self, tid, term):
         if self._terms.get(tid) is term:
             del self._terms[tid]
-        self._output(tid, '\r\n\x1b[33m[process ended]\x1b[0m\r\n')
+        if tid in self._asleep:
+            self._output(tid, '\r\n\x1b[35m[hibernating after 30 minutes idle, to free its memory: '
+                              'click here or its tab to wake it, in the same conversation]\x1b[0m\r\n')
+        else:
+            self._output(tid, '\r\n\x1b[33m[process ended]\x1b[0m\r\n')
         self._js('amc.syncTabs()')
 
     def _flush_loop(self):
@@ -2037,6 +2074,30 @@ class Api:
                 time.sleep(600)
             else:
                 time.sleep(15)
+
+    def _hibernate_loop(self):
+        """Every 30 s: a tab's session idle for HIBERNATE_AFTER (no turn running, not waiting
+        on a question, nothing typed in) has its process ended; the tab stays, hibernating,
+        and a click on it starts the same conversation again (open_tab). A new Codex or agy
+        tab whose conversation is not found yet would start afresh, so it is left running."""
+        while True:
+            time.sleep(30)
+            now = time.time()
+            status = {s['sid']: s['status'] for s in self._sessions}
+            entries = {e['id']: e for e in core.agents()}
+            for sid, term in list(self._terms.items()):
+                entry = entries.get(sid)
+                if not entry or status.get(sid) != 'idle':
+                    self._idle_since.pop(sid, None)
+                    continue
+                since = max(self._idle_since.setdefault(sid, now), term.typed, term.started.timestamp())
+                if now - since < HIBERNATE_AFTER:
+                    continue
+                if is_codex(entry) and not codex_thread(entry) or is_agy(entry) and not agy_conversation(entry):
+                    continue
+                self._idle_since.pop(sid, None)
+                self._asleep.add(sid)
+                term.close()
 
     def _usage_view(self):
         """The usage panel, one section per tool: Claude's, Codex's when it has written
