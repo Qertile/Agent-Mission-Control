@@ -368,6 +368,7 @@
   <div data-act="copyall">Copy all rows</div>
   <hr>
   <div data-act="auto">Open on start</div>
+  <div data-act="awake">Keep awake</div>
   <div data-act="term">Terminate</div>
   <div data-act="fork">Fork…</div>
   <hr>
@@ -2103,6 +2104,11 @@ function rowMenu(r, e) {
   items.forEach(it => it.classList.toggle('disabled', !menuRow && it.dataset.act !== 'copyall'));
   const auto = m.querySelector('[data-act="auto"]');
   auto.textContent = (menuRow && menuRow.autoOpen ? '☑ ' : '☐ ') + 'Open on start';
+  // Keep awake: never hibernates after 30 minutes idle (a session running a /loop or a reminder).
+  const awake = m.querySelector('[data-act="awake"]');
+  awake.textContent = (menuRow && menuRow.keepAwake ? '☑ ' : '☐ ') + 'Keep awake';
+  awake.title = 'never hibernate: for a session running a /loop or a reminder';
+  awake.classList.toggle('disabled', !menuRow || !menuRow.listed || !!menuRow.disc);
   // Open on start and the model live in agents.json: a session outside it has neither.
   for (const it of m.querySelectorAll('[data-act="auto"], [data-act="model"]'))
     it.classList.toggle('disabled', !menuRow || !menuRow.listed);
@@ -2111,7 +2117,7 @@ function rowMenu(r, e) {
   // Several picked: Copy and Terminate take them all; the rest is for one session only.
   m.querySelector('[data-act="copy"]').textContent = many ? `Copy ${menuRows.length} rows` : 'Copy';
   m.querySelector('[data-act="term"]').textContent = many ? `Terminate ${menuRows.length} sessions` : 'Terminate';
-  if (many) for (const it of m.querySelectorAll('[data-act="auto"], [data-act="fork"], [data-act="settings"], [data-act="model"]'))
+  if (many) for (const it of m.querySelectorAll('[data-act="auto"], [data-act="awake"], [data-act="fork"], [data-act="settings"], [data-act="model"]'))
     it.classList.add('disabled');
   // Relax mode's Reset place: relax.js shows it, for a building you moved.
   m.querySelector('[data-act="place"]').style.display = 'none';
@@ -2125,6 +2131,7 @@ $('row-menu').addEventListener('click', async e => {
   if (act === 'copyall') copyText(rows.map(cells).join('\n'));
   if (act === 'auto' && r) await (r.disc ? api().discussion_set_auto_open(r.disc, !r.autoOpen)
                                          : api().set_auto_open(r.sid, !r.autoOpen));
+  if (act === 'awake' && r && !r.disc) await api().set_keep_awake(r.sid, !r.keepAwake);
   // A discussion's Terminate ends the step under way and closes its tab; it stays in + to reopen.
   if (act === 'term' && r) for (const x of menuRows) {
     if (x.disc) {

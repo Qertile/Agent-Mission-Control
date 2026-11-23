@@ -246,6 +246,87 @@ def agy_usage():
             free_pty(proc)
 
 
+def processes():
+    """{pid: (parent pid, start time as a Unix time)} of every process, or {} when they
+    cannot be read."""
+    procs = {}
+    if WINDOWS:
+        import ctypes
+        from ctypes import wintypes
+
+        class Entry(ctypes.Structure):
+            _fields_ = [('dwSize', wintypes.DWORD), ('cntUsage', wintypes.DWORD),
+                        ('th32ProcessID', wintypes.DWORD), ('th32DefaultHeapID', ctypes.c_size_t),
+                        ('th32ModuleID', wintypes.DWORD), ('cntThreads', wintypes.DWORD),
+                        ('th32ParentProcessID', wintypes.DWORD), ('pcPriClassBase', ctypes.c_long),
+                        ('dwFlags', wintypes.DWORD), ('szExeFile', ctypes.c_wchar * 260)]
+        k32 = ctypes.WinDLL('kernel32', use_last_error=True)
+        k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+        k32.Process32FirstW.argtypes = k32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(Entry)]
+        k32.OpenProcess.restype = wintypes.HANDLE
+        k32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        k32.GetProcessTimes.argtypes = [wintypes.HANDLE] + [ctypes.POINTER(wintypes.FILETIME)] * 4
+        k32.CloseHandle.argtypes = [wintypes.HANDLE]
+        snap = k32.CreateToolhelp32Snapshot(2, 0)            # TH32CS_SNAPPROCESS
+        if not snap or snap == wintypes.HANDLE(-1).value:
+            return {}
+        try:
+            e = Entry()
+            e.dwSize = ctypes.sizeof(Entry)
+            ok = k32.Process32FirstW(snap, ctypes.byref(e))
+            while ok:
+                start = 0.0
+                h = k32.OpenProcess(0x1000, False, e.th32ProcessID)   # PROCESS_QUERY_LIMITED_INFORMATION
+                if h:
+                    times = [wintypes.FILETIME() for _ in range(4)]
+                    if k32.GetProcessTimes(h, *[ctypes.byref(t) for t in times]):
+                        ft = times[0].dwHighDateTime << 32 | times[0].dwLowDateTime
+                        start = ft / 1e7 - 11644473600
+                    k32.CloseHandle(h)
+                procs[e.th32ProcessID] = (e.th32ParentProcessID, start)
+                ok = k32.Process32NextW(snap, ctypes.byref(e))
+        finally:
+            k32.CloseHandle(snap)
+        return procs
+    try:
+        boot = next(float(line.split()[1]) for line in open('/proc/stat') if line.startswith('btime'))
+        tick = os.sysconf('SC_CLK_TCK')
+    except (OSError, StopIteration, ValueError):
+        return {}
+    for name in os.listdir('/proc'):
+        if not name.isdigit():
+            continue
+        try:
+            with open(f'/proc/{name}/stat') as f:
+                fields = f.read().rsplit(')', 1)[1].split()
+            procs[int(name)] = (int(fields[1]), boot + int(fields[19]) / tick)
+        except (OSError, IndexError, ValueError):
+            pass
+    return procs
+
+
+def started_since(pid, since):
+    """True when a process under `pid` (its child, their children...) started after `since`:
+    a command the session left running in the background. Those there from its start (a
+    launcher's node, an MCP server) are not counted."""
+    procs = processes()
+    children = {}
+    for p, (parent, start) in procs.items():
+        if p != parent:
+            children.setdefault(parent, []).append(p)
+    todo, seen = list(children.get(pid, [])), set()
+    while todo:
+        p = todo.pop()
+        if p in seen:
+            continue
+        seen.add(p)
+        if procs[p][1] > since:
+            return True
+        todo += children.get(p, [])
+    return False
+
+
 def free_pty(proc, seconds=5):
     """Windows: let a closed PtyProcess's pty, and with it its console host, go. pywinpty's
     own reader thread holds the pty, and its read waits for output that never comes once
@@ -1438,6 +1519,7 @@ class Api:
                          'up': format_uptime(s['started']),
                          'updated': updated.strftime('%Y-%m-%d %H:%M:%S') if updated else '',
                          'listed': bool(entry), 'autoOpen': bool(entry and entry.get('autoOpen', True)),
+                         'keepAwake': bool(entry and entry.get('keepAwake')),
                          'model': (entry or {}).get('model', ''),
                          'tool': (entry or {}).get('tool') or 'claude', 'models': self._models_for(entry),
                          'tab': s['sid'] in self._terms,
@@ -1452,6 +1534,7 @@ class Api:
             rows.append({'sid': sid, 'pid': '-', 'name': e['name'], 'short': sid[:8], 'status': 'hibernating',
                          'color': STATUS_COLORS['hibernating'], 'tokens': '-', 'up': '-', 'updated': '',
                          'listed': True, 'autoOpen': bool(e.get('autoOpen', True)), 'model': e.get('model', ''),
+                         'keepAwake': bool(e.get('keepAwake')),
                          'tool': tool, 'models': self._models_for(e), 'tab': True, 'headless': False,
                          'samples': [], 'turns': self._ended_turns.get(sid, 0), 'asleep': True})
         camp = sum(r['turns'] for r in rows if not r.get('asleep')) + self._ended_turn_total(listed.values(), {s['sid'] for s in self._sessions})
@@ -1522,6 +1605,10 @@ class Api:
 
     def set_auto_open(self, sid, on):
         core.set_auto_open(sid, bool(on))
+
+    def set_keep_awake(self, sid, on):
+        """Keep awake: the session never hibernates (agents.json "keepAwake")."""
+        core.set_field(sid, 'keepAwake', bool(on))
 
     def move_session(self, sid, target, after):
         """Moves the agents.json session `sid` just before (or, `after`, just after)
@@ -2079,7 +2166,8 @@ class Api:
         """Every 30 s: a tab's session idle for HIBERNATE_AFTER (no turn running, not waiting
         on a question, nothing typed in) has its process ended; the tab stays, hibernating,
         and a click on it starts the same conversation again (open_tab). A new Codex or agy
-        tab whose conversation is not found yet would start afresh, so it is left running."""
+        tab whose conversation is not found yet would start afresh, so it is left running; so is
+        one ticked Keep awake, and one with a command still running in the background."""
         while True:
             time.sleep(30)
             now = time.time()
@@ -2094,6 +2182,13 @@ class Api:
                 if now - since < HIBERNATE_AFTER:
                     continue
                 if is_codex(entry) and not codex_thread(entry) or is_agy(entry) and not agy_conversation(entry):
+                    continue
+                # Keep awake (right-click menu): a session running a /loop or a reminder.
+                if entry.get('keepAwake'):
+                    continue
+                # A command it left running in the background (started a minute or more after
+                # the tab, so not the launcher or an MCP server from its start).
+                if started_since(term.proc.pid, term.started.timestamp() + 60):
                     continue
                 self._idle_since.pop(sid, None)
                 self._asleep.add(sid)

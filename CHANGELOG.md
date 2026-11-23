@@ -2,6 +2,27 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-23 – v4.16.1: no hibernating with a background command, and Keep awake
+
+### Changed
+- Hibernating: a session with a command still running in the background no longer
+  hibernates, so the command is not ended with it. Before, a build or download Claude left
+  running in the background (its turn over, so idle) was ended after 30 minutes. Told by any
+  process under the session's that started a minute or more after its tab (`started_since`),
+  so a launcher's node or an MCP server there from the start does not count; read from
+  `/proc` on Linux and with Toolhelp32 / GetProcessTimes on Windows.
+- Right-click menu → *Keep awake* (☑/☐): the session never hibernates, for one running a
+  `/loop` or a reminder, which AMC cannot see. Saved as `"keepAwake": true` in `agents.json`.
+- README: Hibernating lists what does not hibernate, and that the Task Scheduler jobs and
+  `/schedule` are not affected (both languages).
+- Versions: `v4.16.1`.
+- Tagged `v4.16.1`.
+
+### Known
+- Tested on Linux with real processes (a command started later counts, the launcher's own
+  child does not) and with stand-ins for the rest; the Windows process read is not yet run on
+  Windows, and the menu item was not drawn on a test page.
+
 ## 2026-11-23 – v4.16.0: hibernating tabs, and no conhost.exe left behind on Windows
 
 ### Added
