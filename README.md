@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.15.0` (current) | `v4.14.2` plus a bay in Relax mode's bottom-left corner with a wharf that grows with the camp (wooden, then stone with a warehouse, then concrete with an ocean liner and a container ship). See `CHANGELOG.md`. |
+| `v4.15.1` (current) | `v4.15.0` plus a Relax-mode wall round only the 5 sessions nearest the plaza, the camp zoomed in to fill the window with little sky, and a bay about 10% larger. See `CHANGELOG.md`. |
+| `v4.15.0` | `v4.14.2` plus a bay in Relax mode's bottom-left corner with a wharf that grows with the camp (wooden, then stone with a warehouse, then concrete with an ocean liner and a container ship). See `CHANGELOG.md`. |
 | `v4.14.2` | `v4.14.1` plus a lower camera and a stronger perspective in Relax mode, with less sky in view. See `CHANGELOG.md`. |
 | `v4.14.1` | `v4.14.0` plus a ✥ *Rearrange* button in Relax mode: buildings move only while it is on, and ↺ *Reset all* puts them all back. See `CHANGELOG.md`. |
 | `v4.14.0` | `v4.13.0` plus moving the sessions' buildings in Relax mode by dragging them (right-click → *Reset place* puts one back), a landing with a pier and a moored ship, boats on the river, the city era named Medieval City, and fixes for the wall over the river and a camp at start without its buildings. See `CHANGELOG.md`. |
@@ -296,7 +297,8 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   ended ones included: a tribe from 0, a village from 100, a town from 500, a medieval city from 1000,
   a metropolis from 5000 and a megacity from 10000. Roads go from dirt paths to stone to a
   city's cobbled streets round a paved square, the sessions' buildings round its fountain,
-  with a stone wall, gates and towers winding round the town between its buildings (a town
+  with a stone wall, gates and towers winding round the heart of the town (the 5 sessions'
+  buildings nearest the plaza; the rest stand outside it) between its buildings (a town
   has a palisade of stakes), then asphalt, with only the old wall's gates and some broken
   stretches and towers left; at night a city's and a metropolis's windows light up, and a
   city's street lanterns cast pools of light. The top left of the camp shows what it is now and when the
@@ -317,7 +319,8 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   is drawn at about a third of the width of the near side, seen from low down (about 26
   degrees over the ground), the ground hazier with distance, and
   every building and tree casts the shadow of its own outline. Zoomed all the way out the
-  window shows the part where the buildings are; the wheel zooms around the pointer and
+  camp fills the window's height, from its highest roof down, with only a strip of sky
+  (up to a quarter of its width, at the sides, may be out of view); the wheel zooms around the pointer and
   dragging moves the map; names stay one size, and those that would overlap wait for you
   to zoom in. Hills and woods lie beyond its sides.
 - **Its person**, near it: working while the session is busy, waving while it waits for
@@ -619,7 +622,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.15.0`（目前） | `v4.14.2` 再加上：Relax mode 左下角的海灣，和隨營地長大的碼頭（木造，之後是有倉庫的石砌碼頭，大都會是有郵輪和貨櫃船的水泥碼頭）。詳見 `CHANGELOG.md`。 |
+| `v4.15.1`（目前） | `v4.15.0` 再加上：Relax mode 的城牆只圍離廣場最近的 5 個 session，營地放大填滿視窗、天空變少，海灣大約大 10%。詳見 `CHANGELOG.md`。 |
+| `v4.15.0` | `v4.14.2` 再加上：Relax mode 左下角的海灣，和隨營地長大的碼頭（木造，之後是有倉庫的石砌碼頭，大都會是有郵輪和貨櫃船的水泥碼頭）。詳見 `CHANGELOG.md`。 |
 | `v4.14.2` | `v4.14.1` 再加上：Relax mode 的視角更低、遠近更明顯，畫面裡的天空變少。詳見 `CHANGELOG.md`。 |
 | `v4.14.1` | `v4.14.0` 再加上 Relax mode 的 ✥ *Rearrange* 按鈕：只有按下後才能移動建築，↺ *Reset all* 全部放回原位。詳見 `CHANGELOG.md`。 |
 | `v4.14.0` | `v4.13.0` 再加上：Relax mode 裡可以拖曳移動 session 的建築（右鍵 → *Reset place* 放回原位）、有棧橋和停泊帆船的碼頭、河上的船、城市時期改名為 Medieval City，並修正城牆壓在河上和啟動時營地沒有建築的問題。詳見 `CHANGELOG.md`。 |
@@ -842,7 +846,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **整個營地也會成長**，依 `agents.json` 裡所有 session 的訊息總數計算，已結束的也算：
   0 則起是部落，100 則起是村莊，500 則起是小鎮，1000 則起是中世紀城市（Medieval City），5000 則起是大都會，10000 則起
   是超級都市。路從泥土路、石板路，變成城市的石板街道和鋪石廣場，session 的建築圍著廣場的噴水池，一圈有城門
-  和塔樓的石牆在建築之間繞住市區（小鎮是一圈木柵欄）；再變成柏油路，舊城牆只剩城門和幾段殘破的牆與塔。城市和大都會的窗戶晚上會亮，城市的提燈會
+  和塔樓的石牆在建築之間繞住市中心（離廣場最近的 5 個 session 的建築，其他的在牆外；小鎮是一圈木柵欄）；再變成柏油路，舊城牆只剩城門和幾段殘破的牆與塔。城市和大都會的窗戶晚上會亮，城市的提燈會
   在地上照出一圈光。營地左上角會顯示目前的階段和下一階段的門檻。從 `agents.json` 刪除
   session 會扣掉它的訊息數，所以營地可能退回前一階段。
 - **不屬於任何 session 的建築**會隨著成長出現，1000 則以前每 100 則一棟，之後每 500 則一棟：
@@ -854,7 +858,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   市政廳或風車（大都會裡是咖啡廳、商場或其他高樓）。每棟後面還有一兩棟小建築，例如農田、
   攤販或倉庫，組成一個建築群。
 - **地圖**在所有視窗都一樣大，有透視：從低處看（離地約 26 度），遠的一邊（上方）寬度大約只有近處的三分之一，遠處的地面
-  比較朦朧，每棟建築和每棵樹都有照自己輪廓投下的影子。縮到最小時，視窗框住有建築的範圍；
+  比較朦朧，每棟建築和每棵樹都有照自己輪廓投下的影子。縮到最小時，營地從最高的屋頂往下填滿視窗的高度，只留一小條天空（左右最多有營地寬度的四分之一在畫面外）；
   滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，會重疊的要放大才顯示。地圖兩側
   外面是丘陵和樹林。
 - **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒著時坐著或四處走走。

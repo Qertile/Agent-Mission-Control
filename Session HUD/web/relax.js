@@ -239,6 +239,10 @@ const relax = (() => {
     [[0.64, 0.62], [0.46, 0.84], [0.3, 1]],
     [[0.3, 0.13], [0.22, 0.34], [0.26, 0.62], [0.17, 0.82], [0.2, 1]]];
   const groundGap = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) / KY);
+  // The camp's heart: the sessions' buildings nearest the plaza, CORE of them. The wall goes
+  // round these only; the rest stand outside it.
+  const CORE = 5;
+  const coreOf = placed => placed.filter(p => !p.b.prop).sort((a, b) => groundGap(a, PLAZA) - groundGap(b, PLAZA)).slice(0, CORE);
   // A city's wall (cityWall below) finds its way between what stands; onWall says whether a
   // point is on it, so that no lamp or tree is put there.
   let wallLine = null, plazaCount = 0;
@@ -565,7 +569,7 @@ const relax = (() => {
   // The sea in the bottom left corner: its shore runs in from past the map's left edge and
   // round to the bottom edge, past the river's mouth. A quarter ellipse, its edge a little
   // uneven. riverGap counts it as water, so nothing stands, grows or runs on it.
-  const BAY = {rx: 760, ry: 380}, bayK = a => 1 + 0.05 * Math.sin(a * 5 + 1) + 0.025 * Math.sin(a * 13);
+  const BAY = {rx: 840, ry: 420}, bayK = a => 1 + 0.05 * Math.sin(a * 5 + 1) + 0.025 * Math.sin(a * 13);
   const SHORE = (() => {
     const line = [];
     for (let x = -PAD; x < 0; x += 40) line.push({x, y: MAP_H - BAY.ry * bayK(Math.PI / 2)});
@@ -932,7 +936,7 @@ const relax = (() => {
       // ship at a pier (from a city two). A metropolis's boats are modern: an ocean liner, a
       // container ship, tugs and speedboats; its goods are containers.
       const wood = e[1] === 'Village', m = metro(e), [edge, top] = wood ? ['#4f3a24', '#a57c4c'] : m ? ['#4a4c4f', '#9c9e9c'] : ['#4f4b44', '#9a948a'];
-      const quay = SHORE.filter(q => q.x > 120 && q.x < 690);
+      const quay = SHORE.filter(q => q.x > BAY.rx * 0.16 && q.x < BAY.rx * 0.91);
       const along = (line, i) => { const a = line[Math.max(0, i - 1)], b = line[Math.min(line.length - 1, i + 1)], l = Math.hypot(b.x - a.x, b.y - a.y) || 1; return [(b.x - a.x) / l, (b.y - a.y) / l]; };
       const out = d => quay.map((q, i) => { const [tx, ty] = along(quay, i); return {x: q.x - ty * d, y: q.y + tx * d}; });   // d out over the water
       const post = (p, r, color) => { g.fillStyle = color; g.beginPath(); g.ellipse(p.x, p.y, r, r * KY, 0, 0, Math.PI * 2); g.fill(); };
@@ -1196,14 +1200,16 @@ const relax = (() => {
                 const side = (l.flip ? -1 : 1) * plot * (l.b.kind === 'lantern-post' ? 0.13 : 0.18);
                 return {x: l.x + side, y: l.y, r: plot * 0.5, lamp: true, head: plot * (l.b.kind === 'lantern-post' ? 0.36 : 0.58)};
               })];
-    // What the view must hold: the buildings, and every paddock's four corners.
+    // What the view must hold: the buildings (their roofs too), and every paddock's four
+    // corners. From the highest roof down, not from the mountains: the camp fills the window,
+    // with little sky.
     const pens = [...new Set(herd.filter(a => a.pen).map(a => a.pen))];
-    const xs = [...placed.map(p => warp(p.x, p.y)[0]), ...pens.flatMap(pen => [[0, 0], [1, 0], [0, 1], [1, 1]].map(([a, b]) => { const q = inPen(pen, a, b); return warp(q.x, q.y)[0]; }))];
+    const pts = [...placed.map(p => warp(p.x, p.y)), ...pens.flatMap(pen => [[0, 0], [1, 0], [0, 1], [1, 1]].map(([a, b]) => { const q = inPen(pen, a, b); return warp(q.x, q.y); }))];
+    const xs = pts.map(q => q[0]);
     const left = Math.max(0, Math.min(...xs, MAP_W * 0.3) - plot * 0.9), right = Math.min(MAP_W, Math.max(...xs, MAP_W * 0.7) + plot * 0.9);
     const wasFit = !zoom || zoom - fitZoom() < 0.001;
     const bottom = Math.min(MAP_H, Math.max(...placed.map(p => warp(p.x, p.y)[1])) + plot * 0.55);
-    // From a little above the horizon (the mountains' tops), so not much sky shows.
-    const fitTop = Y_H - plot * 1.1;
+    const fitTop = Math.max(SKY_TOP, Math.min(...pts.map(q => q[1])) - plot * 1.3);
     FIT = {x: left, y: fitTop, w: right - left, h: bottom - fitTop};
     if (wasFit && zoom) zoom = fitZoom();      // still all the way out
     eraNow = e;
@@ -1220,8 +1226,9 @@ const relax = (() => {
   // the whole map can be dragged into view.
   // FIT is set by each draw: from the mountain tops down, across what stands on the map.
   let FIT = {x: 0, y: 0, w: MAP_W, h: MAP_H};
-  // All the way out it may leave a tenth of that width (the empty ground at the sides) out.
-  function fitZoom() { return Math.min(viewW / (FIT.w * 0.9), viewH / FIT.h); }
+  // All the way out it fills the window's height with the camp, leaving up to a quarter of
+  // its width out at the sides (half each side) rather than show sky above it.
+  function fitZoom() { return Math.min(viewW / (FIT.w * 0.75), viewH / FIT.h); }
   // Within the map; a map smaller than the window sits in its middle.
   function clampView() {
     const fit = fitZoom();
@@ -1604,9 +1611,9 @@ const relax = (() => {
     const pt = (i, r) => { const t = i / A * Math.PI * 2; return {x: PLAZA.x + Math.cos(t) * r, y: PLAZA.y + Math.sin(t) * r * KY}; };
     // How far out it wants to be, in each direction: just beyond the buildings there, so most
     // are in town and the wall keeps close round them, not out in the fields. The farthest
-    // session's building within 35 degrees of the direction, plus 50; at least 320 (the
+    // of the heart's buildings (coreOf) within 35 degrees of the direction, plus 50; at least 320 (the
     // plaza and its first ring), at most 880.
-    const own = placed.filter(p => !p.b.prop), dirAt = i => i / A * Math.PI * 2;
+    const own = coreOf(placed), dirAt = i => i / A * Math.PI * 2;
     const wantAt = i => {
       let w = 320;
       for (const p of own) {

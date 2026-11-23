@@ -2,6 +2,23 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-23 – v4.15.1: Relax mode: a smaller wall, a closer view, a larger bay
+
+### Changed
+- Relax mode: a town's palisade, a city's wall and a metropolis's old wall go round the 5
+  sessions' buildings nearest the plaza only; the rest stand outside it (before: round them
+  all, e.g. all 12 in a test city).
+- Relax mode: zoomed all the way out, the camp fills the window's height from its highest roof
+  down instead of from the mountains' tops, leaving up to a quarter of its width out at the
+  sides (a tenth before). In a 1644×1146 window the sky goes from about 30% of the height to
+  about 10%.
+- Relax mode: the bay is about 10% larger (840×420 instead of 760×380), its wharf with it. A
+  building whose place is now on the water or too near it is placed again; one moved there
+  with Rearrange goes back to its own place.
+- README: Relax mode, the wall and the view (both languages).
+- Versions: `v4.15.1`.
+- Tagged `v4.15.1`.
+
 ## 2026-11-22 – v4.15.0: Relax mode: a bay, a wharf and modern ships
 
 ### Added
