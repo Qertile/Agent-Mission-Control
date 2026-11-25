@@ -1092,6 +1092,7 @@ const relax = (() => {
     g.setTransform(res, 0, 0, res, PAD * res, PADY * res);
     g.fillStyle = e[2];
     g.fillRect(-PAD, -PADY, w + 2 * PAD, h + PADY);
+    flatFilled = pixel(flat);                 // for the report: the ground colour should be there now
     land(g, w, h, e);
     const {lamps: allLamps, edges} = roads(g, placed, e);
     ways = edges.length ? waysOf(edges) : null;
@@ -1320,7 +1321,7 @@ const relax = (() => {
   // For ⚙ → Send feedback: the camp's canvases after each new picture, their sizes and the
   // colour at their middle (r,g,b,a; a blank one is 0,0,0,0), and whether the browser lost
   // one. One line, replaced each time.
-  let reportDue = false, flatSeen = 'none';
+  let reportDue = false, flatSeen = 'none', flatFilled = 'none';
   const pixel = c => { try { return c.getContext('2d', SOFT).getImageData(c.width >> 1, c.height >> 1, 1, 1).data.join(','); } catch (e) { return 'unreadable: ' + e.message; } };
   function canvasReport() {
     if (typeof amc === 'undefined' || !amc.errors) return;
@@ -1332,7 +1333,16 @@ const relax = (() => {
         return `${name} ${c.width}x${c.height} ${g.getImageData(c.width >> 1, c.height >> 1, 1, 1).data.join(',')}${lost}`;
       } catch (e) { return `${name} ${c.width}x${c.height} unreadable: ${e.message}`; }
     };
-    const line = `relax canvases: flat ${flatSeen}; ${one('bg', bg)}; ${one('view', view)}; dpr ${window.devicePixelRatio} res ${res} zoom ${zoom.toFixed(2)}`;
+    // A new canvas of each size, filled red and read back: does any off-screen canvas work here?
+    const probe = (w, h) => {
+      try {
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const g = c.getContext('2d', SOFT); g.fillStyle = '#ff0000'; g.fillRect(0, 0, w, h);
+        const px = pixel(c); c.width = c.height = 0;
+        return px === '255,0,0,255' ? 'ok' : 'blank ' + px;
+      } catch (e) { return 'unreadable: ' + e.message; }
+    };
+    const line = `relax canvases: flat after fill ${flatFilled}; flat ${flatSeen}; ${one('bg', bg)}; ${one('view', view)}; small ${probe(100, 100)}; big ${probe(5080, 2050)}; dpr ${window.devicePixelRatio} res ${res} zoom ${zoom.toFixed(2)}`;
     const i = amc.errors.findIndex(l => l.startsWith('relax canvases:'));
     if (i >= 0) amc.errors.splice(i, 1);
     amc.errors.push(line);

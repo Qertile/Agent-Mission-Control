@@ -2,6 +2,16 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – untagged: Relax mode's canvas probes in Send feedback
+
+### Changed
+- The `relax canvases:` line in ⚙ → *Send feedback…* now has three more probes, for the
+  Windows camp drawn without its map (still blank on v4.19.0):
+  - `flat after fill r,g,b,a`: flat's centre right after its ground fill.
+  - `small ok|blank`: a new 100x100 canvas filled red and read back.
+  - `big ok|blank`: the same for a new 5080x2050 canvas, freed straight after.
+  They run once per new picture of the camp. Made by AMC Relax Mode.
+
 ## 2026-11-25 – v4.19.0: your own colours
 
 ### Added
