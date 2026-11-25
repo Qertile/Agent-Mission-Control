@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.17.1` (current) | `v4.17.0` plus: the task due-date calendar starts its weeks on Sunday. See `CHANGELOG.md`. |
+| `v4.18.0` (current) | `v4.17.1` plus, in Relax mode, the idle sessions' people walking the camp's streets, hidden behind what stands in front of them, and a hibernating session shown asleep (lights off, its status in pale purple). See `CHANGELOG.md`. |
+| `v4.17.1` | `v4.17.0` plus: the task due-date calendar starts its weeks on Sunday. See `CHANGELOG.md`. |
 | `v4.17.0` | `v4.16.1` plus `Session HUD/amc_send.py`: a session can send a message to a hibernating tab, which SendMessage cannot see; AMC wakes it and types the message in. See `CHANGELOG.md`. |
 | `v4.16.1` | `v4.16.0` plus: a session with a command still running in the background does not hibernate, and the right-click menu's *Keep awake* keeps a session (one running a `/loop` or a reminder) from hibernating at all. See `CHANGELOG.md`. |
 | `v4.16.0` | `v4.15.1` plus hibernating tabs: a session idle for 30 minutes has its process ended to free its memory (about 150 MB) and wakes with a click on its tab, in the same conversation; on Windows, no `conhost.exe` left behind by the Antigravity usage read or a closed tab. See `CHANGELOG.md`. |
@@ -328,7 +329,12 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   dragging moves the map; names stay one size, and those that would overlap wait for you
   to zoom in. Hills and woods lie beyond its sides.
 - **Its person**, near it: working while the session is busy, waving while it waits for
-  you, sitting or strolling about while idle.
+  you, sitting by its door while idle or hibernating, and now and then off for a walk along
+  the streets to anywhere in the camp and back (not at night or in the rain); called back
+  by a new status, it walks home first. Whatever stands nearer the camera (a building, a
+  tree, the wall) hides a person or an animal behind it.
+- **A hibernating session** keeps its building, its lights off at night (a city's windows
+  dark), and *hibernating* in pale purple on its sign.
 - **Animals:** deer, stags, foxes and wolves in a tribe; from a village on, cows and horses
   (with a donkey and an alpaca) in fenced paddocks, and some wild ones about; in a city its
   horses' paddock lies outside the wall, with dogs in the streets; in a metropolis dogs, a
@@ -646,7 +652,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.17.1`（目前） | `v4.17.0` 再加上：工作清單的到期日月曆改成每週從週日開始。詳見 `CHANGELOG.md`。 |
+| `v4.18.0`（目前） | `v4.17.1` 再加上：Relax mode 裡閒置 session 的小人沿著街道逛整個營地，走到建築後面會被擋住；休眠的 session 不亮燈，狀態用淡紫色。詳見 `CHANGELOG.md`。 |
+| `v4.17.1` | `v4.17.0` 再加上：工作清單的到期日月曆改成每週從週日開始。詳見 `CHANGELOG.md`。 |
 | `v4.17.0` | `v4.16.1` 再加上 `Session HUD/amc_send.py`：session 可以傳訊息給休眠中的分頁（SendMessage 看不到它），AMC 會叫醒它並把訊息打進去。詳見 `CHANGELOG.md`。 |
 | `v4.16.1` | `v4.16.0` 再加上：背景還有指令在跑的 session 不會休眠；右鍵選單的 *Keep awake* 可以讓某個 session（例如在跑 `/loop` 或提醒的）永遠不休眠。詳見 `CHANGELOG.md`。 |
 | `v4.16.0` | `v4.15.1` 再加上：分頁休眠，session 閒置 30 分鐘就結束它的程式、釋放記憶體（約 150 MB），點分頁就叫醒並接回同一段對話；Windows 上讀 Antigravity 用量或關掉分頁時，不再留下 `conhost.exe`。詳見 `CHANGELOG.md`。 |
@@ -889,7 +896,10 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   比較朦朧，每棟建築和每棵樹都有照自己輪廓投下的影子。縮到最小時，營地從最高的屋頂往下填滿視窗的高度，只留一小條天空（左右最多有營地寬度的四分之一在畫面外）；
   滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，會重疊的要放大才顯示。地圖兩側
   外面是丘陵和樹林。
-- **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒著時坐著或四處走走。
+- **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒置或休眠時坐在門口，不時沿著街道走到營地
+  任何地方再走回來（晚上和下雨時不出門）；狀態改變時會先沿街走回家。比較靠近鏡頭的東西（建築、樹、城牆）
+  會擋住後面的小人和動物。
+- **休眠的 session**：建築留著，晚上不亮燈（城市的窗戶也是暗的），名牌上用淡紫色寫 *hibernating*。
 - **動物**：部落裡有鹿、公鹿、狐狸和狼；從村莊起，牛和馬（還有驢和羊駝）養在有籬笆的牧場裡，
   外面也有一些野生動物；城市的馬場在城牆外，街上有狗；大都會裡有狗、一隻鹿和一隻狐狸。牠們會
   吃草、走動、站著，晚上（20:00 到 5:30）不動。小人和動物也有影子。

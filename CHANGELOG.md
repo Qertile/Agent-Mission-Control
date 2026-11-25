@@ -2,6 +2,29 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.18.0: Relax mode: people walk the streets, hibernating sessions asleep
+
+### Added
+- Relax mode: an idle or hibernating session's person, after sitting by its door 20 to 40
+  seconds, walks along the streets (the shortest way, over bridges and through gates) to
+  anywhere on them, looks round 2 to 7 seconds and walks home the same way. Not at night
+  (20:00 to 5:30) or in the rain. A new status (busy, waiting) calls it home along the
+  streets first. A camp without streets keeps the stroll in front of the building.
+- Relax mode: what stands nearer the camera (a building and its yard, a tree, a lamp, the
+  wall and its towers, the wharf's ships and goods) hides a person or an animal behind it.
+
+### Changed
+- Relax mode: a hibernating session's building has no light round it at night and, in a
+  city or a metropolis, dark windows; its sign shows *hibernating* in pale purple (#b48cff,
+  the HUD's colour for it).
+- README: Relax mode, the people's walks and hibernating sessions (both languages).
+- Versions: `v4.18.0`.
+- Tagged `v4.18.0`.
+
+### Known
+- Redrawing takes a little longer (the streets are made into a net each time): in the test
+  page a city 322–367 ms → 368–398 ms.
+
 ## 2026-11-25 – v4.17.1: the due-date calendar starts on Sunday
 
 ### Changed

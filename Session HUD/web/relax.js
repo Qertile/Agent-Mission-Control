@@ -38,7 +38,7 @@ const relax = (() => {
                'med-a': 0.545, 'med-b': 0.453, 'med-c': 0.531, 'med-church': 0.256, 'med-d': 0.545, 'med-e': 0.439, 'med-f': 0.545, 'med-farm': 0.576, 'med-g': 0.533, 'med-h': 0.637, 'med-level2': 0.637, 'med-level3': 0.545, 'med-level4': 0.395, 'med-sawmill': 0.637, 'med-shop': 0.545, 'med-smithy': 0.629, 'med-tavern': 0.531, 'med-townhall': 0.4, 'med-warehouse': 0.533, 'med-watermill': 0.545, 'med-windmill': 0.395,
                'metro-a': 0.656, 'metro-b': 0.717, 'metro-c': 0.734, 'metro-cafe': 0.68, 'metro-d': 0.6, 'metro-e': 0.656, 'metro-f': 0.652, 'metro-g': 0.523, 'metro-h': 0.59, 'metro-level0': 0.742, 'metro-level1': 0.693, 'metro-level2': 0.607, 'metro-level3': 0.58, 'metro-level4': 0.338, 'metro-lot': 0.777, 'metro-mall': 0.627, 'metro-park': 0.57, 'metro-ruin': 0.723, 'metro-meeting': 0.762, 'metro-tower-a': 0.387, 'metro-tower-b': 0.094, 'metro-tower-c': 0.119, 'metro-tower-d': 0.098, 'metro-tower-e': 0.074};  // its top
   const TOOL_COLORS = {claude: '#d97757', codex: '#e6e6e6', agy: '#4f8cff', disc: '#ffc400'};
-  const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0'};
+  const STATUS_COLORS = {busy: '#00dcff', running: '#00dcff', waiting: '#ffc400', idle: '#8cff8c', ended: '#8c96a0', hibernating: '#b48cff'};
   // The building grows with the messages typed into the session (agy: its hours open):
   // a campfire at 0, then a tent, a cabin, a house, a tower.
   const LEVELS = [[200, 'level4'], [50, 'level3'], [10, 'level2'], [1, 'level1'], [0, 'level0']];
@@ -152,6 +152,8 @@ const relax = (() => {
   let zoom = 0, ox = 0, oy = 0, viewW = 0, viewH = 0, viewDirty = false, tags = [];
   const people = new Map();                // session id (a participant: discussion id#i) -> its person
   let fires = [];                          // the discussions under way: {x, y} of their fire
+  let fronts = [];                         // what stands up, to hide a person behind it: {y, x0, y0, x1, y1, paint}
+  let ways = null;                         // the streets as a net to walk on (waysOf)
 
   // Where you moved each building to (dragging it): {session id: {x, y}} on the ground, per computer.
   const PLACES_KEY = 'amc-relax-places';
@@ -1088,6 +1090,7 @@ const relax = (() => {
     g.fillRect(-PAD, -PADY, w + 2 * PAD, h + PADY);
     land(g, w, h, e);
     const {lamps: allLamps, edges} = roads(g, placed, e);
+    ways = edges.length ? waysOf(edges) : null;
     // A town's palisade, a city's wall, what is left of it in a metropolis.
     const wallStyle = {Town: 'wood', City: 'stone', Metropolis: 'ruin', Megacity: 'ruin'}[e[1]];
     wallLine = wallStyle ? wallOutline(placed) : null;
@@ -1143,9 +1146,16 @@ const relax = (() => {
     tags = [];
     litList = [];
     g.textAlign = 'center';
+    fronts = [];
+    // Each thing that stands up, again, for tick(): its shape over a person walking behind it.
+    const front = (cx, ground, r, h, paint) => {
+      const [X, Y] = warp(cx, ground), m = depth(ground);
+      fronts.push({y: ground, x0: X - r * m, x1: X + r * m, y0: Y - h * m, y1: Y + plot * 0.1 * m, paint});
+    };
+    const standing = (cx, ground, fn) => g2 => { const [X, Y] = warp(cx, ground), m = depth(ground); g2.save(); g2.translate(X, Y); g2.scale(m, m); g2.translate(-cx, -ground); fn(g2); g2.restore(); };
     // Back to front, so a building lower on the screen stands in front of one above it.
     for (const {x: cx, y: ground, b, flip} of [...placed, ...lamps, ...trees, ...ramparts, ...docks].sort((a, c) => a.y - c.y)) {
-      if (b.wall) { b.draw(g); continue; }        // a stretch of the city wall, or one of its towers
+      if (b.wall) { b.draw(g); front(cx, ground, plot * 0.9, plot * 1.3, b.draw); continue; }        // a stretch of the city wall, or one of its towers
       const [GX, GY] = warp(cx, ground), gm = depth(ground);
       g.save(); g.translate(GX, GY); g.scale(gm, gm); g.translate(-cx, -ground);
       try {
@@ -1153,7 +1163,7 @@ const relax = (() => {
         const s = plot * 1.5 * (b.scale || scaleOf(b.kind)) * (b.house ? DECOR_SIZE : 1);
         castShadow(g, img[b.kind], cx, ground, s, flip);
         const pk = /^tree/.test(b.kind) ? seasonal(img[b.kind], cx, ground) : img[b.kind];
-        if (pk) put(g, pk, cx, ground, s, flip);
+        if (pk) { put(g, pk, cx, ground, s, flip); front(cx, ground, s / 2, s * ANCHOR, standing(cx, ground, g2 => put(g2, pk, cx, ground, s, flip))); }
         if (urban(e)) litList.push([b.kind, cx, ground, s, flip, cx, ground]);
         continue;
       }
@@ -1176,7 +1186,15 @@ const relax = (() => {
       if (building) scaffold(g, cx, ground, level, false);
       if (pic) put(g, pic, cx, ground, s, flip);
       if (building) scaffold(g, cx, ground, level, true);
-      if (urban(e)) litList.push([level, cx, ground, s, flip, cx, ground]);
+      if (pic) front(cx, ground, Math.max(s / 2, plot * 0.75 * big), s * ANCHOR, standing(cx, ground, g2 => {
+        if (b.kind !== 'meeting' && b.status !== 'ended') yard(e, level, b.id).forEach((k, i) => {
+          if (!img[k]) return;
+          const side = (i ? 1 : -1) * (flip ? -1 : 1), ks = plot * 1.5 * scaleOf(k) * big * (YARD_SIZE[k.replace(/^med-/, '')] || 0.55);
+          put(g2, img[k], cx + side * plot * 0.5 * big, ground - plot * 0.2 * big, ks, flip);
+        });
+        put(g2, pic, cx, ground, s, flip);
+      }));
+      if (urban(e)) litList.push([level, cx, ground, s, flip, cx, ground, b.status === 'hibernating']);   // asleep: its windows dark
       const top = ground - s * (ANCHOR - TOP[level]);
       tags.push({cx, ground, top, b});
       // Where a click finds it, in the warped picture.
@@ -1194,7 +1212,7 @@ const relax = (() => {
       if (tint) { g.fillStyle = tint; g.fillRect(0, 0, MAP_W, MAP_H); }
     }
     // What is lit at night: each building with someone in it, the fires, the lanterns.
-    lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
+    lights = [...placed.filter(p => !p.b.prop && p.b.status !== 'ended' && p.b.status !== 'hibernating').map(p => ({x: p.x, y: p.y - plot * 0.1, r: plot * (p.b.kind === 'meeting' ? 0.95 : 0.8)})),
               ...[...lamps, ...trees].filter(l => /^(lantern|lamp)/.test(l.b.kind)).map(l => {
                 // A city's lantern hangs out to one side of its post, a metropolis's lamp over the road.
                 const side = (l.flip ? -1 : 1) * plot * (l.b.kind === 'lantern-post' ? 0.13 : 0.18);
@@ -1283,7 +1301,7 @@ const relax = (() => {
     out.drawImage(view, 0, 0);
     worldOn(out);
     for (const f of fires) onGround(out, f.x, f.y, () => flames(out, f));
-    for (const p of [...people.values()].sort((a, c) => a.y - c.y)) onGround(out, p.x, p.y, () => person(out, p));
+    for (const p of [...people.values()].sort((a, c) => a.y - c.y)) { onGround(out, p.x, p.y, () => person(out, p)); hide(out, p, k); }
     frontOver(out, null);
     if (moving && moving.to) ghost(out, moving.to, moving.ok);
     drawTags();
@@ -1360,7 +1378,8 @@ const relax = (() => {
       taken.push(rect);
       signs.push({rect, b});
       // The name on a little wooden sign like the task board's, with the tool's colour as a
-      // dot and the status under it; an ended session's sign is weathered grey, with no status.
+      // dot and the status under it (a hibernating one's in pale purple); an ended session's
+    // sign is weathered grey, with no status.
       plank(g, rect, ended);
       g.fillStyle = TOOL_COLORS[b.tool] || TOOL_COLORS.claude;
       if (b.kind === 'meeting') { g.font = "12px 'DejaVu Sans Mono', Consolas, monospace"; g.fillText('⚖', x - nw / 2 - 5, y + 13);
@@ -1374,7 +1393,7 @@ const relax = (() => {
       g.fillText(name, x + 4, y + 13);
       if (!ended && full) {
         g.font = "11px 'DejaVu Sans Mono', Consolas, monospace";
-        g.fillStyle = '#4a3019';
+        g.fillStyle = b.status === 'hibernating' ? STATUS_COLORS.hibernating : '#4a3019';   // asleep: the HUD's sleep colour
         g.fillText(b.status || '-', x, y + 26);
       }
     }
@@ -1958,8 +1977,8 @@ const relax = (() => {
       keep.add(b.id);
       const home = {x, y}, p = people.get(b.id);
       if (p) {
-        p.x += x - p.home.x; p.y += y - p.home.y;
-        if (p.flip !== !!flip) { p.mode = 'go'; p.goal = spot(p.want === 'rest' ? 'seat' : p.want, !!flip); }
+        if (p.mode !== 'walk') { p.x += x - p.home.x; p.y += y - p.home.y; }
+        if (p.flip !== !!flip && p.mode !== 'walk') { p.mode = 'go'; p.goal = spot(p.want === 'rest' ? 'seat' : p.want, !!flip); }
         Object.assign(p, {home, tool: b.tool, status: b.status, flip: !!flip});
       } else {
         // A new person starts where its status puts it, already at it.
@@ -2051,8 +2070,10 @@ const relax = (() => {
     if (p.animal) return animalStep(p, dt);
     const before = [p.x, p.y, p.dir, p.frame].join();
     const w = want(p.status);
-    if (w !== p.want) {                    // the status changed: off to that spot
-      p.want = w; p.mode = 'go'; p.goal = spot(w === 'rest' ? 'seat' : w, p.flip); p.pause = 0;
+    if (w !== p.want) {                    // the status changed: off to that spot (from a walk, home along the streets first)
+      p.want = w; p.pause = 0;
+      if (p.mode === 'walk' && walkTo(p, door(p))) p.leg = 'back';
+      else { p.mode = 'go'; p.goal = spot(w === 'rest' ? 'seat' : w, p.flip); }
     }
     if (p.pause > 0) {                     // a stop on a walk: standing
       p.pause -= dt; p.frame = F.stand;
@@ -2063,7 +2084,29 @@ const relax = (() => {
       else {
         p.frame = F.sit;
         p.wait -= dt;
-        if (p.wait <= 0) { p.mode = 'stroll'; p.laps = 2 + Math.floor(Math.random() * 2); p.goal = stroll(); }
+        if (p.wait <= 0) {
+          // A walk through the camp, along its streets, to anywhere on them; but not at night
+          // or in the rain. Without streets, a stroll in front of the building.
+          const h = hourNow(), out = !(h >= 20 || h < 5.5 || weatherDrawn === 'rain') && ways && walkTo(p, ways.pts[Math.floor(Math.random() * ways.pts.length)]);
+          if (out) p.leg = 'out';
+          else if (ways) p.wait = 20 + Math.random() * 20;
+          else { p.mode = 'stroll'; p.laps = 2 + Math.floor(Math.random() * 2); p.goal = stroll(); }
+        }
+      }
+    } else if (p.mode === 'walk') {        // along the streets, point by point
+      const q = p.path[0], speed = plot * 0.2 * dt, dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy);
+      if (d <= speed) {
+        p.x = q.x; p.y = q.y; p.path.shift();
+        if (!p.path.length) {
+          // There: a look round, then home the same way; home: to its spot by the building.
+          if (p.leg === 'out') { p.pause = 2 + Math.random() * 5; if (walkTo(p, door(p))) p.leg = 'back'; else { p.mode = 'go'; p.goal = spot(p.want === 'rest' ? 'seat' : p.want, p.flip); } }
+          else { p.mode = 'go'; p.goal = spot(p.want === 'rest' ? 'seat' : p.want, p.flip); }
+        }
+      } else {
+        p.x += dx / d * speed; p.y += dy / d * speed;
+        p.dir = dx >= 0 ? 0 : 1;
+        p.tick++;
+        p.frame = F.walk + p.tick % 4;
       }
     } else {                               // walking to p.goal
       const speed = plot * 0.2 * dt;
@@ -2173,10 +2216,10 @@ const relax = (() => {
       const g = litMap.getContext('2d');
       // Back to front, buildings and lamps together, so a building in front of a lamp hides
       // its glow: each building first wipes out what it stands in front of.
-      const order = [...litList.map(([kind, x, y, s, flip, gx, gy]) => [gy, () => onGround(g, gx, gy, () => {
+      const order = [...litList.map(([kind, x, y, s, flip, gx, gy, dark]) => [gy, () => onGround(g, gx, gy, () => {
           if (img[kind]) { g.globalCompositeOperation = 'destination-out'; put(g, img[kind], x, y, s, flip); }
           g.globalCompositeOperation = 'source-over';
-          if (img[kind + '-lit']) put(g, img[kind + '-lit'], x, y, s, flip);
+          if (!dark && img[kind + '-lit']) put(g, img[kind + '-lit'], x, y, s, flip);
         })]),
         ...lights.filter(l => l.lamp).map(({x, y, head}) => [y, () => onGround(g, x, y, () => {
           const hy = y - head, hr = plot * 0.2, warm = g.createRadialGradient(x, hy, 0, x, hy, hr);
@@ -2215,6 +2258,80 @@ const relax = (() => {
     w.drawImage(litMap, -ox * zoom, -oy * zoom, MAP_W * zoom, MAP_H * zoom);
   }
 
+  // What stands nearer the camera than a person hides it: its own pixels, cut to its shape,
+  // drawn again over the person (right after it, so a person in front of that is drawn over).
+  let mask = null;
+  function hide(g, p, k) {
+    const [bx, by, bw, bh] = warpBox(box(p));
+    const over = fronts.filter(f => f.y > p.y && f.x0 < bx + bw && bx < f.x1 && f.y0 < by + bh && by < f.y1);
+    if (!over.length) return;
+    const sx = Math.max(0, Math.floor((bx - ox) * k)), sy = Math.max(0, Math.floor((by - oy) * k));
+    const sw = Math.min(view.width - sx, Math.ceil(bw * k) + 2), sh = Math.min(view.height - sy, Math.ceil(bh * k) + 2);
+    if (sw <= 0 || sh <= 0) return;
+    mask = mask || document.createElement('canvas');
+    mask.width = sw; mask.height = sh;
+    const m = mask.getContext('2d');
+    m.setTransform(k, 0, 0, k, -ox * k - sx, -oy * k - sy);
+    for (const f of over) f.paint(m);
+    m.setTransform(1, 0, 0, 1, 0, 0);
+    m.globalCompositeOperation = 'source-in';
+    m.drawImage(view, sx, sy, sw, sh, 0, 0, sw, sh);
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(mask, sx, sy); g.restore();
+  }
+  // The streets as a net to walk on: a point about every 20 units along each road, joined to
+  // the next along it and to any other road's within 14 (where roads meet).
+  function waysOf(edges) {
+    const pts = [], nb = [];
+    edges.forEach(({line}, e) => {
+      let last = -1, run = 0;
+      line.forEach((q, i) => {
+        if (i) run += Math.hypot(q.x - line[i - 1].x, q.y - line[i - 1].y);
+        if (i && run < 20 && i < line.length - 1) return;
+        run = 0;
+        const n = pts.push({x: q.x, y: q.y, e}) - 1;
+        nb.push([]);
+        if (last >= 0) { nb[n].push(last); nb[last].push(n); }
+        last = n;
+      });
+    });
+    for (let a = 0; a < pts.length; a++)
+      for (let b = a + 1; b < pts.length; b++)
+        if (pts[a].e !== pts[b].e && Math.hypot(pts[a].x - pts[b].x, pts[a].y - pts[b].y) < 14) { nb[a].push(b); nb[b].push(a); }
+    return {pts, nb};
+  }
+  const nearestWay = q => { let best = -1, d = Infinity; ways.pts.forEach((w, i) => { const e = Math.hypot(w.x - q.x, w.y - q.y); if (e < d) { d = e; best = i; } }); return best; };
+  // The shortest way along the streets from one point of the net to another, or null.
+  function route(a, b) {
+    const n = ways.pts.length, dist = new Float64Array(n).fill(Infinity), from = new Int32Array(n).fill(-1), done = new Uint8Array(n);
+    dist[a] = 0;
+    for (;;) {
+      let u = -1, best = Infinity;
+      for (let i = 0; i < n; i++) if (!done[i] && dist[i] < best) { best = dist[i]; u = i; }
+      if (u < 0 || u === b) break;
+      done[u] = 1;
+      for (const v of ways.nb[u]) {
+        const d = best + Math.hypot(ways.pts[v].x - ways.pts[u].x, ways.pts[v].y - ways.pts[u].y);
+        if (d < dist[v]) { dist[v] = d; from[v] = u; }
+      }
+    }
+    if (!isFinite(dist[b])) return null;
+    const path = [];
+    for (let i = b; i >= 0; i = from[i]) path.unshift(ways.pts[i]);
+    return path;
+  }
+  // In front of a person's own door, where its building's road ends.
+  const door = p => ({x: p.home.x + plot * 0.18 * (p.flip ? 1 : -1), y: p.home.y + plot * 0.16});
+  // Off along the streets to `to`: false if there is no way there.
+  function walkTo(p, to) {
+    if (!ways) return false;
+    const path = route(nearestWay(p), nearestWay(to));
+    if (!path || path.length < 2) return false;
+    const side = (Math.random() - 0.5) * 10;   // a little to one side of the middle of the street
+    p.path = path.map(q => ({x: q.x + side, y: q.y + side * KY}));
+    p.mode = 'walk';
+    return true;
+  }
+
   // One step for everyone. Only the squares that changed are drawn again, from the
   // background, then the flames and people on top.
   function tick() {
@@ -2241,7 +2358,10 @@ const relax = (() => {
     worldOn(g);
     const hit = ([x, y, w, h]) => dirty.some(([a, b, c, d]) => x < a + c && a < x + w && y < b + d && b < y + h);
     for (const f of fires) if (hit(warpBox(flameBox(f)))) onGround(g, f.x, f.y, () => flames(g, f));
-    for (const p of [...people.values()].filter(p => hit(warpBox(box(p)))).sort((a, c) => a.y - c.y)) onGround(g, p.x, p.y, () => person(g, p));
+    for (const p of [...people.values()].filter(p => hit(warpBox(box(p)))).sort((a, c) => a.y - c.y)) {
+      onGround(g, p.x, p.y, () => person(g, p));
+      hide(g, p, k);
+    }
     frontOver(g, hit);
   }
   // The timer runs only while it has something to move and someone to see it.
