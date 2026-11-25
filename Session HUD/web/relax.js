@@ -2302,7 +2302,8 @@ const relax = (() => {
     g.clearRect(0, 0, viewW, viewH);
     g.fillStyle = nightColor;              // the strip around a map that does not fill the window
     g.fillRect(0, 0, viewW, viewH);
-    g.clearRect(-ox * zoom, -oy * zoom, MAP_W * zoom, MAP_H * zoom);
+    // The map's own night only from the sky's top down: above it, as round it, the plain colour.
+    g.clearRect(-ox * zoom, (SKY_TOP - oy) * zoom, MAP_W * zoom, (MAP_H - SKY_TOP) * zoom);
     g.drawImage(nightMap, -ox * zoom, -oy * zoom, MAP_W * zoom, MAP_H * zoom);
     if (!litOn) return;
     if (lit.width !== viewW || lit.height !== viewH) {

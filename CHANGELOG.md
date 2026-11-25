@@ -2,6 +2,15 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – untagged: Relax mode's night reaches the top of the window
+
+### Fixed
+- Relax mode at dusk and at night: with the view reaching above the sky's top (a squarish
+  window, since zoomed out shows every session), a strip at the top kept the daytime sky
+  blue. The map's own night layer was cleared from the map's top, but it has nothing above
+  the sky's top; it is now cleared from there, so the strip gets the night colour as the
+  area round the map does. Made by AMC Relax Mode, checked at 1344x1324 at 17:30.
+
 ## 2026-11-25 – untagged: Relax mode uses a third of the CPU, and shows every session
 
 ### Changed
