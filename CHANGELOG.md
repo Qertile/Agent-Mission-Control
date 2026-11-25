@@ -2,6 +2,22 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.18.4: developer mode's Update on a Chinese Windows
+
+### Fixed
+- Developer mode's ⚙ → *Update* stayed at *reading GitHub…* on a Chinese Windows. git's
+  output (UTF-8; the commit `afe5343 v4.7.0: a tidier ⚙ menu` is among the 30 listed) was
+  read in Windows' code page, cp950, which cannot decode `⚙`, so `update_commits` failed and
+  the page had nothing to catch it. git's output is now read as UTF-8 (`_run_git`), and a
+  failed list shows its error instead of *reading GitHub…*.
+- Versions: `v4.18.4`.
+- Tagged `v4.18.4`.
+
+### Known
+- Checked on Linux (the 30 commits read as UTF-8, and cp950 fails on that byte as on
+  Windows); not yet run on Windows. A Windows copy in developer mode gets this by turning
+  developer mode off, pressing *Update*, then turning it on again.
+
 ## 2026-11-25 – v4.18.3: Relax mode's canvases in Send feedback
 
 ### Added

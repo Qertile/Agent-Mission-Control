@@ -1801,6 +1801,10 @@ $('set-menu').addEventListener('click', e => {
         }).join('') + '</div>');
       const b = $('set-btn').getBoundingClientRect();
       showAt(m, b.right - m.offsetWidth, b.bottom);
+    }).catch(err => {
+      // What went wrong, not "reading GitHub…" for ever.
+      if (m.querySelector('[data-back]'))
+        m.innerHTML = `<div data-back="1">◂ Back</div><hr><div class="err">${esc(String(err && err.message || err))}</div>`;
     });
     return;
   }

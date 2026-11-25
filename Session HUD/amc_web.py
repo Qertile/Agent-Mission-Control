@@ -1076,8 +1076,10 @@ class Api:
 
     def _run_git(self, *args):
         kw = {'creationflags': subprocess.CREATE_NO_WINDOW} if WINDOWS else {}
+        # git writes UTF-8 (a commit subject's ⚙); Windows would read it in its own code page
+        # (cp950 on a Chinese one) and fail on it.
         return subprocess.run([self._git(), '-C', core.ROOT, *args], capture_output=True, text=True,
-                              timeout=120, stdin=subprocess.DEVNULL, **kw)
+                              encoding='utf-8', errors='replace', timeout=120, stdin=subprocess.DEVNULL, **kw)
 
     def _make_clone(self):
         """Turns this folder into a clone of REPO_URL at the newest version tag on master. Your
