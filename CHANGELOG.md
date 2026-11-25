@@ -2,6 +2,25 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – untagged: the page comes back after a crash; Custom colours reach the terminals
+
+### Fixed
+- Linux: when the page's web process ended (WebKitWebProcess crashed with SIGILL three times
+  today, each time in Relax mode), the window stayed blank until AMC was restarted. AMC now
+  loads the page again a second later (`web-process-terminated`) and logs
+  `page: its web process ended (<reason>), loading it again`. Tested by killing a stub
+  window's own web process.
+- Every load of the page after the first (that reload, or WebView2's own after its renderer
+  crashed on Windows) gets each terminal's kept output back, and the drop hook again. Before,
+  the terminals started empty.
+- ⚙ → Theme → Edit colours…: a change did not reach the terminals. xterm.js redraws only
+  when `options.theme` is another object, and the palette changed Custom's own one;
+  `termTheme()` now gives a copy.
+- ⚙ → Send feedback…: the issue's title is only `Problem in AMC <version>`; the errors stay
+  in the body.
+- Relax mode's report no longer makes a 5080x2050 test canvas (about 42 MB) for each new
+  picture; the small one stays.
+
 ## 2026-11-25 – untagged: Relax mode remakes a lost canvas
 
 ### Fixed

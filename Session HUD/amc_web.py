@@ -1268,8 +1268,8 @@ class Api:
         compose = lambda old: clean('\n'.join([*head, *details('Errors in this run of AMC', now),
                                                *details('Errors and messages on the screen', shown),
                                                *details('Errors from an earlier run', old), *system]))
-        last = (now or shown or [''])[-1].strip()
-        title = clean(f'Problem in AMC {version}' + (f': {last[:80]}' if last else ''))
+        # Only the version: the errors are in the body, and you write the rest yourself.
+        title = clean(f'Problem in AMC {version}')
         # GitHub takes a link of about 8000 characters at most: an earlier run's errors go first,
         # then lines from the end.
         body = compose(before)
@@ -2334,9 +2334,37 @@ class Api:
             self._js(f'amc.dropFiles({json.dumps(paths)})')
 
     def _loaded(self):
-        if not self._drop_hooked:
+        # Every load of the page, the first and any after its web process ended (crashed: a
+        # blank window on Linux, a reload on Windows): the drop hook again, and from the second
+        # on, each terminal's kept output, since the new page's terminals start empty.
+        self._window.dom.get_element('#terms').events.drop += DOMEventHandler(self._on_drop, True)
+        if self._drop_hooked:
+            self._refill()
+        else:
             self._drop_hooked = True
-            self._window.dom.get_element('#terms').events.drop += DOMEventHandler(self._on_drop, True)
+            if not WINDOWS:
+                self._reload_when_ended()
+
+    def _refill(self):
+        with self._out_lock:
+            kept = {tid: h['buf'] for tid, h in self._hist.items() if tid in self._terms}
+            self._out = {}                  # in the kept output already
+        for tid, data in kept.items():
+            self._js(f'amc.output({json.dumps(tid)}, {json.dumps(data)})')
+
+    def _reload_when_ended(self):
+        """Linux: WebKitGTK leaves the window blank when the page's web process ends (crashes,
+        or runs out of memory); load the page again instead (_loaded then refills it)."""
+        from gi.repository import GLib
+        from webview.platforms.gtk import BrowserView
+        view = BrowserView.instances[self._window.uid].webview
+
+        def ended(v, reason):
+            print(f'page: its web process ended ({reason.value_nick}), loading it again',
+                  file=sys.stderr, flush=True)
+            GLib.timeout_add(1000, lambda: v.reload() and False)
+
+        GLib.idle_add(lambda: view.connect('web-process-terminated', ended) and False)
 
     def _set_icon(self):
         """Windows: the window and its taskbar button get the desktop shortcut's

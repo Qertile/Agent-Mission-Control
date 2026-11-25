@@ -532,7 +532,9 @@ function saveCustom() {
 })();
 let themeName = (() => { try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; } })();
 if (!THEMES[themeName]) themeName = 'Classic';
-const termTheme = () => THEMES[themeName].term;
+// A new object each time: xterm.js redraws only when options.theme is another object, so the
+// palette's change to Custom's own colours would not reach the terminals.
+const termTheme = () => ({...THEMES[themeName].term});
 function applyTheme(name) {
   themeName = name;
   for (const [k, v] of Object.entries(THEMES[name].ui)) document.documentElement.style.setProperty('--' + k, v);
