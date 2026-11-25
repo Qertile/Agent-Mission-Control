@@ -58,6 +58,7 @@ STATUS_COLORS = {'busy': 'var(--busy)', 'running': 'var(--busy)', 'waiting': 'va
 # A tab's session idle this long (no turn running, nothing typed) has its process ended to
 # free its memory (about 150 MB); a click on the tab starts it again, in the same conversation.
 HIBERNATE_AFTER = 30 * 60
+INBOX = os.path.join(HERE, 'inbox')         # messages from amc_send.py (_inbox_loop)
 GREY = 'var(--grey)'
 HISTORY = 400_000                          # characters of each tab's output kept for the phone page
 # The aliases `claude --model` takes for the latest model of each family; '' is Claude Code's default.
@@ -528,6 +529,7 @@ class Api:
         threading.Thread(target=self._activity_loop, daemon=True).start()
         threading.Thread(target=self._agy_usage_loop, daemon=True).start()
         threading.Thread(target=self._hibernate_loop, daemon=True).start()
+        threading.Thread(target=self._inbox_loop, daemon=True).start()
         remote.start(self, self._config.get('remote'), os.path.join(HERE, 'web'))
         self._remote_on = bool((self._config.get('remote') or {}).get('token'))
         running = {s['sid'] for s in active_sessions()}
@@ -2193,6 +2195,58 @@ class Api:
                 self._idle_since.pop(sid, None)
                 self._asleep.add(sid)
                 term.close()
+
+    def _inbox_loop(self):
+        """Every second: a message amc_send.py left in INBOX ({"to", "text", "pid"}) is typed
+        into the tab named "to" by send(), which first wakes a hibernating tab (or opens one
+        not running), so a session can reach one SendMessage cannot see. Each message is sent
+        on its own thread, and what went wrong (or null) is written to <name>.done for
+        amc_send.py to print."""
+        os.makedirs(INBOX, exist_ok=True)
+        seen = set()
+        while True:
+            time.sleep(1)
+            try:
+                names = [n for n in os.listdir(INBOX) if n.endswith('.json') and n not in seen]
+            except OSError:
+                continue
+            for name in names:
+                seen.add(name)
+                threading.Thread(target=self._deliver, args=(os.path.join(INBOX, name),), daemon=True).start()
+
+    def _deliver(self, path):
+        try:
+            with open(path, encoding='utf-8') as f:
+                msg = json.load(f)
+            to, text = str(msg.get('to', '')), str(msg.get('text', '')).strip()
+            sender = self._tab_of(int(msg.get('pid') or 0))
+            if not text:
+                err = 'empty message'
+            elif sender and sender == to:
+                err = 'that is this session'
+            else:
+                err = self.send(to, f"[message from {sender or 'another session'} via amc_send] {text}")
+        except (OSError, ValueError, TypeError) as e:
+            err = f'bad message: {e}'
+        try:
+            with open(path[:-len('.json')] + '.done', 'w', encoding='utf-8') as f:
+                json.dump({'error': err}, f)
+            os.remove(path)
+        except OSError:
+            pass
+
+    def _tab_of(self, pid):
+        """The name of the tab whose process `pid` runs under, or None."""
+        names = {e['id']: e['name'] for e in core.agents()}
+        tabs = {term.proc.pid: names.get(sid) for sid, term in list(self._terms.items())}
+        procs = processes()
+        for _ in range(50):
+            if pid in tabs:
+                return tabs[pid]
+            if pid not in procs:
+                return None
+            pid = procs[pid][0]
+        return None
 
     def _usage_view(self):
         """The usage panel, one section per tool: Claude's, Codex's when it has written

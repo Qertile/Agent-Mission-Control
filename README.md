@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.16.1` (current) | `v4.16.0` plus: a session with a command still running in the background does not hibernate, and the right-click menu's *Keep awake* keeps a session (one running a `/loop` or a reminder) from hibernating at all. See `CHANGELOG.md`. |
+| `v4.17.0` (current) | `v4.16.1` plus `Session HUD/amc_send.py`: a session can send a message to a hibernating tab, which SendMessage cannot see; AMC wakes it and types the message in. See `CHANGELOG.md`. |
+| `v4.16.1` | `v4.16.0` plus: a session with a command still running in the background does not hibernate, and the right-click menu's *Keep awake* keeps a session (one running a `/loop` or a reminder) from hibernating at all. See `CHANGELOG.md`. |
 | `v4.16.0` | `v4.15.1` plus hibernating tabs: a session idle for 30 minutes has its process ended to free its memory (about 150 MB) and wakes with a click on its tab, in the same conversation; on Windows, no `conhost.exe` left behind by the Antigravity usage read or a closed tab. See `CHANGELOG.md`. |
 | `v4.15.1` | `v4.15.0` plus a Relax-mode wall round only the 5 sessions nearest the plaza, the camp zoomed in to fill the window with little sky, and a bay about 10% larger. See `CHANGELOG.md`. |
 | `v4.15.0` | `v4.14.2` plus a bay in Relax mode's bottom-left corner with a wharf that grows with the camp (wooden, then stone with a warehouse, then concrete with an ocean liner and a container ship). See `CHANGELOG.md`. |
@@ -395,8 +396,14 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   tab stays, dimmed and in italics with a small `z`, and the Session Monitor shows it as
   *hibernating*. A click on the tab or its pane (a double-click in the Session Monitor; on the
   phone page, the session under *Hibernating*) starts it again in the same conversation; text
-  sent to it from a chat box wakes it first. While hibernating it gets no messages from other
-  sessions, and a question it was waiting on or a `/loop` it ran is gone. Not hibernated:
+  sent to it from a chat box wakes it first. While hibernating, SendMessage from other sessions
+  cannot reach it (its process is gone, so it is not listed); a session can still send it a
+  message through AMC, which wakes it and types the message in, headed
+  `[message from <sender tab> via amc_send]`:
+  `python3 "Session HUD/amc_send.py" "<tab name>" "<message>"` (prints `sent` or what went
+  wrong). For Claude sessions to use it on their own, add a rule to `~/.claude/rules/` such as
+  "when ListAgents does not list the session, send it with amc_send.py" with the full path.
+  A question it was waiting on or a `/loop` it ran is gone. Not hibernated:
   - a session with a command still running in the background (a process under it that started
     a minute or more after its tab), such as a long build Claude left running;
   - a session ticked *Keep awake* in the right-click menu (saved as `"keepAwake"` in
@@ -638,7 +645,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.16.1`（目前） | `v4.16.0` 再加上：背景還有指令在跑的 session 不會休眠；右鍵選單的 *Keep awake* 可以讓某個 session（例如在跑 `/loop` 或提醒的）永遠不休眠。詳見 `CHANGELOG.md`。 |
+| `v4.17.0`（目前） | `v4.16.1` 再加上 `Session HUD/amc_send.py`：session 可以傳訊息給休眠中的分頁（SendMessage 看不到它），AMC 會叫醒它並把訊息打進去。詳見 `CHANGELOG.md`。 |
+| `v4.16.1` | `v4.16.0` 再加上：背景還有指令在跑的 session 不會休眠；右鍵選單的 *Keep awake* 可以讓某個 session（例如在跑 `/loop` 或提醒的）永遠不休眠。詳見 `CHANGELOG.md`。 |
 | `v4.16.0` | `v4.15.1` 再加上：分頁休眠，session 閒置 30 分鐘就結束它的程式、釋放記憶體（約 150 MB），點分頁就叫醒並接回同一段對話；Windows 上讀 Antigravity 用量或關掉分頁時，不再留下 `conhost.exe`。詳見 `CHANGELOG.md`。 |
 | `v4.15.1` | `v4.15.0` 再加上：Relax mode 的城牆只圍離廣場最近的 5 個 session，營地放大填滿視窗、天空變少，海灣大約大 10%。詳見 `CHANGELOG.md`。 |
 | `v4.15.0` | `v4.14.2` 再加上：Relax mode 左下角的海灣，和隨營地長大的碼頭（木造，之後是有倉庫的石砌碼頭，大都會是有郵輪和貨櫃船的水泥碼頭）。詳見 `CHANGELOG.md`。 |
@@ -931,8 +939,12 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **休眠**：分頁的 session 閒置 30 分鐘（沒有在跑、沒有在等你回答、沒有打字），就會結束它的程式來
   釋放記憶體，每個約 150 MB。分頁會留著，變淡、斜體、帶一個小 `z`，Session Monitor 顯示
   *hibernating*。點分頁或它的窗格（Session Monitor 裡雙擊；手機頁在 *Hibernating* 底下選它）就會
-  重新啟動並接回同一段對話；從輸入框傳文字給它也會先叫醒它。休眠期間收不到其他 session 的訊息，
-  原本在等你回答的問題或它跑的 `/loop` 也會消失。以下不會休眠：
+  重新啟動並接回同一段對話；從輸入框傳文字給它也會先叫醒它。休眠期間其他 session 的 SendMessage
+  送不到它（程式已結束，清單裡看不到），但可以透過 AMC 傳：AMC 會叫醒它，再把訊息打進去，開頭是
+  `[message from <寄件分頁> via amc_send]`：
+  `python3 "Session HUD/amc_send.py" "<分頁名稱>" "<訊息>"`（會印出 `sent` 或失敗原因）。要讓 Claude
+  session 自己會用，在 `~/.claude/rules/` 加一條規則，例如「ListAgents 找不到對方時，用 amc_send.py
+  傳」，並寫上完整路徑。原本在等你回答的問題或它跑的 `/loop` 也會消失。以下不會休眠：
   - 背景還有指令在跑的 session（它底下有在分頁開啟一分鐘以後才啟動的程式），例如 Claude 丟到背景跑的長時間 build；
   - 右鍵選單勾了 *Keep awake* 的 session（存成 `agents.json` 的 `"keepAwake"`）：在跑 `/loop` 或提醒的 session 請勾這個；
   - 還沒找到對話的新 Codex 或 Antigravity 分頁。

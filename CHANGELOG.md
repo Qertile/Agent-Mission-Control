@@ -2,6 +2,28 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.17.0: messages to a hibernating tab (amc_send.py)
+
+### Added
+- `Session HUD/amc_send.py "<tab name>" "<message>"`: sends a message to an AMC tab, waking
+  it first when it is hibernating. SendMessage cannot reach a hibernating session (its process
+  and messaging socket are gone, so ListAgents does not list it). The message is left in
+  `Session HUD/inbox/`; the running AMC checks it every second (`_inbox_loop`), and `send()`
+  wakes the tab in the same conversation, waits for its prompt and types the message in,
+  headed `[message from <sender tab> via amc_send]` (the sender found by walking up from the
+  command's process to a tab's). Prints `sent` or what went wrong (`no '<name>' in
+  agents.json`, `that is this session`, `AMC is not running`); exit code 0 only when sent.
+  Waits up to 150 s; a message no AMC picked up is removed, so a later AMC does not send it late.
+- `.gitignore`: `Session HUD/inbox/`.
+- README: Hibernating explains amc_send.py and the `~/.claude/rules/` rule that lets Claude
+  sessions use it on their own (both languages).
+- Versions: `v4.17.0`.
+- Tagged `v4.17.0`.
+
+### Known
+- Tested with stand-in tabs (sent, unknown tab, to itself, no AMC); not yet run in the real
+  AMC, and not on Windows. Codex and Antigravity sessions do not read the Claude rule.
+
 ## 2026-11-23 – v4.16.1: no hibernating with a background command, and Keep awake
 
 ### Changed
