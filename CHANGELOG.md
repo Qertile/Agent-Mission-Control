@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.18.5: Relax mode's map on Windows
+
+### Fixed
+- Relax mode on Windows drew a camp without its map (only flat green, the people and the
+  labels). The v4.18.3 report showed why: `flat 5080x2050 0,0,0,0; bg 1800x1350 0,0,0,0`, so
+  drawing into the two off-screen canvases did nothing, with no error and no lost context.
+  WebView2, with many terminal tabs using the graphics card too, likely gave them no memory.
+  Every off-screen canvas's context (flat, bg, the night and lamp layers, the front fences,
+  the shadows' outlines, the hiding mask, the weather fade's copy) is now made with
+  `willReadFrequently: true`, so it is kept in memory instead of on the card; the
+  canvases on screen are unchanged. The flat world canvas (about 41 MB) is freed right
+  after it is warped; the report takes its entry just before that.
+- Versions: `v4.18.5`.
+- Tagged `v4.18.5`.
+
+### Known
+- Made by AMC Relax Mode and checked in Firefox on a stub page (a village and a city draw
+  fully; a redraw about 10% slower); not yet run in WebView2. The next Send feedback from
+  Windows tells whether flat and bg are drawn.
+
 ## 2026-11-25 – v4.18.4: developer mode's Update on a Chinese Windows
 
 ### Fixed

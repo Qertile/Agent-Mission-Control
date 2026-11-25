@@ -113,6 +113,10 @@ const relax = (() => {
   // over the ground; the pictures are drawn from 31). PAD and PADY: as much margin as the
   // narrowest far side and the sky above the horizon then need; the view goes no higher than
   // the sky's top (SKY_TOP, in the warped picture).
+  // The camp's off-screen canvases are kept in memory, not on the graphics card
+  // (willReadFrequently): WebView2 on Windows, with many terminal tabs using the card too, can
+  // give a big canvas none, and then it stays blank with no error.
+  const SOFT = {willReadFrequently: true};
   const PAD = 1640, PADY = 700, FAR_SCALE = 0.36, FAR_V = 0.55, HORIZON = plot * 0.9, SQ = 0.72;
   const farness = y => Math.min(1, Math.max(0, (y - HORIZON) / (MAP_H - HORIZON)));
   const depth = y => FAR_SCALE + (1 - FAR_SCALE) * farness(y);
@@ -128,7 +132,7 @@ const relax = (() => {
   // strips two units high, each rounded to whole pixels so none overlap (night is see-through).
   function warpCanvas(src, sr, dst, dr) {
     dst.width = Math.round(MAP_W * dr); dst.height = Math.round(MAP_H * dr);
-    const g = dst.getContext('2d');
+    const g = dst.getContext('2d', SOFT);
     g.imageSmoothingQuality = 'high';
     for (let y = -PADY; y < MAP_H; y += 2) {
       const y1 = Math.round(warpY(y) * dr), y2 = Math.round(warpY(y + 2) * dr);
@@ -1041,7 +1045,7 @@ const relax = (() => {
     if (!c) {
       c = document.createElement('canvas');
       c.width = im.naturalWidth || im.width; c.height = im.naturalHeight || im.height;
-      const o = c.getContext('2d');
+      const o = c.getContext('2d', SOFT);
       o.drawImage(im, 0, 0);
       o.globalCompositeOperation = 'source-in';
       o.fillStyle = 'rgb(12, 28, 12)';
@@ -1084,7 +1088,7 @@ const relax = (() => {
     res = Math.min(window.devicePixelRatio || 1, 1.5);
     flat = flat || document.createElement('canvas');
     flat.width = Math.round((w + 2 * PAD) * res); flat.height = Math.round((h + PADY) * res);
-    let g = flat.getContext('2d');
+    let g = flat.getContext('2d', SOFT);
     g.setTransform(res, 0, 0, res, PAD * res, PADY * res);
     g.fillStyle = e[2];
     g.fillRect(-PAD, -PADY, w + 2 * PAD, h + PADY);
@@ -1107,8 +1111,12 @@ const relax = (() => {
     // flat about its ground point, moved and sized there, so its walls stay straight up.
     bg = bg || document.createElement('canvas');
     warpCanvas(flat, res, bg, res);
+    // The flat world is not needed again until the next picture: its memory back (for the
+    // report, the colour at its middle first).
+    flatSeen = `${flat.width}x${flat.height} ${pixel(flat)}`;
+    flat.width = flat.height = 0;
     reportDue = true;
-    g = bg.getContext('2d');
+    g = bg.getContext('2d', SOFT);
     g.setTransform(res, 0, 0, res, 0, 0);
     // Depth in the air: the far ground paler and bluer, the near ground a little darker.
     const top = Y_H - plot * 0.4, air = g.createLinearGradient(0, top, 0, MAP_H), haze = metro(e) ? '205, 215, 225' : '200, 222, 240';
@@ -1136,7 +1144,7 @@ const relax = (() => {
     if (rails.length) {
       frontFence = document.createElement('canvas');
       frontFence.width = bg.width; frontFence.height = bg.height;
-      const f = frontFence.getContext('2d');
+      const f = frontFence.getContext('2d', SOFT);
       f.setTransform(res, 0, 0, res, 0, 0);
       fences(f, true);
     }
@@ -1312,7 +1320,8 @@ const relax = (() => {
   // For ⚙ → Send feedback: the camp's canvases after each new picture, their sizes and the
   // colour at their middle (r,g,b,a; a blank one is 0,0,0,0), and whether the browser lost
   // one. One line, replaced each time.
-  let reportDue = false;
+  let reportDue = false, flatSeen = 'none';
+  const pixel = c => { try { return c.getContext('2d', SOFT).getImageData(c.width >> 1, c.height >> 1, 1, 1).data.join(','); } catch (e) { return 'unreadable: ' + e.message; } };
   function canvasReport() {
     if (typeof amc === 'undefined' || !amc.errors) return;
     // Each canvas on its own: one that cannot be read (lost, or not readable) still leaves the others'.
@@ -1323,7 +1332,7 @@ const relax = (() => {
         return `${name} ${c.width}x${c.height} ${g.getImageData(c.width >> 1, c.height >> 1, 1, 1).data.join(',')}${lost}`;
       } catch (e) { return `${name} ${c.width}x${c.height} unreadable: ${e.message}`; }
     };
-    const line = `relax canvases: ${one('flat', flat)}; ${one('bg', bg)}; ${one('view', view)}; dpr ${window.devicePixelRatio} res ${res} zoom ${zoom.toFixed(2)}`;
+    const line = `relax canvases: flat ${flatSeen}; ${one('bg', bg)}; ${one('view', view)}; dpr ${window.devicePixelRatio} res ${res} zoom ${zoom.toFixed(2)}`;
     const i = amc.errors.findIndex(l => l.startsWith('relax canvases:'));
     if (i >= 0) amc.errors.splice(i, 1);
     amc.errors.push(line);
@@ -2193,7 +2202,7 @@ const relax = (() => {
       nightColor = `rgba(${tint}, ${dark})`;
       const flatNight = document.createElement('canvas');
       flatNight.width = MAP_W + 2 * PAD; flatNight.height = MAP_H + PADY;
-      const g = flatNight.getContext('2d');
+      const g = flatNight.getContext('2d', SOFT);
       g.setTransform(1, 0, 0, 1, PAD, PADY);
       g.globalCompositeOperation = 'source-over';
       g.fillStyle = nightColor;
@@ -2234,7 +2243,7 @@ const relax = (() => {
       litAlpha = Math.min(0.8, dark * 1.2);
       litMap = litMap || document.createElement('canvas');
       litMap.width = MAP_W; litMap.height = MAP_H;
-      const g = litMap.getContext('2d');
+      const g = litMap.getContext('2d', SOFT);
       // Back to front, buildings and lamps together, so a building in front of a lamp hides
       // its glow: each building first wipes out what it stands in front of.
       const order = [...litList.map(([kind, x, y, s, flip, gx, gy, dark]) => [gy, () => onGround(g, gx, gy, () => {
@@ -2291,7 +2300,7 @@ const relax = (() => {
     if (sw <= 0 || sh <= 0) return;
     mask = mask || document.createElement('canvas');
     mask.width = sw; mask.height = sh;
-    const m = mask.getContext('2d');
+    const m = mask.getContext('2d', SOFT);
     m.setTransform(k, 0, 0, k, -ox * k - sx, -oy * k - sy);
     for (const f of over) f.paint(m);
     m.setTransform(1, 0, 0, 1, 0, 0);
@@ -2653,7 +2662,7 @@ const relax = (() => {
     if (bg && w.kind !== weatherDrawn && w.t < 1) {
       bgPrev = bgPrev || document.createElement('canvas');
       bgPrev.width = bg.width; bgPrev.height = bg.height;
-      bgPrev.getContext('2d').drawImage(bg, 0, 0);
+      bgPrev.getContext('2d', SOFT).drawImage(bg, 0, 0);
     }
     sig = now;
     draw(list);
