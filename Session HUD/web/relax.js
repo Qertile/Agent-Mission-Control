@@ -1207,7 +1207,7 @@ const relax = (() => {
       if (building) scaffold(g, cx, ground, level, false);
       if (pic) put(g, pic, cx, ground, s, flip);
       if (building) scaffold(g, cx, ground, level, true);
-      if (pic) front(cx, ground, Math.max(s / 2, plot * 0.75 * big), s * ANCHOR, standing(cx, ground, g2 => {
+      if (pic) front(cx, ground, s / 2 + plot * 0.2 * big, s * ANCHOR, standing(cx, ground, g2 => {
         if (b.kind !== 'meeting' && b.status !== 'ended') yard(e, level, b.id).forEach((k, i) => {
           if (!img[k]) return;
           const side = (i ? 1 : -1) * (flip ? -1 : 1), ks = plot * 1.5 * scaleOf(k) * big * (YARD_SIZE[k.replace(/^med-/, '')] || 0.55);
@@ -1239,17 +1239,15 @@ const relax = (() => {
                 const side = (l.flip ? -1 : 1) * plot * (l.b.kind === 'lantern-post' ? 0.13 : 0.18);
                 return {x: l.x + side, y: l.y, r: plot * 0.5, lamp: true, head: plot * (l.b.kind === 'lantern-post' ? 0.36 : 0.58)};
               })];
-    // What the view must hold: the buildings (their roofs too), and every paddock's four
-    // corners. From the highest roof down, not from the mountains: the camp fills the window,
-    // with little sky.
-    const pens = [...new Set(herd.filter(a => a.pen).map(a => a.pen))];
-    const pts = [...placed.map(p => warp(p.x, p.y)), ...pens.flatMap(pen => [[0, 0], [1, 0], [0, 1], [1, 1]].map(([a, b]) => { const q = inPen(pen, a, b); return warp(q.x, q.y); }))];
-    const xs = pts.map(q => q[0]);
-    const left = Math.max(0, Math.min(...xs, MAP_W * 0.3) - plot * 0.9), right = Math.min(MAP_W, Math.max(...xs, MAP_W * 0.7) + plot * 0.9);
+    // What the view must hold zoomed all the way out: every building, from the highest roof
+    // down to the names under the lowest; the names' room at the sides and below in pixels
+    // (FIT.px, FIT.pb: they stay one size), as the zoom is not known yet.
+    const at = placed.map(p => warp(p.x, p.y)), xs = at.map(q => q[0]);
+    const left = Math.max(0, Math.min(...xs) - plot * 0.6), right = Math.min(MAP_W, Math.max(...xs) + plot * 0.6);
     const wasFit = !zoom || zoom - fitZoom() < 0.001;
-    const bottom = Math.min(MAP_H, Math.max(...placed.map(p => warp(p.x, p.y)[1])) + plot * 0.55);
-    const fitTop = Math.max(SKY_TOP, Math.min(...pts.map(q => q[1])) - plot * 1.3);
-    FIT = {x: left, y: fitTop, w: right - left, h: bottom - fitTop};
+    const bottom = Math.min(MAP_H, Math.max(...at.map(q => q[1])) + plot * 0.25);
+    const fitTop = Math.max(SKY_TOP, Math.min(...at.map(q => q[1])) - plot * 1.3);
+    FIT = {x: left, y: fitTop, w: right - left, h: bottom - fitTop, px: 80, pb: 36};
     if (wasFit && zoom) zoom = fitZoom();      // still all the way out
     eraNow = e;
     eraCheck(e);
@@ -1263,20 +1261,24 @@ const relax = (() => {
   // Zoomed out all the way, the window shows the part of the map where the camp is: not the
   // empty corners the tilt leaves either side of the far end, nor most of the sky. Zoomed in,
   // the whole map can be dragged into view.
-  // FIT is set by each draw: from the mountain tops down, across what stands on the map.
+  // FIT is set by each draw: every building and its name.
   let FIT = {x: 0, y: 0, w: MAP_W, h: MAP_H};
-  // All the way out it fills the window's height with the camp, leaving up to a quarter of
-  // its width out at the sides (half each side) rather than show sky above it.
-  function fitZoom() { return Math.min(viewW / (FIT.w * 0.75), viewH / FIT.h); }
+  // All the way out the window holds all of FIT, the names' pixels besides (no more than
+  // ZOOM_MAX, for a camp of one or two).
+  function fitZoom() { return Math.min(ZOOM_MAX, Math.max(0.05, viewW - 2 * (FIT.px || 0)) / FIT.w, Math.max(0.05, viewH - (FIT.pb || 0)) / FIT.h); }
   // Within the map; a map smaller than the window sits in its middle.
   function clampView() {
     const fit = fitZoom();
     zoom = Math.max(fit, Math.min(ZOOM_MAX, zoom || fit));
     if (zoom - fit < 0.001) {             // all the way out: FIT in the middle, but not past the map's edge
       const vw = viewW / zoom, vh = viewH / zoom, keep = (o, v, M) => (v >= M ? (M - v) / 2 : Math.max(0, Math.min(M - v, o)));
-      // Taller than the map from the sky's top down: the bottom at the map's, more sky above.
+      // The buildings in the middle across; from the highest roof down, room to spare below
+      // (the land, the bay) rather than sky above, as far as the map goes. Taller than the map
+      // from the sky's top down: the bottom at the map's, more sky above.
+      // The lowest names may hang below the map's edge (the ground's colour is under them).
+      const B = Math.max(MAP_H, FIT.y + FIT.h + (FIT.pb || 0) / zoom);
       ox = keep(FIT.x + (FIT.w - vw) / 2, vw, MAP_W);
-      oy = vh >= MAP_H - SKY_TOP ? MAP_H - vh : SKY_TOP + keep(FIT.y - SKY_TOP + (FIT.h - vh) / 2, vh, MAP_H - SKY_TOP);
+      oy = vh >= B - SKY_TOP ? B - vh : SKY_TOP + keep(FIT.y - SKY_TOP, vh, B - SKY_TOP);
       return;
     }
     ox = MAP_W * zoom <= viewW ? -(viewW / zoom - MAP_W) / 2 : Math.max(0, Math.min(MAP_W - viewW / zoom, ox));
@@ -2316,23 +2318,39 @@ const relax = (() => {
 
   // What stands nearer the camera than a person hides it: its own pixels, cut to its shape,
   // drawn again over the person (right after it, so a person in front of that is drawn over).
-  let mask = null;
   function hide(g, p, k) {
-    const [bx, by, bw, bh] = warpBox(box(p));
-    const over = fronts.filter(f => f.y > p.y && f.x0 < bx + bw && bx < f.x1 && f.y0 < by + bh && by < f.y1);
-    if (!over.length) return;
-    const sx = Math.max(0, Math.floor((bx - ox) * k)), sy = Math.max(0, Math.floor((by - oy) * k));
-    const sw = Math.min(view.width - sx, Math.ceil(bw * k) + 2), sh = Math.min(view.height - sy, Math.ceil(bh * k) + 2);
-    if (sw <= 0 || sh <= 0) return;
-    mask = keep(mask);
-    mask.width = sw; mask.height = sh;
-    const m = mask.getContext('2d', SOFT);
-    m.setTransform(k, 0, 0, k, -ox * k - sx, -oy * k - sy);
-    for (const f of over) f.paint(m);
+    if (p.boat) return;                    // on the river: nothing stands in front of it there
+    const z = size(), [bx, by, bw, bh] = warpBox([p.x - z / 2, p.y - z * ANCHOR, z, z]);   // the figure, not its shadow
+    let clipped = false;
+    for (const f of fronts) {              // back to front, as drawn
+      if (f.y <= p.y || f.x1 <= bx || bx + bw <= f.x0 || f.y1 <= by || by + bh <= f.y0) continue;
+      if (f.sprite === undefined) { cutFront(f); if (!f.sprite || f.x1 <= bx || bx + bw <= f.x0 || f.y1 <= by || by + bh <= f.y0) continue; }
+      if (!f.sprite) continue;
+      if (!clipped) { clipped = true; g.save(); g.setTransform(k, 0, 0, k, -ox * k, -oy * k); g.beginPath(); g.rect(bx, by, bw, bh); g.clip(); }
+      g.drawImage(f.sprite, f.sx, f.sy, f.sw, f.sh);
+    }
+    if (clipped) g.restore();
+  }
+  // A thing that stands up, cut out of the finished picture by its own shape, the first time
+  // a person comes near it after each picture: hide() then only lays it over the person.
+  function cutFront(f) {
+    const x0 = Math.max(0, Math.floor(f.x0 * res)), y0 = Math.max(0, Math.floor(f.y0 * res));
+    const w = Math.min(bg.width, Math.ceil(f.x1 * res) + 1) - x0, h = Math.min(bg.height, Math.ceil(f.y1 * res) + 1) - y0;
+    if (w <= 0 || h <= 0) { f.sprite = null; return; }
+    const c = document.createElement('canvas'), m = c.getContext('2d', SOFT);
+    c.width = w; c.height = h;
+    m.setTransform(res, 0, 0, res, -x0, -y0);
+    f.paint(m);
     m.setTransform(1, 0, 0, 1, 0, 0);
     m.globalCompositeOperation = 'source-in';
-    m.drawImage(view, sx, sy, sw, sh, 0, 0, sw, sh);
-    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(mask, sx, sy); g.restore();
+    m.drawImage(bg, x0, y0, w, h, 0, 0, w, h);
+    Object.assign(f, {sprite: c, sx: x0 / res, sy: y0 / res, sw: w / res, sh: h / res});
+    // Its box shrunk to where its shape really is, so fewer of them are laid over each person.
+    const a = m.getImageData(0, 0, w, h).data;
+    let l = w, r = -1, t = h, b = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (a[(y * w + x) * 4 + 3] > 8) { if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y; }
+    if (r < 0) { f.sprite = null; return; }
+    Object.assign(f, {x0: (x0 + l) / res, x1: (x0 + r + 1) / res, y0: (y0 + t) / res, y1: (y0 + b + 1) / res});
   }
   // The streets as a net to walk on: a point about every 20 units along each road, joined to
   // the next along it and to any other road's within 14 (where roads meet).

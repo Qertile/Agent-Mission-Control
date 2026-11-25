@@ -2,6 +2,23 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – untagged: Relax mode uses a third of the CPU, and shows every session
+
+### Changed
+- Relax mode's people hidden behind what stands in front of them cost about 4 times the
+  drawing time (on a 15-session city, 109 ms of each second against 25 before the walkers):
+  each redrawn person repainted about 14 overlapping buildings into a mask canvas resized
+  every time. Each building is now cut out of the finished picture once, the first time
+  someone comes near it, and its box shrunk to its real shape. A person then gets only the
+  one or two cut-outs over it, and no canvas is made or resized per frame; boats are
+  skipped. 109 -> 34 ms each second. The first redraw after a new picture is about 100 ms
+  longer.
+- Fully zoomed out, the window holds every building and its name. Before, up to a quarter
+  of the camp's width could be cut at the sides (v4.15.1), so a camp with many sessions lost
+  the ones at its edges. A narrow window draws the camp smaller, and a tall one shows more
+  sky. The view is anchored at the top.
+- Both made by AMC Relax Mode.
+
 ## 2026-11-25 – untagged: the page comes back after a crash; Custom colours reach the terminals
 
 ### Fixed
