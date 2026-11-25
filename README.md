@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.18.5` (current) | `v4.18.4` plus a fix for Relax mode's camp drawn without its map on Windows: its off-screen canvases are kept in memory instead of on the graphics card. See `CHANGELOG.md`. |
+| `v4.19.0` (current) | `v4.18.5` plus your own colours: ⚙ → *Theme ▸* → *Edit colours…* makes a *Custom* theme from any theme, colour by colour. See `CHANGELOG.md`. |
+| `v4.18.5` | `v4.18.4` plus a fix for Relax mode's camp drawn without its map on Windows: its off-screen canvases are kept in memory instead of on the graphics card. See `CHANGELOG.md`. |
 | `v4.18.4` | `v4.18.3` plus a fix: on a Chinese Windows, developer mode's ⚙ → *Update* no longer stays at *reading GitHub…*. See `CHANGELOG.md`. |
 | `v4.18.3` | `v4.18.2` plus: ⚙ → *Send feedback…* lists Relax mode's canvases (size and the colour at their middle), to find why a camp is drawn without its map on Windows. See `CHANGELOG.md`. |
 | `v4.18.2` | `v4.18.1` plus: an error Relax mode's drawing (or the first refresh or task read) throws is listed in ⚙ → *Send feedback…* with its file and line. See `CHANGELOG.md`. |
@@ -548,7 +549,11 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
 - **Theme:** `⚙` at the right of the tab bar → *Theme ▸* lists the themes: Classic (the original
   green on black, the default), Dark, Light, Monokai, Solarized Dark, Solarized Light,
   Dracula, Nord, Gruvbox Dark and One Dark. The theme colours the whole window and the
-  terminals, and is kept for the next start.
+  terminals, and is kept for the next start. *Theme ▸* → *Edit colours…* opens a palette
+  for your own theme, *Custom*: pick a theme to start from, then click any of its 19 colours
+  (15 for the window, such as Background, Accent, Busy and Waiting, and 4 for the terminals:
+  background, text, cursor, selection) to change it in the system's colour picker. The window
+  follows as you pick. Custom is then in the list with the others, kept on this computer.
 - **Default AI:** `⚙` → *Default AI ▸* picks Claude, Codex or Antigravity (only the installed
   ones) for `Task Reminder` and `Session Manager`, made on their first send. Kept as
   `"defaultTool"` in `Session HUD/hud-config.json`. When those two are already on another
@@ -657,7 +662,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.18.5`（目前） | `v4.18.4` 再加上修正：Windows 上 Relax mode 營地地圖空白；畫面外的畫布改放在記憶體，不放顯示卡。詳見 `CHANGELOG.md`。 |
+| `v4.19.0`（目前） | `v4.18.5` 再加上自訂配色：⚙ → *Theme ▸* → *Edit colours…* 可以從任一主題出發，一個一個顏色改，做成 *Custom* 主題。詳見 `CHANGELOG.md`。 |
+| `v4.18.5` | `v4.18.4` 再加上修正：Windows 上 Relax mode 營地地圖空白；畫面外的畫布改放在記憶體，不放顯示卡。詳見 `CHANGELOG.md`。 |
 | `v4.18.4` | `v4.18.3` 再加上修正：中文版 Windows 上，開發者模式的 ⚙ → *Update* 不會再一直停在 *reading GitHub…*。詳見 `CHANGELOG.md`。 |
 | `v4.18.3` | `v4.18.2` 再加上：⚙ → *Send feedback…* 會列出 Relax mode 各張畫布的大小和正中間的顏色，用來查 Windows 上營地地圖空白的原因。詳見 `CHANGELOG.md`。 |
 | `v4.18.2` | `v4.18.1` 再加上：Relax mode 畫圖（或第一次更新、讀工作清單）出錯時，錯誤和它的檔案、行號會列在 ⚙ → *Send feedback…* 裡。詳見 `CHANGELOG.md`。 |
@@ -1068,7 +1074,10 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   再按一次 `⇔` 回到三欄。
 - **主題**：分頁列右邊的 `⚙` → *Theme ▸* 列出主題：Classic（原本的黑底綠字，預設）、Dark、Light、
   Monokai、Solarized Dark、Solarized Light、Dracula、Nord、Gruvbox Dark、One Dark。
-  主題會套用到整個視窗和終端機，下次啟動仍然保留。
+  主題會套用到整個視窗和終端機，下次啟動仍然保留。*Theme ▸* → *Edit colours…* 會打開調色盤，
+  做你自己的主題 *Custom*：先選一個主題當起點，再點 19 個顏色中的任一個（視窗 15 個，例如
+  Background、Accent、Busy、Waiting；終端機 4 個：背景、文字、游標、選取），用系統的取色器改。
+  改的同時視窗就會跟著變。之後 Custom 會和其他主題列在一起，存在這台電腦上。
 - **預設 AI**：`⚙` → *Default AI ▸* 選 Claude、Codex 或 Antigravity（只能選有裝的），
   `Task Reminder` 和 `Session Manager` 第一次送出訊息建立時就用它。存在
   `Session HUD/hud-config.json` 的 `"defaultTool"`。這兩個分頁已經用別的工具時會先問：

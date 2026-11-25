@@ -316,6 +316,17 @@
   #add-menu .hist-row span:hover { color: var(--red); }
   .menu .commits div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
+  /* ⚙ → Theme → Edit colours…: one row a colour, a click on its swatch to change it. */
+  #palette { max-height: 85vh; overflow-y: auto; padding: 6px 0; }
+  #palette div.pal-head { color: var(--accent); cursor: default; }
+  #palette div.pal-head:hover, #palette div.pal-row:hover { background: none; color: inherit; }
+  #palette div.pal-row { display: flex; align-items: center; gap: 10px; cursor: default; padding: 2px 14px; }
+  #palette .pal-row input { width: 34px; height: 20px; margin: 0; padding: 0; border: 1px solid var(--desc);
+                            background: none; cursor: pointer; }
+  #palette .pal-row span { flex: 1; }
+  #palette .pal-row code { color: var(--note); font: inherit; }
+  #palette select { background: var(--bg); color: var(--title); border: 1px solid var(--desc); font: inherit; }
+  #palette div.pal-done { text-align: right; color: var(--accent); }
   .menu input { margin: 3px 8px; width: 180px; background: var(--bg); color: var(--title);
                 border: 1px solid var(--desc); font: inherit; padding: 2px 4px; outline: none; }
   #fork-id, #fork-id + input { display: block; width: 300px; }   /* one under the other; an id fits */
@@ -411,6 +422,7 @@
   <div class="line"><button id="xc-go">Start</button><button id="xc-cancel">Cancel</button></div>
 </div>
 <div id="cal"></div>
+<div class="menu" id="palette"></div>
 
 <script src="vendor/xterm.js"></script>
 <script src="vendor/addon-fit.js"></script>
@@ -495,6 +507,29 @@ const THEMES = {
            ...ansi('#282c34', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#abb2bf',
                    '#5c6370', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#ffffff')}},
 };
+// ⚙ → Theme → Edit colours…: your own theme, "Custom", started from one of the themes above
+// and changed colour by colour in the palette (#palette). Kept in this computer's page
+// storage, as the theme's name is.
+const CUSTOM_KEY = 'amc-custom-theme';
+const UI_NAMES = {bg: 'Background', bar: 'Headers and menus', line: 'Lines', accent: 'Accent', title: 'Text',
+                  desc: 'Second text', note: 'Dim text', spark: 'Activity graph', tabon: 'Current tab',
+                  attn: 'Tab that needs you', busy: 'Busy', wait: 'Waiting', idle: 'Idle', grey: 'Ended',
+                  red: 'Errors'};
+const TERM_NAMES = {background: 'Terminal background', foreground: 'Terminal text', cursor: 'Cursor',
+                    selectionBackground: 'Selection'};
+function setCustom(base, saved) {
+  const b = THEMES[base] || THEMES.Classic;
+  THEMES.Custom = {base, ui: {...b.ui, ...(saved && saved.ui)}, term: {...b.term, ...(saved && saved.term)}};
+}
+function saveCustom() {
+  const c = THEMES.Custom;
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify({base: c.base, ui: c.ui, term: c.term})); } catch (e) {}
+}
+(() => {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(CUSTOM_KEY)); } catch (e) {}
+  if (saved && THEMES[saved.base]) setCustom(saved.base, saved);
+})();
 let themeName = (() => { try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; } })();
 if (!THEMES[themeName]) themeName = 'Classic';
 const termTheme = () => THEMES[themeName].term;
@@ -1667,7 +1702,8 @@ function setSubmenu(which) {
   if (which === 'accounts') return accountsMenu();
   const m = $('set-menu'), def = setMenuDef;
   m.innerHTML = '<div data-back="1">◂ Back</div><hr>' + (which === 'theme'
-    ? Object.keys(THEMES).map(n => `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('')
+    ? Object.keys(THEMES).map(n => `<div data-theme="${esc(n)}">${n === themeName ? '✓' : '\u00a0'} ${esc(n)}</div>`).join('') +
+      '<hr><div data-palette="1">\u00a0 Edit colours…</div>'
     : Object.entries(AI_LABELS).map(([k, label]) =>
         def.installed.includes(k) ? `<div data-tool="${k}">${k === def.tool ? '✓' : '\u00a0'} ${label}</div>`
                                   : `<div class="disabled" title="not installed">\u00a0 ${label}</div>`).join(''));
@@ -1724,6 +1760,7 @@ $('set-menu').addEventListener('click', e => {
     return;
   }
   if (e.target.dataset.theme) applyTheme(e.target.dataset.theme);
+  if (e.target.dataset.palette) { e.stopPropagation(); hideMenus(); openPalette(); return; }
   if (e.target.dataset.monitor) {
     const hide = !document.body.classList.contains('no-monitor');
     document.body.classList.toggle('no-monitor', hide);
@@ -2385,7 +2422,7 @@ $('term-menu').addEventListener('click', e => {
   if (act === 'pin') api().pin(m.id, m.text);
   if (act === 'copy') copyText(m.text);
 });
-function hideMenus() { for (const id of ['term-menu', 'row-menu', 'status-menu', 'result-box', 'restore-menu', 'add-menu', 'set-menu', 'send-menu', 'cal']) $(id).style.display = 'none'; }
+function hideMenus() { for (const id of ['term-menu', 'row-menu', 'status-menu', 'result-box', 'restore-menu', 'add-menu', 'set-menu', 'send-menu', 'cal', 'palette']) $(id).style.display = 'none'; }
 // This window and the remote desktop type into the same terminals, which have one size: the
 // window used last sets it. A click or a key here gives the shown terminals this window's size
 // again (the remote desktop's resize does nothing there; remote-desktop.js claims its own).
@@ -2417,6 +2454,50 @@ $('tabs').addEventListener('wheel', e => {
   e.preventDefault();
   $('tabs').scrollLeft += e.deltaY;
 }, {passive: false});
+
+// ---------------------------------------------------------------- palette
+// The Custom theme's colours, each changed with the system's colour picker; the page and the
+// terminals follow as you pick. "Start from" makes Custom a copy of another theme again.
+function openPalette() {
+  if (!THEMES.Custom) setCustom(themeName, null);
+  applyTheme('Custom');
+  saveCustom();
+  drawPalette();
+  const b = $('set-btn').getBoundingClientRect(), m = $('palette');
+  showAt(m, b.right - m.offsetWidth, b.bottom);
+}
+function drawPalette() {
+  const c = THEMES.Custom;
+  const row = (group, key, label) =>
+    `<div class="pal-row"><input type="color" data-group="${group}" data-key="${key}" value="${c[group][key]}">` +
+    `<span>${esc(label)}</span><code>${c[group][key]}</code></div>`;
+  $('palette').innerHTML =
+    '<div class="pal-head">Custom colours</div>' +
+    `<div class="pal-row">Start from <select id="pal-base">${Object.keys(THEMES).filter(n => n !== 'Custom')
+      .map(n => `<option${n === c.base ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div><hr>` +
+    Object.entries(UI_NAMES).map(([k, l]) => row('ui', k, l)).join('') + '<hr>' +
+    Object.entries(TERM_NAMES).map(([k, l]) => row('term', k, l)).join('') +
+    '<hr><div class="pal-done" data-done="1">Done</div>';
+}
+$('palette').addEventListener('click', e => {
+  e.stopPropagation();                      // open while you pick, closed by Done, Esc or a click outside
+  if (e.target.dataset.done) hideMenus();
+});
+$('palette').addEventListener('input', e => {
+  const {group, key} = e.target.dataset;
+  if (!group) return;
+  THEMES.Custom[group][key] = e.target.value;
+  e.target.parentNode.querySelector('code').textContent = e.target.value;
+  applyTheme('Custom');
+  saveCustom();
+});
+$('palette').addEventListener('change', e => {
+  if (e.target.id !== 'pal-base') return;
+  setCustom(e.target.value, null);
+  applyTheme('Custom');
+  saveCustom();
+  drawPalette();
+});
 
 // ---------------------------------------------------------------- refresh
 async function refresh() {

@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.19.0: your own colours
+
+### Added
+- ⚙ → *Theme ▸* → *Edit colours…*: a palette for your own theme, *Custom*. *Start from*
+  copies one of the themes; each of its colours is then one row with a swatch, a name and
+  its hex. There are 15 for the window (Background, Headers and menus, Lines, Accent, Text,
+  Second text, Dim text, Activity graph, Current tab, Tab that needs you, Busy, Waiting,
+  Idle, Ended, Errors) and 4 for the terminals (background, text, cursor, selection; the 16
+  ANSI colours stay the starting theme's). A click on a swatch opens the system's colour
+  picker, and the window and the terminals follow as you pick. Custom is listed with the
+  other themes and kept in this computer's page storage (`amc-custom-theme`), as the theme's
+  name is. Done, Esc or a click outside closes it.
+- README: Theme describes it (both languages).
+- Versions: `v4.19.0`.
+- Tagged `v4.19.0`.
+
+### Known
+- Drawn on a stub page in Firefox (from Solarized Dark, Accent changed: the page followed);
+  not yet run in the real AMC's WebKitGTK or WebView2 colour pickers.
+
 ## 2026-11-25 – v4.18.5: Relax mode's map on Windows
 
 ### Fixed
