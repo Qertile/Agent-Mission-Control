@@ -2,6 +2,16 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.18.2: caught page errors listed in Send feedback
+
+### Changed
+- An error caught in the page (Relax mode's part of a refresh, the first refresh, the first
+  task read; v4.18.1 only logged them to the console, which pywebview's window does not show)
+  is now kept with the page's other errors (`amc.logError`), with the file and line it was
+  thrown at, so ⚙ → *Send feedback…* lists it. For the Windows camp drawn without its map.
+- Versions: `v4.18.2`.
+- Tagged `v4.18.2`.
+
 ## 2026-11-25 – v4.18.1: Relax mode draws a village and a town again; the page keeps updating
 
 ### Fixed

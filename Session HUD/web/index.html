@@ -1394,6 +1394,13 @@ amc.openPath = async tries => {
 };
 // What the page tells Send feedback: its look and its last script errors.
 amc.errors = [];
+// A caught error, kept with the others for ⚙ → Send feedback… (where it was thrown: its stack's first line).
+amc.logError = (where, e) => {
+  console.error(where + ':', e);
+  const at = ((e && e.stack) || '').split('\n').find(l => /:\d+:\d+/.test(l)) || '';
+  amc.errors.push(`${where}: ${e && e.message || e} ${at.trim()}`);
+  amc.errors.splice(0, amc.errors.length - 20);
+};
 addEventListener('error', e => { amc.errors.push(`${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})`); amc.errors.splice(0, amc.errors.length - 20); });
 addEventListener('unhandledrejection', e => { amc.errors.push(`unhandled: ${e.reason && e.reason.message || e.reason}`); amc.errors.splice(0, amc.errors.length - 20); });
 // What AMC told the person in a box (an error in most cases) goes with it too.
@@ -2419,7 +2426,7 @@ async function refresh() {
   try {
     relax.stamina(s.usage);
     relax.update(false, s.camp);
-  } catch (e) { console.error('relax:', e); }
+  } catch (e) { amc.logError('relax', e); }
 }
 // Once, after the restart of an Update: what it brought.
 async function showUpdateNote() {
@@ -2449,8 +2456,8 @@ async function init() {
   // The timers first: one failed refresh (or task read) must not leave the page never updating.
   setInterval(refresh, 1000);
   setInterval(refreshTasks, 30000);
-  await refresh().catch(e => console.error('refresh:', e));
-  await refreshTasks().catch(e => console.error('tasks:', e));
+  await refresh().catch(e => amc.logError('refresh', e));
+  await refreshTasks().catch(e => amc.logError('tasks', e));
   showUpdateNote().catch(() => {});
 }
 if (window.pywebview && window.pywebview.api && window.pywebview.api.init) init();
