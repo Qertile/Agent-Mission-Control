@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.18.2` (current) | `v4.18.1` plus: an error Relax mode's drawing (or the first refresh or task read) throws is listed in ⚙ → *Send feedback…* with its file and line. See `CHANGELOG.md`. |
+| `v4.18.3` (current) | `v4.18.2` plus: ⚙ → *Send feedback…* lists Relax mode's canvases (size and the colour at their middle), to find why a camp is drawn without its map on Windows. See `CHANGELOG.md`. |
+| `v4.18.2` | `v4.18.1` plus: an error Relax mode's drawing (or the first refresh or task read) throws is listed in ⚙ → *Send feedback…* with its file and line. See `CHANGELOG.md`. |
 | `v4.18.1` | `v4.18.0` plus fixes: Relax mode draws a village's and a town's camp again, and the page keeps updating (Session Monitor, tasks) when Relax mode's drawing fails. See `CHANGELOG.md`. |
 | `v4.18.0` | `v4.17.1` plus, in Relax mode, the idle sessions' people walking the camp's streets, hidden behind what stands in front of them, and a hibernating session shown asleep (lights off, its status in pale purple). See `CHANGELOG.md`. |
 | `v4.17.1` | `v4.17.0` plus: the task due-date calendar starts its weeks on Sunday. See `CHANGELOG.md`. |
@@ -654,7 +655,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.18.2`（目前） | `v4.18.1` 再加上：Relax mode 畫圖（或第一次更新、讀工作清單）出錯時，錯誤和它的檔案、行號會列在 ⚙ → *Send feedback…* 裡。詳見 `CHANGELOG.md`。 |
+| `v4.18.3`（目前） | `v4.18.2` 再加上：⚙ → *Send feedback…* 會列出 Relax mode 各張畫布的大小和正中間的顏色，用來查 Windows 上營地地圖空白的原因。詳見 `CHANGELOG.md`。 |
+| `v4.18.2` | `v4.18.1` 再加上：Relax mode 畫圖（或第一次更新、讀工作清單）出錯時，錯誤和它的檔案、行號會列在 ⚙ → *Send feedback…* 裡。詳見 `CHANGELOG.md`。 |
 | `v4.18.1` | `v4.18.0` 再加上修正：Relax mode 在村莊、城鎮階段又畫得出營地了；Relax mode 畫圖出錯時，頁面（Session Monitor、工作清單）也會照常更新。詳見 `CHANGELOG.md`。 |
 | `v4.18.0` | `v4.17.1` 再加上：Relax mode 裡閒置 session 的小人沿著街道逛整個營地，走到建築後面會被擋住；休眠的 session 不亮燈，狀態用淡紫色。詳見 `CHANGELOG.md`。 |
 | `v4.17.1` | `v4.17.0` 再加上：工作清單的到期日月曆改成每週從週日開始。詳見 `CHANGELOG.md`。 |

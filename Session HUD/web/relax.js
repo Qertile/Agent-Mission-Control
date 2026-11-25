@@ -1107,6 +1107,7 @@ const relax = (() => {
     // flat about its ground point, moved and sized there, so its walls stay straight up.
     bg = bg || document.createElement('canvas');
     warpCanvas(flat, res, bg, res);
+    reportDue = true;
     g = bg.getContext('2d');
     g.setTransform(res, 0, 0, res, 0, 0);
     // Depth in the air: the far ground paler and bluer, the near ground a little darker.
@@ -1306,6 +1307,26 @@ const relax = (() => {
     if (moving && moving.to) ghost(out, moving.to, moving.ok);
     drawTags();
     drawNight();
+    if (reportDue) { reportDue = false; canvasReport(); }
+  }
+  // For ⚙ → Send feedback: the camp's canvases after each new picture, their sizes and the
+  // colour at their middle (r,g,b,a; a blank one is 0,0,0,0), and whether the browser lost
+  // one. One line, replaced each time.
+  let reportDue = false;
+  function canvasReport() {
+    if (typeof amc === 'undefined' || !amc.errors) return;
+    // Each canvas on its own: one that cannot be read (lost, or not readable) still leaves the others'.
+    const one = (name, c) => {
+      if (!c) return `${name} none`;
+      try {
+        const g = c.getContext('2d'), lost = g.isContextLost && g.isContextLost() ? ' LOST' : '';
+        return `${name} ${c.width}x${c.height} ${g.getImageData(c.width >> 1, c.height >> 1, 1, 1).data.join(',')}${lost}`;
+      } catch (e) { return `${name} ${c.width}x${c.height} unreadable: ${e.message}`; }
+    };
+    const line = `relax canvases: ${one('flat', flat)}; ${one('bg', bg)}; ${one('view', view)}; dpr ${window.devicePixelRatio} res ${res} zoom ${zoom.toFixed(2)}`;
+    const i = amc.errors.findIndex(l => l.startsWith('relax canvases:'));
+    if (i >= 0) amc.errors.splice(i, 1);
+    amc.errors.push(line);
   }
   // Moving a building: where it would go, green if it can, red if not.
   function ghost(g, {x, y}, ok) {

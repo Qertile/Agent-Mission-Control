@@ -2,6 +2,19 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.18.3: Relax mode's canvases in Send feedback
+
+### Added
+- Relax mode: after each new picture of the camp, one line in the page's errors (replaced
+  each time, so ⚙ → *Send feedback…* always shows it): `relax canvases: flat WxH r,g,b,a;
+  bg …; view …; dpr … res … zoom …`. That is each canvas's size and the colour at its middle
+  (`0,0,0,0` is blank), ` LOST` when the browser lost it, and `unreadable: …` when it cannot
+  be read. To tell where the Windows camp loses its map: the world canvas (flat), the warp
+  (bg) or the copy to the window (view). Feedback no longer says *No errors were recorded*
+  once Relax mode has drawn.
+- Versions: `v4.18.3`.
+- Tagged `v4.18.3`.
+
 ## 2026-11-25 – v4.18.2: caught page errors listed in Send feedback
 
 ### Changed
