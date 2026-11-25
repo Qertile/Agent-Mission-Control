@@ -2,6 +2,18 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – untagged: Relax mode remakes a lost canvas
+
+### Fixed
+- Relax mode on Windows: the probes showed `bg 1800x1350 0,0,0,0 LOST`. The flat world
+  now draws (v4.18.5's in-memory canvases), but the warped picture's canvas, kept from one
+  picture to the next, had its context lost, so the camp stayed blank. Each kept canvas
+  (flat, bg, view, the night and lamp layers, the hiding mask, the weather fade's copy) is
+  now made again when its context is lost (`keep`), and redraws when the browser gives one
+  back. A bg lost after it was drawn is drawn again, at most once in 5 seconds. The report
+  line adds `remade N`, the number of canvases made again. Made by AMC Relax Mode; the lost
+  path is not yet run on Windows.
+
 ## 2026-11-25 – untagged: Relax mode's canvas probes in Send feedback
 
 ### Changed

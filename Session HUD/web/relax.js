@@ -117,6 +117,17 @@ const relax = (() => {
   // (willReadFrequently): WebView2 on Windows, with many terminal tabs using the card too, can
   // give a big canvas none, and then it stays blank with no error.
   const SOFT = {willReadFrequently: true};
+  // A canvas kept from one picture to the next, made again if the browser has lost its
+  // context (WebView2 on Windows can: it is then blank for good, with no error). When the
+  // browser gives one back, everything is drawn again.
+  let remade = 0;                          // how many lost ones were made again, for the report
+  function keep(c) {
+    if (c && !(c.getContext('2d', SOFT).isContextLost?.())) return c;
+    if (c) remade++;
+    const n = document.createElement('canvas');
+    n.addEventListener('contextrestored', () => update(true));
+    return n;
+  }
   const PAD = 1640, PADY = 700, FAR_SCALE = 0.36, FAR_V = 0.55, HORIZON = plot * 0.9, SQ = 0.72;
   const farness = y => Math.min(1, Math.max(0, (y - HORIZON) / (MAP_H - HORIZON)));
   const depth = y => FAR_SCALE + (1 - FAR_SCALE) * farness(y);
@@ -1086,7 +1097,7 @@ const relax = (() => {
     if (!river.length) river = riverPath(w, h);
     const placed = layout(list, e);
     res = Math.min(window.devicePixelRatio || 1, 1.5);
-    flat = flat || document.createElement('canvas');
+    flat = keep(flat);
     flat.width = Math.round((w + 2 * PAD) * res); flat.height = Math.round((h + PADY) * res);
     let g = flat.getContext('2d', SOFT);
     g.setTransform(res, 0, 0, res, PAD * res, PADY * res);
@@ -1110,7 +1121,7 @@ const relax = (() => {
     scenery(g, w, h, placed, plot, e, edges, woods);
     // The ground is done: warp it, then stand everything upright on it. Each thing is drawn
     // flat about its ground point, moved and sized there, so its walls stay straight up.
-    bg = bg || document.createElement('canvas');
+    bg = keep(bg);
     warpCanvas(flat, res, bg, res);
     // The flat world is not needed again until the next picture: its memory back (for the
     // report, the colour at its middle first).
@@ -1283,14 +1294,18 @@ const relax = (() => {
   }
   function worldOn(g) { const k = dpr * zoom; g.setTransform(k, 0, 0, k, -ox * k, -oy * k); }
   // The window's picture of the map, then the flames, people, names and night over it.
+  let lostAt = 0;
   function compose() {
     if (!bg) return;
+    // The picture's canvas lost since it was drawn: draw it all again on a new one (not more
+    // than once in 5 seconds, should the new one be lost too).
+    if (bg.getContext('2d', SOFT).isContextLost?.() && Date.now() - lostAt > 5000) { lostAt = Date.now(); bg = null; update(true); return; }
     measure();
     if (viewW <= 0 || viewH <= 0) return;
     clampView();
     dpr = window.devicePixelRatio || 1;
     const cv = $('relax-canvas'), W = Math.round(viewW * dpr), H = Math.round(viewH * dpr);
-    view = view || document.createElement('canvas');
+    view = keep(view);
     if (view.width !== W || view.height !== H) {
       view.width = W; view.height = H;
       cv.width = W; cv.height = H;
@@ -1342,7 +1357,7 @@ const relax = (() => {
         return px === '255,0,0,255' ? 'ok' : 'blank ' + px;
       } catch (e) { return 'unreadable: ' + e.message; }
     };
-    const line = `relax canvases: flat after fill ${flatFilled}; flat ${flatSeen}; ${one('bg', bg)}; ${one('view', view)}; small ${probe(100, 100)}; big ${probe(5080, 2050)}; dpr ${window.devicePixelRatio} res ${res} zoom ${zoom.toFixed(2)}`;
+    const line = `relax canvases: flat after fill ${flatFilled}; flat ${flatSeen}; ${one('bg', bg)}; ${one('view', view)}; small ${probe(100, 100)}; big ${probe(5080, 2050)}; remade ${remade}; dpr ${window.devicePixelRatio} res ${res} zoom ${zoom.toFixed(2)}`;
     const i = amc.errors.findIndex(l => l.startsWith('relax canvases:'));
     if (i >= 0) amc.errors.splice(i, 1);
     amc.errors.push(line);
@@ -2242,7 +2257,7 @@ const relax = (() => {
         g.fillStyle = glow;
         g.fillRect(x - r, y - r, r * 2, r * 2);
       }
-      nightMap = nightMap || document.createElement('canvas');
+      nightMap = keep(nightMap);
       warpCanvas(flatNight, 1, nightMap, 1);
     }
     // A metropolis's windows, warm, on a canvas of their own over the dark: each building
@@ -2251,7 +2266,7 @@ const relax = (() => {
     if (nightOn && litList.length) {
       const dark = 1 - Math.min(...c) / 255;
       litAlpha = Math.min(0.8, dark * 1.2);
-      litMap = litMap || document.createElement('canvas');
+      litMap = keep(litMap);
       litMap.width = MAP_W; litMap.height = MAP_H;
       const g = litMap.getContext('2d', SOFT);
       // Back to front, buildings and lamps together, so a building in front of a lamp hides
@@ -2308,7 +2323,7 @@ const relax = (() => {
     const sx = Math.max(0, Math.floor((bx - ox) * k)), sy = Math.max(0, Math.floor((by - oy) * k));
     const sw = Math.min(view.width - sx, Math.ceil(bw * k) + 2), sh = Math.min(view.height - sy, Math.ceil(bh * k) + 2);
     if (sw <= 0 || sh <= 0) return;
-    mask = mask || document.createElement('canvas');
+    mask = keep(mask);
     mask.width = sw; mask.height = sh;
     const m = mask.getContext('2d', SOFT);
     m.setTransform(k, 0, 0, k, -ox * k - sx, -oy * k - sy);
@@ -2670,7 +2685,7 @@ const relax = (() => {
     // A new kind of weather: keep the picture as it was, to fade the new one in over it.
     const w = weatherNow();
     if (bg && w.kind !== weatherDrawn && w.t < 1) {
-      bgPrev = bgPrev || document.createElement('canvas');
+      bgPrev = keep(bgPrev);
       bgPrev.width = bg.width; bgPrev.height = bg.height;
       bgPrev.getContext('2d', SOFT).drawImage(bg, 0, 0);
     }
