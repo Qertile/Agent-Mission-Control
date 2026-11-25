@@ -2301,7 +2301,7 @@ const relax = (() => {
   }
   const nearestWay = q => { let best = -1, d = Infinity; ways.pts.forEach((w, i) => { const e = Math.hypot(w.x - q.x, w.y - q.y); if (e < d) { d = e; best = i; } }); return best; };
   // The shortest way along the streets from one point of the net to another, or null.
-  function route(a, b) {
+  function wayRoute(a, b) {
     const n = ways.pts.length, dist = new Float64Array(n).fill(Infinity), from = new Int32Array(n).fill(-1), done = new Uint8Array(n);
     dist[a] = 0;
     for (;;) {
@@ -2324,7 +2324,7 @@ const relax = (() => {
   // Off along the streets to `to`: false if there is no way there.
   function walkTo(p, to) {
     if (!ways) return false;
-    const path = route(nearestWay(p), nearestWay(to));
+    const path = wayRoute(nearestWay(p), nearestWay(to));
     if (!path || path.length < 2) return false;
     const side = (Math.random() - 0.5) * 10;   // a little to one side of the middle of the street
     p.path = path.map(q => ({x: q.x + side, y: q.y + side * KY}));

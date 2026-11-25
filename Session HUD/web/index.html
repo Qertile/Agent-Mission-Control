@@ -2415,8 +2415,11 @@ async function refresh() {
   drawGrid();
   drawUsage(s.usage);
   $('grid-note').textContent = s.note;
-  relax.stamina(s.usage);
-  relax.update(false, s.camp);
+  // Relax mode's drawing failing must not stop the session list and the tasks from updating.
+  try {
+    relax.stamina(s.usage);
+    relax.update(false, s.camp);
+  } catch (e) { console.error('relax:', e); }
 }
 // Once, after the restart of an Update: what it brought.
 async function showUpdateNote() {
@@ -2443,10 +2446,11 @@ async function init() {
   // The discussions ticked "Open on start", before the layout that may place them.
   for (const x of await api().discussions()) if (x.autoOpen) await amc.openDiscussion(x.id);
   amc.restore();
-  await refresh();
-  await refreshTasks();
+  // The timers first: one failed refresh (or task read) must not leave the page never updating.
   setInterval(refresh, 1000);
   setInterval(refreshTasks, 30000);
+  await refresh().catch(e => console.error('refresh:', e));
+  await refreshTasks().catch(e => console.error('tasks:', e));
   showUpdateNote().catch(() => {});
 }
 if (window.pywebview && window.pywebview.api && window.pywebview.api.init) init();

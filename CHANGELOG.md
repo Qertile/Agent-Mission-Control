@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.18.1: Relax mode draws a village and a town again; the page keeps updating
+
+### Fixed
+- Relax mode (v4.18.0): a camp in the Village or Town era was not drawn (it stayed at its
+  first picture). The walkers' new `route(a, b)` had the same name as the roads' `route({a,
+  c1, c2, b}, placed)`, replacing it, so drawing a village's or a town's paths threw. Renamed
+  `wayRoute`. City and later eras do not draw those paths, so they were not affected.
+- The page stopped updating for good when Relax mode's drawing threw on its first refresh:
+  `init()` awaited that refresh before starting the timers, so the Session Monitor stayed at
+  *No active sessions*, the tasks never loaded and the camp kept its first picture. The
+  timers now start first, the first refresh and task read have a catch, and Relax mode's
+  part of each refresh is in a try/catch (logged as `relax:`).
+- Versions: `v4.18.1`.
+- Tagged `v4.18.1`.
+
+### Known
+- The rename was verified by AMC Relax Mode on a stub page (camp 0, 300, 816, 1939); the
+  page fix is not yet run in the real AMC. A Windows camp in the City era drawn without its
+  map (from before v4.18.0) is not explained by this and is still open.
+
 ## 2026-11-25 – v4.18.0: Relax mode: people walk the streets, hibernating sessions asleep
 
 ### Added
