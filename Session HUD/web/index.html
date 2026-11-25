@@ -2333,12 +2333,12 @@ function openCalendar(due, x, y) {
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 function drawCalendar() {
   const m = calMonth, today = ymd(new Date());
-  const first = (m.getDay() + 6) % 7;      // Monday first
+  const first = m.getDay();      // Sunday first
   const days = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
   let html = `<div class="nav"><span class="click" data-mv="-1">◀</span>` +
              `<span>${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}</span>` +
              `<span class="click" data-mv="1">▶</span></div><table><tr>` +
-             ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(h => `<td class="hd">${h}</td>`).join('') + '</tr><tr>';
+             ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(h => `<td class="hd">${h}</td>`).join('') + '</tr><tr>';
   for (let i = 0; i < first; i++) html += '<td class="hd"></td>';
   for (let day = 1; day <= days; day++) {
     const s = ymd(new Date(m.getFullYear(), m.getMonth(), day));

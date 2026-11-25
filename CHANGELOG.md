@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – v4.17.1: the due-date calendar starts on Sunday
+
+### Changed
+- Task Manager's due-date calendar: weeks start on Sunday (`Su Mo Tu We Th Fr Sa`), not Monday.
+- README: Due date says so (both languages).
+- Versions: `v4.17.1`.
+- Tagged `v4.17.1`.
+
 ## 2026-11-25 – v4.17.0: messages to a hibernating tab (amc_send.py)
 
 ### Added

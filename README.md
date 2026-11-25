@@ -17,7 +17,8 @@ side in the same folders (see [Linux](#linux)), so there is no separate Linux br
 
 | Tag | What it is |
 |---|---|
-| `v4.17.0` (current) | `v4.16.1` plus `Session HUD/amc_send.py`: a session can send a message to a hibernating tab, which SendMessage cannot see; AMC wakes it and types the message in. See `CHANGELOG.md`. |
+| `v4.17.1` (current) | `v4.17.0` plus: the task due-date calendar starts its weeks on Sunday. See `CHANGELOG.md`. |
+| `v4.17.0` | `v4.16.1` plus `Session HUD/amc_send.py`: a session can send a message to a hibernating tab, which SendMessage cannot see; AMC wakes it and types the message in. See `CHANGELOG.md`. |
 | `v4.16.1` | `v4.16.0` plus: a session with a command still running in the background does not hibernate, and the right-click menu's *Keep awake* keeps a session (one running a `/loop` or a reminder) from hibernating at all. See `CHANGELOG.md`. |
 | `v4.16.0` | `v4.15.1` plus hibernating tabs: a session idle for 30 minutes has its process ended to free its memory (about 150 MB) and wakes with a click on its tab, in the same conversation; on Windows, no `conhost.exe` left behind by the Antigravity usage read or a closed tab. See `CHANGELOG.md`. |
 | `v4.15.1` | `v4.15.0` plus a Relax-mode wall round only the 5 sessions nearest the plaza, the camp zoomed in to fill the window with little sky, and a bay about 10% larger. See `CHANGELOG.md`. |
@@ -580,7 +581,7 @@ and it edits `tasks.md`; the Agent Mission Control picks the change up within 30
   the version, system, tools and settings. The remote token, session names, what was typed
   in a tab and the home folder's name are left out. Nothing is sent until you submit it on
   GitHub; read it first, as issues are public.
-- **Due date:** click a task's date (or `no due`) for a small calendar; the chosen day is
+- **Due date:** click a task's date (or `no due`) for a small calendar (weeks start on Sunday); the chosen day is
   written to `tasks.md` and synced to the Excel file.
 - **Status:** click a task's status (or `-`) for Pending / Ongoing / Checking / Finished /
   Discard. Finished asks for the result (Enter; empty = `finished`; Esc cancels), writes
@@ -645,7 +646,8 @@ Windows 和 Linux 版放在同一個分支 `master`：兩個平台的檔案並�
 
 | Tag | 內容 |
 |---|---|
-| `v4.17.0`（目前） | `v4.16.1` 再加上 `Session HUD/amc_send.py`：session 可以傳訊息給休眠中的分頁（SendMessage 看不到它），AMC 會叫醒它並把訊息打進去。詳見 `CHANGELOG.md`。 |
+| `v4.17.1`（目前） | `v4.17.0` 再加上：工作清單的到期日月曆改成每週從週日開始。詳見 `CHANGELOG.md`。 |
+| `v4.17.0` | `v4.16.1` 再加上 `Session HUD/amc_send.py`：session 可以傳訊息給休眠中的分頁（SendMessage 看不到它），AMC 會叫醒它並把訊息打進去。詳見 `CHANGELOG.md`。 |
 | `v4.16.1` | `v4.16.0` 再加上：背景還有指令在跑的 session 不會休眠；右鍵選單的 *Keep awake* 可以讓某個 session（例如在跑 `/loop` 或提醒的）永遠不休眠。詳見 `CHANGELOG.md`。 |
 | `v4.16.0` | `v4.15.1` 再加上：分頁休眠，session 閒置 30 分鐘就結束它的程式、釋放記憶體（約 150 MB），點分頁就叫醒並接回同一段對話；Windows 上讀 Antigravity 用量或關掉分頁時，不再留下 `conhost.exe`。詳見 `CHANGELOG.md`。 |
 | `v4.15.1` | `v4.15.0` 再加上：Relax mode 的城牆只圍離廣場最近的 5 個 session，營地放大填滿視窗、天空變少，海灣大約大 10%。詳見 `CHANGELOG.md`。 |
@@ -1074,7 +1076,7 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
 - **重新啟動**：`⚙` → *Restart*（會先確認）會關掉視窗再開新的；分頁會結束，再接續原本的對話。
 - **意見回饋**：`⚙` → *Send feedback…* 會用預設瀏覽器開 GitHub 的新 issue 頁面（github.com/Qertile/Agent-Mission-Control/issues/new），並先替不知道怎麼寫的人填好：標題、三個簡單的問題、這次執行的錯誤（完整的 traceback、啟動失敗的分頁、15 秒內就結束的分頁和工具最後說的話、畫面上跳出的訊息）、之前執行的錯誤，以及版本、系統、工具和設定。遠端 token、session 名稱、分頁裡打的內容和家目錄名稱都不會放進去。要在 GitHub 上按送出才會送出；issue 是公開的，送出前請先看過。
 
-- **到期日**：點任務的日期（或 `no due`）會跳出小月曆，選好的日子寫進 `tasks.md`
+- **到期日**：點任務的日期（或 `no due`）會跳出小月曆（每週從週日開始），選好的日子寫進 `tasks.md`
   並同步到 Excel。
 - **狀態**：點任務的狀態（或 `-`）選 Pending／Ongoing／Checking／Finished／Discard。
   選 Finished 會先問結果（按 Enter；空白 = `finished`；Esc 取消），在任務底下寫
