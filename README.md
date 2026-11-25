@@ -335,10 +335,9 @@ The Tasks and Sessions columns can be a camp seen from a tilted camera instead: 
   dragging moves the map; names stay one size, and those that would overlap wait for you
   to zoom in. Hills and woods lie beyond its sides.
 - **Its person**, near it: working while the session is busy, waving while it waits for
-  you, sitting by its door while idle or hibernating, and now and then off for a walk along
-  the streets to anywhere in the camp and back (not at night or in the rain); called back
-  by a new status, it walks home first. Whatever stands nearer the camera (a building, a
-  tree, the wall) hides a person or an animal behind it.
+  you, sitting by its door while idle or hibernating, and now and then strolling about in
+  front of it. (The walks along the streets of v4.18.0 are switched off for now: WebKitGTK's
+  web process crashed and used much more CPU with them.)
 - **A hibernating session** keeps its building, its lights off at night (a city's windows
   dark), and *hibernating* in pale purple on its sign.
 - **Animals:** deer, stags, foxes and wolves in a tribe; from a village on, cows and horses
@@ -912,9 +911,8 @@ Tasks 和 Sessions 兩欄可以換成一個從斜上方看的營地：⚙ → *L
   比較朦朧，每棟建築和每棵樹都有照自己輪廓投下的影子。縮到最小時，營地從最高的屋頂往下填滿視窗的高度，只留一小條天空（左右最多有營地寬度的四分之一在畫面外）；
   滾輪以游標為中心縮放，拖曳可以移動地圖；名字維持同樣大小，會重疊的要放大才顯示。地圖兩側
   外面是丘陵和樹林。
-- **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒置或休眠時坐在門口，不時沿著街道走到營地
-  任何地方再走回來（晚上和下雨時不出門）；狀態改變時會先沿街走回家。比較靠近鏡頭的東西（建築、樹、城牆）
-  會擋住後面的小人和動物。
+- **旁邊的小人**：session 忙的時候在工作，等你回應時揮手，閒置或休眠時坐在門口，不時在門前走走。
+  （v4.18.0 的沿街散步暫時關掉：有它時 WebKitGTK 的網頁程序會當掉，CPU 也高很多。）
 - **休眠的 session**：建築留著，晚上不亮燈（城市的窗戶也是暗的），名牌上用淡紫色寫 *hibernating*。
 - **動物**：部落裡有鹿、公鹿、狐狸和狼；從村莊起，牛和馬（還有驢和羊駝）養在有籬笆的牧場裡，
   外面也有一些野生動物；城市的馬場在城牆外，街上有狗；大都會裡有狗、一隻鹿和一隻狐狸。牠們會

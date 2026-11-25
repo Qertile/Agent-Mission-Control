@@ -2,6 +2,22 @@
 
 All notable changes to this project are listed here, newest first.
 
+## 2026-11-25 – untagged: Relax mode: the walks switched off, and less CPU on Linux
+
+### Changed
+- Relax mode: the people's walks along the streets and their hiding behind what stands in
+  front of them (v4.18.0) are switched off (`WALKS = false` in `relax.js`); an idle person
+  strolls in front of its building, as in v4.17.1. Since they came, WebKitGTK's web process
+  crashed six times today in Relax mode (SIGILL, SIGSEGV), and it used much more CPU.
+- Relax mode: the off-screen canvases are kept in memory (`willReadFrequently`, v4.18.5) on
+  Windows only, where WebView2 had left them blank. In WebKitGTK it made the drawing about
+  five times as costly.
+- Measured in a WebKitGTK window on a test page (a town of 851 messages, 7 sessions and 3
+  stopped, 1344x1324), the web process's CPU with `top`: v4.17.1 2.6–2.8%; before this change
+  19–21%; walks off only 14–16%; walks off and no `willReadFrequently` 2.8–3.4%. Whether the
+  crashes stop is not known yet. Made by AMC Relax Mode.
+- README: Relax mode, the person by its building (both languages).
+
 ## 2026-11-25 – untagged: Relax mode's night reaches the top of the window
 
 ### Fixed

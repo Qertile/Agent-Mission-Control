@@ -113,10 +113,15 @@ const relax = (() => {
   // over the ground; the pictures are drawn from 31). PAD and PADY: as much margin as the
   // narrowest far side and the sky above the horizon then need; the view goes no higher than
   // the sky's top (SKY_TOP, in the warped picture).
-  // The camp's off-screen canvases are kept in memory, not on the graphics card
-  // (willReadFrequently): WebView2 on Windows, with many terminal tabs using the card too, can
-  // give a big canvas none, and then it stays blank with no error.
-  const SOFT = {willReadFrequently: true};
+  // On Windows the camp's off-screen canvases are kept in memory, not on the graphics card
+  // (willReadFrequently): WebView2, with many terminal tabs using the card too, can give a big
+  // canvas none, and then it stays blank with no error. Not elsewhere: in WebKitGTK it costs
+  // about five times the CPU (a WebKit test page, Relax mode: 3% -> 15%).
+  const SOFT = /Windows/.test(navigator.userAgent) ? {willReadFrequently: true} : {};
+  // People walking the streets and hidden behind what stands in front of them (v4.18.0): off.
+  // Since they came, WebKitGTK's web process has crashed (SIGILL, SIGSEGV) and run at 50–70%
+  // CPU in Relax mode; without them people stay by their doors, as before.
+  const WALKS = false;
   // A canvas kept from one picture to the next, made again if the browser has lost its
   // context (WebView2 on Windows can: it is then blank for good, with no error). When the
   // browser gives one back, everything is drawn again.
@@ -1106,7 +1111,7 @@ const relax = (() => {
     flatFilled = pixel(flat);                 // for the report: the ground colour should be there now
     land(g, w, h, e);
     const {lamps: allLamps, edges} = roads(g, placed, e);
-    ways = edges.length ? waysOf(edges) : null;
+    ways = WALKS && edges.length ? waysOf(edges) : null;
     // A town's palisade, a city's wall, what is left of it in a metropolis.
     const wallStyle = {Town: 'wood', City: 'stone', Metropolis: 'ruin', Megacity: 'ruin'}[e[1]];
     wallLine = wallStyle ? wallOutline(placed) : null;
@@ -1170,6 +1175,7 @@ const relax = (() => {
     fronts = [];
     // Each thing that stands up, again, for tick(): its shape over a person walking behind it.
     const front = (cx, ground, r, h, paint) => {
+      if (!WALKS) return;
       const [X, Y] = warp(cx, ground), m = depth(ground);
       fronts.push({y: ground, x0: X - r * m, x1: X + r * m, y0: Y - h * m, y1: Y + plot * 0.1 * m, paint});
     };
@@ -2320,6 +2326,7 @@ const relax = (() => {
   // What stands nearer the camera than a person hides it: its own pixels, cut to its shape,
   // drawn again over the person (right after it, so a person in front of that is drawn over).
   function hide(g, p, k) {
+    if (!WALKS) return;
     if (p.boat) return;                    // on the river: nothing stands in front of it there
     const z = size(), [bx, by, bw, bh] = warpBox([p.x - z / 2, p.y - z * ANCHOR, z, z]);   // the figure, not its shadow
     let clipped = false;
